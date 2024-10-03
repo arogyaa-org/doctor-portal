@@ -73,11 +73,9 @@ export function CustomersTable({
                   }}
                 />
               </TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Signed Up</TableCell>
+              <TableCell>patientId</TableCell>
+              <TableCell>appointmentTime</TableCell>
+              <TableCell>status</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
