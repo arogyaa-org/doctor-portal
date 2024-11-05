@@ -3,5 +3,5 @@ export interface Appointment{
     doctorId:string;
     appointmentTime:string;
     status:string;
-    
+    total:string;
 }
