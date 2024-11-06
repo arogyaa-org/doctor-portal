@@ -1,10 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import appointmentReducer from './features/appointmentSlice';
+import toastReducer from "./features/toastSlice";
 
 export const store = configureStore({
   reducer: {
-    appointment: appointmentReducer
+    appointment: appointmentReducer,
+    toast: toastReducer,
   },
 });
 

@@ -7,17 +7,22 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { TableRow, TableCell, Checkbox, Avatar, Card, TableBody, Box, Table, TableHead, TablePagination } from '@mui/material';
 
+import Toast from "../../../components/common/Toast";
 import type { AppDispatch, RootState } from '@/redux/store';
+import type { Appointment } from '@/types/appointment';
 import { CustomersFilters } from '@/components/dashboard/customer/customers-filters';
 import { useGetAppointment } from '@/hooks/appointment';
-import { setAppointment, setLoading } from '@/redux/features/appointmentSlice';
-import type { Appointment } from '@/types/appointment';
+import { setAppointment } from '@/redux/features/appointmentSlice';
+import { Utility } from "@/utils";
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [limit, setLimit] = React.useState(10);
   const dispatch: AppDispatch = useDispatch();
+  const { toast } = useSelector((state: RootState) => state.toast);
   const { appointment } = useSelector((state: RootState) => state.appointment);
+
+  const { toastAndNavigate } = Utility();
 
   const { value: data, swrLoading } = useGetAppointment(
     {} as Appointment[],
@@ -30,6 +35,7 @@ const Page: React.FC = () => {
   React.useEffect(() => {
     if (data?.results?.length) {
       dispatch(setAppointment(data.results));
+      toastAndNavigate(dispatch, true, "success", "Success Guru");
     }
   }, [data, dispatch]);
 
@@ -79,6 +85,7 @@ const Page: React.FC = () => {
           </Box>
         </Card>
       </Stack>
+
       <TablePagination
         component="div"
         count={totalItems} // Total items from your API response
@@ -90,6 +97,11 @@ const Page: React.FC = () => {
           setCurrentPage(1); // Reset to the first page
         }}
         labelRowsPerPage="Rows per page" />
+      <Toast
+        alerting={toast.toastAlert}
+        severity={toast.toastSeverity}
+        message={toast.toastMessage}
+      />
     </>
   );
 };
