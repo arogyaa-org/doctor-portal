@@ -1,25 +1,55 @@
-"use client"
+"use client";
+
 import { useState } from 'react';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 
 import { creator, fetcher, modifier } from '@/apis/apiClient';
-import { Appointment } from '@/types/appointment';
+import { AppointmentData, Appointment } from '@/types/appointment';
 
 /**
  * Hook for fetching appointments with SWR (stale-while-revalidate) strategy.
- * 
+ *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
- * @param pathKey - The API path key used by SWR to fetch appointment data.
- * @returns An object contFaining the fetched appointments, loading state, and error state.
+ * @param pathKey - The API path key used by SWR to fetch customer data.
+ * @param appointmentId
+ * @param page
+ * @param limit
+ * @returns An object containing the fetched appointments, loading, error state and refetch function.
  */
-export const useGetAppointment = (initialData: Appointment[], pathKey: string) => {
-    const { data: swrData, error } = useSWR<Appointment[]>(pathKey, fetcher, {
+export const useGetAppointment = (
+    initialData: Appointment[],
+    pathKey: string,
+    appointmentId: string,
+    page: number = 1,
+    limit: number = 5
+) => {
+    const url = `${pathKey}/${appointmentId}?page=${page}&limit=${limit}`;
+
+    const { data: swrData, error } = useSWR<Appointment[]>(
+        url,
+        fetcher, {
         fallbackData: initialData,
         refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
         revalidateOnFocus: false,                  // Disable revalidation on window focus
     });
 
-    return { data: swrData || [], swrLoading: !error && !swrData, error };
+    // Manually re-trigger re-fetch
+    const refetch = async () => {
+        await mutate(url);
+    };
+
+    return {
+        value: swrData || {
+            results: [],
+            total: 0,
+            page: 1,
+            limit,
+            totalPages: 1,
+        },
+        swrLoading: !error && !swrData,
+        error,
+        refetch
+    };
 };
 
 /**
@@ -31,14 +61,14 @@ export const useGetAppointment = (initialData: Appointment[], pathKey: string) =
 export const useCreateAppointment = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [createdAppointment, setCreatedAppointment] = useState<Appointment | null>(null);
+    const [createdAppointment, setCreatedAppointment] = useState<AppointmentData | null>(null);
 
-    const createAppointment = async (newAppointmentData: Appointment) => {
+    const createAppointment = async (newAppointmentData: AppointmentData) => {
         setLoading(true);
         setError(null);
 
         try {
-            const appointment = await creator<Appointment, Appointment>(pathKey, newAppointmentData);
+            const appointment = await creator<AppointmentData, AppointmentData>(pathKey, newAppointmentData);
             setCreatedAppointment(appointment);
         } catch (err) {
             setError(err as Error);
@@ -59,14 +89,14 @@ export const useCreateAppointment = (pathKey: string) => {
 export const useModifyAppointment = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [updatedAppointment, setUpdatedAppointment] = useState<Appointment | null>(null);
+    const [updatedAppointment, setUpdatedAppointment] = useState<AppointmentData | null>(null);
 
-    const modifyAppointment = async (updatedAppointmentData: Appointment) => {
+    const modifyAppointment = async (updatedAppointmentData: AppointmentData) => {
         setLoading(true);
         setError(null);
 
         try {
-            const appointment = await modifier<Appointment, Appointment>(pathKey, updatedAppointmentData);
+            const appointment = await modifier<AppointmentData, AppointmentData>(pathKey, updatedAppointmentData);
             setUpdatedAppointment(appointment);
         } catch (err) {
             setError(err as Error);
