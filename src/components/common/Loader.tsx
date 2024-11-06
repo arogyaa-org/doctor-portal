@@ -1,7 +1,6 @@
 import { Box, keyframes } from "@mui/material";
 import { styled } from "@mui/system";
 
-
 const loaderContainerAnimation = keyframes`
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -20,7 +19,6 @@ const LoaderContainer = styled(Box)({
   borderRightColor: "rgba(255, 255, 255, 0.3)",
   animation: `${loaderContainerAnimation} 1s ease-in-out infinite`,
 });
-
 
 const BackgroundContainer = styled(Box)({
   background: "transparent",
