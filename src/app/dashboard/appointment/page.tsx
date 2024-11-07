@@ -2,44 +2,44 @@
 
 import * as React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-
-import Stack from '@mui/material/Stack';
+import { Card, Stack } from '@mui/material';
 import Typography from '@mui/material/Typography';
-import { TableRow, TableCell, Checkbox, Avatar, Card, TableBody, Box, Table, TableHead, TablePagination } from '@mui/material';
 
-import Toast from "../../../components/common/Toast";
+import ServerPaginationGrid from '@/components/common/Datagrid';
 import type { AppDispatch, RootState } from '@/redux/store';
 import type { Appointment } from '@/types/appointment';
 import { CustomersFilters } from '@/components/dashboard/customer/customers-filters';
+import { datagridColumns } from "./appointmentConfig";
 import { useGetAppointment } from '@/hooks/appointment';
-import { setAppointment } from '@/redux/features/appointmentSlice';
-import { Utility } from "@/utils";
+import { setAppointment, setLoading } from '@/redux/features/appointmentSlice';
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [limit, setLimit] = React.useState(10);
   const dispatch: AppDispatch = useDispatch();
-  const { toast } = useSelector((state: RootState) => state.toast);
-  const { appointment } = useSelector((state: RootState) => state.appointment);
+  const { appointment, reduxLoading } = useSelector((state: RootState) => state.appointment);
 
-  const { toastAndNavigate } = Utility();
-
-  const { value: data, swrLoading } = useGetAppointment(
-    {} as Appointment[],
+  const { value: data } = useGetAppointment(
+    {} as Appointment,
     'appointments/get-doctorsappointment',
     '672a09ea00b25358d17c77a5',
     currentPage,
     limit
   );
 
-  React.useEffect(() => {
-    if (data?.results?.length) {
-      dispatch(setAppointment(data.results));
-      toastAndNavigate(dispatch, true, "success", "Success Guru");
+  const handleDispatch = React.useCallback(() => {
+    dispatch(setLoading(true));
+    if (data) {
+      dispatch(setAppointment(data));
+      dispatch(setLoading(false));
+    } else {
+      dispatch(setLoading(false));
     }
-  }, [data, dispatch]);
+  }, [data?.results?.length]);
 
-  const totalItems: number = data?.total || 0;
+  React.useEffect(() => {
+    handleDispatch();
+  }, [handleDispatch]);
 
   console.log("appointment data:", appointment);
   console.log("total items:", data);
@@ -52,56 +52,15 @@ const Page: React.FC = () => {
         </Stack>
         <Card>
           <CustomersFilters />
-          <Box sx={{ overflowX: 'auto' }}>
-            <Table sx={{ minWidth: '800px' }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox />
-                  </TableCell>
-                  <TableCell>patientId</TableCell>
-                  <TableCell>appointmentTime</TableCell>
-                  <TableCell>status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody> {appointment.map((item) => (
-                <TableRow hover key={item.patientId}>
-                  <TableCell padding="checkbox">
-                    <Checkbox />
-                  </TableCell>
-                  <TableCell>
-                    <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
-                      <Avatar />
-                      <Typography variant="subtitle2">{item.patientId}</Typography>
-                    </Stack>
-                  </TableCell>
-                  <TableCell>{item.appointmentTime}</TableCell>
-                  <TableCell>
-                    {item.status}
-                  </TableCell>
-                </TableRow>
-              ))}</TableBody>
-            </Table>
-          </Box>
+          <ServerPaginationGrid
+            columns={datagridColumns()}
+            count={appointment?.totalPages}
+            rows={appointment?.results || []}
+            loading={reduxLoading}
+            pageSizeOptions={[5, 10, 20]}
+          />
         </Card>
       </Stack>
-
-      <TablePagination
-        component="div"
-        count={totalItems} // Total items from your API response
-        page={currentPage - 1}
-        onPageChange={(event, newPage) => setCurrentPage(newPage + 1)}
-        rowsPerPage={limit}
-        onRowsPerPageChange={(event) => {
-          setLimit(parseInt(event.target.value, 10));
-          setCurrentPage(1); // Reset to the first page
-        }}
-        labelRowsPerPage="Rows per page" />
-      <Toast
-        alerting={toast.toastAlert}
-        severity={toast.toastSeverity}
-        message={toast.toastMessage}
-      />
     </>
   );
 };

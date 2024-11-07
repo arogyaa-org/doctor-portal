@@ -12,7 +12,7 @@ export interface AppointmentData {
 export interface Appointment {
     results: AppointmentData[];
     total: number;
-    page: string;
-    limit: string;
+    page: number;
+    limit: number;
     totalPages: number;
 }

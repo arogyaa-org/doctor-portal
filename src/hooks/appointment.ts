@@ -17,7 +17,7 @@ import { AppointmentData, Appointment } from '@/types/appointment';
  * @returns An object containing the fetched appointments, loading, error state and refetch function.
  */
 export const useGetAppointment = (
-    initialData: Appointment[],
+    initialData: Appointment | null,
     pathKey: string,
     appointmentId: string,
     page: number = 1,
@@ -25,7 +25,7 @@ export const useGetAppointment = (
 ) => {
     const url = `${pathKey}/${appointmentId}?page=${page}&limit=${limit}`;
 
-    const { data: swrData, error } = useSWR<Appointment[]>(
+    const { data: swrData, error } = useSWR<Appointment | null>(
         url,
         fetcher, {
         fallbackData: initialData,
