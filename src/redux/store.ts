@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import appointmentReducer from './features/appointmentSlice';
+import patientReducer from './features/patientSlice';
 import toastReducer from "./features/toastSlice";
 
 export const store = configureStore({
   reducer: {
     appointment: appointmentReducer,
+    patient: patientReducer,
     toast: toastReducer,
   },
 });
