@@ -5,10 +5,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Card, Stack } from '@mui/material';
 import Typography from '@mui/material/Typography';
 
+import Search from '@/components/common/Search';
 import ServerPaginationGrid from '@/components/common/Datagrid';
 import type { AppDispatch, RootState } from '@/redux/store';
 import type { Appointment } from '@/types/appointment';
-import { CustomersFilters } from '@/components/dashboard/customer/customers-filters';
 import { datagridColumns } from "./appointmentConfig";
 import { useGetAppointment } from '@/hooks/appointment';
 import { setAppointment, setLoading } from '@/redux/features/appointmentSlice';
@@ -19,7 +19,7 @@ const Page: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const { appointment, reduxLoading } = useSelector((state: RootState) => state.appointment);
 
-  const { value: data } = useGetAppointment(
+  const { value: data, refetch } = useGetAppointment(
     {} as Appointment,
     'appointments/get-doctorsappointment',
     '672c637fff727fed2ffb3693',
@@ -51,10 +51,12 @@ const Page: React.FC = () => {
           <Typography variant="h4">Appointment</Typography>
         </Stack>
         <Card>
-          <CustomersFilters />
+          <Search
+            refetchAPI={refetch}
+          />
           <ServerPaginationGrid
             columns={datagridColumns()}
-            count={appointment?.totalPages}
+            count={appointment?.total}
             rows={appointment?.results || []}
             loading={reduxLoading}
             pageSizeOptions={[5, 10, 20]}
