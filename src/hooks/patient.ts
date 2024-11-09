@@ -21,22 +21,23 @@ export const useGetPatient = (
     pathKey: string,
     patientId: string,
     page: number = 1,
-    limit: number = 5  
+    limit: number = 5
 ) => {
     const url = `${pathKey}/${patientId}?page=${page}&limit=${limit}`;
-    console.log('path key',pathKey)
 
     const { data: swrData, error } = useSWR<Patient | null>(
         url,
-        fetcher, {
-        fallbackData: initialData,
-        refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
-        revalidateOnFocus: false,                  // Disable revalidation on window focus
-    });
+        fetcher,
+        {
+            fallbackData: initialData,
+            refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
+            revalidateOnFocus: false,                  // Disable revalidation on window focus
+        }
+    );
 
     // Manually re-trigger re-fetch
-    const refetch = async () => {
-        await mutate(url);
+    const refetch = async (keyword?: string) => {
+        await mutate(`${url}?keyword=${keyword}`);
     };
 
     return {
