@@ -4,6 +4,7 @@ import appointmentReducer from './features/appointmentSlice';
 import patientReducer from './features/patientSlice';
 import doctorReducer from './features/doctorSlice';
 import specialityReducer from './features/specialitySlice'
+import symptomsReducer from './features/symptomsSlice'
 import toastReducer from "./features/toastSlice";
 
 export const store = configureStore({
@@ -12,6 +13,7 @@ export const store = configureStore({
     patient: patientReducer,
     doctor: doctorReducer,
     speciality: specialityReducer,
+    symptoms: symptomsReducer,
     toast: toastReducer,
   },
 });
