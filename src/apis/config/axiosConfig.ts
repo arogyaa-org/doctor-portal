@@ -9,7 +9,7 @@ import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
  * @type {AxiosInstance}
  */
 export const axiosInstance: AxiosInstance = axios.create({
-    baseURL: `${process.env.NEXT_PUBLIC_SPECIALITY_API}`,
+    baseURL: `${process.env.NEXT_PUBLIC_APPOINTMENT_API}`,
     withCredentials: true,
     validateStatus: (status) => (status >= 200 && status < 300) || status == 404,
     timeout: 40000,
