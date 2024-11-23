@@ -1,87 +1,106 @@
-'use client';
-
-import * as React from 'react';
-import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardActions from '@mui/material/CardActions';
-import CardContent from '@mui/material/CardContent';
-import CardHeader from '@mui/material/CardHeader';
-import Divider from '@mui/material/Divider';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import OutlinedInput from '@mui/material/OutlinedInput';
-import Select from '@mui/material/Select';
-import Grid from '@mui/material/Unstable_Grid2';
+import React from "react";
+import {
+  Box,
+  Button,
+  Grid,
+  TextField,
+  Typography,
+  MenuItem,
+  IconButton,
+} from "@mui/material";
+import SaveIcon from "@mui/icons-material/Save";
+import CloseIcon from "@mui/icons-material/Close";
 
 const states = [
-  { value: 'uttar-pradesh', label: 'Uttar Pradesh' },
-  { value: 'new-delhi', label: 'New Delhi' },
-  { value: 'noida', label: 'Noida' },
-  { value: 'uttarakhand', label: 'Uttarakhand' },
-] as const;
+  { value: "uttar-pradesh", label: "Uttar Pradesh" },
+  { value: "new-delhi", label: "New Delhi" },
+  { value: "noida", label: "Noida" },
+  { value: "uttarakhand", label: "Uttarakhand" },
+];
 
-export function AccountDetailsForm(): React.JSX.Element {
+interface AccountDetailsFormProps {
+  onClose: () => void;
+}
+
+export default function AccountDetailsForm({
+  onClose,
+}: AccountDetailsFormProps): React.JSX.Element {
+  const handleSave = () => {
+    // Add save logic (e.g., API call)
+    alert("Profile details saved");
+    onClose();
+  };
+
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
-    >
-      <Card>
-        <CardHeader subheader="The information can be edited" title="Profile" />
-        <Divider />
-        <CardContent>
-          <Grid container spacing={3}>
-            <Grid md={6} xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>First name</InputLabel>
-                <OutlinedInput defaultValue="Test" label="First name" name="firstName" />
-              </FormControl>
-            </Grid>
-            <Grid md={6} xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Last name</InputLabel>
-                <OutlinedInput defaultValue="User" label="Last name" name="lastName" />
-              </FormControl>
-            </Grid>
-            <Grid md={6} xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Email address</InputLabel>
-                <OutlinedInput defaultValue="testuser@f2fintech.in" label="Email address" name="email" />
-              </FormControl>
-            </Grid>
-            <Grid md={6} xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Phone number</InputLabel>
-                <OutlinedInput label="Phone number" name="phone" type="tel" />
-              </FormControl>
-            </Grid>
-            <Grid md={6} xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>State</InputLabel>
-                <Select defaultValue="New Delhi" label="State" name="state" variant="outlined">
-                  {states.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid md={6} xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>City</InputLabel>
-                <OutlinedInput label="City" />
-              </FormControl>
-            </Grid>
-          </Grid>
-        </CardContent>
-        <Divider />
-        <CardActions sx={{ justifyContent: 'flex-end' }}>
-          <Button variant="contained">Save details</Button>
-        </CardActions>
-      </Card>
+    <form>
+      {/* Close Icon */}
+      <Box display="flex" justifyContent="flex-end">
+        <IconButton onClick={onClose} aria-label="close">
+          <CloseIcon />
+        </IconButton>
+      </Box>
+
+      {/* Form Title */}
+      <Typography variant="h6" gutterBottom>
+        Edit Profile
+      </Typography>
+
+      {/* Form Fields */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <TextField fullWidth label="First Name" defaultValue="John" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField fullWidth label="Last Name" defaultValue="Doe" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            label="Email"
+            defaultValue="doctor@example.com"
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField fullWidth label="Phone" defaultValue="+91 9876543210" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField fullWidth label="Speciality" defaultValue="Cardiology" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField fullWidth label="Years of Experience" defaultValue="15" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField fullWidth label="State" select defaultValue="new-delhi">
+            {states.map((state) => (
+              <MenuItem key={state.value} value={state.value}>
+                {state.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField fullWidth label="City" defaultValue="New Delhi" />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Address"
+            defaultValue="New Delhi, India"
+          />
+        </Grid>
+      </Grid>
+
+      {/* Save Button */}
+      <Box mt={3} display="flex" justifyContent="flex-end">
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<SaveIcon />}
+          onClick={handleSave}
+        >
+          Save Changes
+        </Button>
+      </Box>
     </form>
   );
 }

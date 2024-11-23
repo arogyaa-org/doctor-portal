@@ -1,29 +1,70 @@
-import * as React from 'react';
-import type { Metadata } from 'next';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Unstable_Grid2';
+"use client"
 
-import { config } from '@/config';
-import { AccountDetailsForm } from '@/components/dashboard/account/account-details-form';
-import { AccountInfo } from '@/components/dashboard/account/account-info';
+import React, { useState } from "react";
+import { Box, Tabs, Tab, Container } from "@mui/material";
+import AccountInfo from "@/components/dashboard/account/account-info";
+import TabPanel from "@/components/dashboard/account/tab-panel";
+import DoctorAppointmentHistory from "@/components/dashboard/account/appointment-history";
+import DoctorRatingsAndReviews from "@/components/dashboard/account/d-rating-reviews";
 
-export const metadata = { title: `Account | Dashboard | ${config.site.name}` } satisfies Metadata;
+export default function AccountPage(): React.JSX.Element {
+  const [tabValue, setTabValue] = useState(0);
 
-export default function Page(): React.JSX.Element {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
   return (
-    <Stack spacing={3}>
-      <div>
-        <Typography variant="h4">Account</Typography>
-      </div>
-      <Grid container spacing={3}>
-        <Grid lg={4} md={6} xs={12}>
-          <AccountInfo />
-        </Grid>
-        <Grid lg={8} md={6} xs={12}>
-          <AccountDetailsForm />
-        </Grid>
-      </Grid>
-    </Stack>
+    <Container sx={{ py: 0 }}>
+      <AccountInfo />
+      <Box
+        sx={{
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          centered
+          TabIndicatorProps={{
+            sx: {
+              height: 3,
+              bgcolor: "primary.main", 
+            },
+          }}
+        >
+          {/* Customized Tab Button */}
+          <Tab
+            label="Appointment History"
+            sx={{
+              transition: "transform 0.3s, box-shadow 0.3s",
+              "&:hover": {
+                boxShadow: 2,
+                transform: "scale(1.05)",
+              },
+            }}
+          />
+          <Tab
+            label="Reviews"
+            sx={{
+              transition: "transform 0.3s, box-shadow 0.3s",
+              "&:hover": {
+                boxShadow: 2,
+                transform: "scale(1.05)",
+              },
+            }}
+          />
+        </Tabs>
+      </Box>
+
+      {/* Tab Panels */}
+      <TabPanel value={tabValue} index={0}>
+        <DoctorAppointmentHistory />
+      </TabPanel>
+      <TabPanel value={tabValue} index={1}>
+        <DoctorRatingsAndReviews />
+      </TabPanel>
+    </Container>
   );
 }
