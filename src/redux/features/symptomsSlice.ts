@@ -1,9 +1,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { Symptoms, SymptomData } from '@/types/symptoms';
+import type { Symptom} from '@/types/symptom';
 
 interface SymptomInitialState {
-    symptom: SymptomData | null;
+    symptom: Symptom | null;
     reduxLoading: boolean;
 }
 
@@ -16,7 +16,7 @@ export const symptomSlice = createSlice({
     name: 'symptom',
     initialState,
     reducers: {
-        setSymptom: (state, action: PayloadAction<SymptomData>) => { 
+        setSymptom: (state, action: PayloadAction<Symptom>) => { 
             state.symptom = action.payload; 
             state.reduxLoading = false;
         },

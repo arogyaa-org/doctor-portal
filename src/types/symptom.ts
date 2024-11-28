@@ -8,7 +8,8 @@ export interface SymptomData {
     __v: number;
 }
 
-export interface Symptoms {
+export interface Symptom {
+    
     results: SymptomData[];
     total: number;
     page: number;
