@@ -22,7 +22,7 @@ const Page: React.FC = () => {
   const { value: data, refetch } = useGetAppointment(
     {} as Appointment,
     'appointments/get-doctorsappointment',
-    '672c637fff727fed2ffb3693',
+    
     currentPage,
     limit
   );
