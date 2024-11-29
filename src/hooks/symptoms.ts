@@ -11,7 +11,6 @@ import { Symptom, SymptomData } from '@/types/symptom';
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
  * @param pathKey - The API path key used by SWR to fetch symptom data.
- * @param symptomId
  * @param page
  * @param limit
  * @returns An object containing the fetched symptoms, loading, error state and refetch function.
@@ -26,16 +25,18 @@ export const useGetSymptom = (
   const url = `${pathKey}?page=${page}&limit=${limit}`;
 
   // Fetch data using SWR
-  const { data: swrData, error } = useSWR<Symptom | null>(url, fetcher, {
-    fallbackData: initialData,
-    refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
-    revalidateOnFocus: false, // Disable revalidation on window focus
-  });
+  const { data: swrData, error } = useSWR<Symptom | null>(url,
+    fetcher,
+    {
+      fallbackData: initialData,
+      refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
+      revalidateOnFocus: false, // Disable revalidation on window focus
+    });
 
   // Refetch function with an optional search keyword
   const refetch = async (keyword?: string) => {
     const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
-    await mutate(refetchUrl);
+    return await mutate(refetchUrl);
   };
 
   // Return structured data
@@ -53,29 +54,27 @@ export const useGetSymptom = (
   };
 };
 
-export const useCreateSymptom = () => {
+export const useCreateSymptom = (pathKey: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [createdSymptom, setCreatedSymptom] = useState<Symptom | null>(null);
 
-  const createSymptom = async (pathKey: string, newSymptomData: Symptom) => {
+  const createSymptom = async (dataObj: object) => {
     setLoading(true);
     setError(null);
 
     try {
       // Use pathKey for the dynamic API endpoint
-      const symptom = await creator<Symptom, Symptom>(pathKey, newSymptomData);
-      setCreatedSymptom(symptom);
+      const symptom = await creator(pathKey, dataObj);
+      return symptom;
     } catch (err) {
       setError(err as Error);
     } finally {
       setLoading(false);
     }
   };
-
-  return { createdSymptom, loading, error, createSymptom };
+  return { loading, error, createSymptom };
 };
-  
+
 
 /**
  * Hook for modifying an existing symptom.
@@ -84,26 +83,24 @@ export const useCreateSymptom = () => {
  * @returns An object containing the updated symptom, loading state, error state, and the modifySymptom function.
  */
 
-export const useModifySymptom = (p0: string) => {
+export const useModifySymptom = (pathKey: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [updatedSymptom, setUpdatedSymptom] = useState<SymptomData | null>(null);
 
-  const modifySymptom = async (path: string, formData: { name: string; description: string }) => {
+  const modifySymptom = async (
+    updatedSymptomData: Partial<SymptomData>
+  ) => {
     setLoading(true);
     setError(null);
-
     try {
-      const symptom = await modifier<SymptomData, SymptomData>(path, formData);
-      setUpdatedSymptom(symptom);
-      return symptom; // Return the updated symptom in case the caller needs it
+      const symptom = await modifier<SymptomData, Partial<SymptomData>>(pathKey, updatedSymptomData);
+      return symptom;
     } catch (err) {
       setError(err as Error);
-      throw err; // Propagate the error for better error handling in the calling function
     } finally {
       setLoading(false);
     }
   };
 
-  return { updatedSymptom, loading, error, modifySymptom };
+  return { loading, error, modifySymptom };
 };

@@ -1,61 +1,41 @@
-"use client"
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Box, Button, Card, Stack, Typography } from "@mui/material";
-import { symptomDatagridColumns } from "./symptomsConfig";
-import Search from '@/components/common/Search';
-import { setSymptom } from "@/redux/features/symptomsSlice";
-import { AppDispatch, RootState } from "@/redux/store";
-import { useModifySymptom } from "@/hooks/symptoms";
-import { useGetSymptom } from "@/hooks/symptoms";
-import ServerPaginationGrid from "@/components/common/Datagrid";
+import CreateIcon from '@mui/icons-material/Create';
+
 import FormInModal from "./FormInModal";
+import Search from '@/components/common/Search';
+import ServerPaginationGrid from "@/components/common/Datagrid";
+
+import type { AppDispatch, RootState } from "@/redux/store";
+import { setSymptom } from "@/redux/features/symptomsSlice";
+import { useGetSymptom, useModifySymptom } from "@/hooks/symptoms";
+import { symptomDatagridColumns } from "./symptomsConfig";
 
 const ITEMS_PER_PAGE = 10;
+
 const Page: React.FC = () => {
-  const [openModal, setOpenModal] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedSymptomId, setSelectedSymptomId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [editData, setEditData] = useState<any>(null);
-  const [pathKey, setPathKey] = useState<string>("");
 
   const dispatch: AppDispatch = useDispatch();
   const { symptom, reduxLoading } = useSelector((state: RootState) => state.symptoms);
 
-  const { value: data, refetch } = useGetSymptom(null, "/symptoms/get-symptoms", currentPage, ITEMS_PER_PAGE);
+  const { value: data, refetch } = useGetSymptom(null, "symptoms/get-symptoms", currentPage, ITEMS_PER_PAGE);
 
-  const { modifySymptom, loading: modifyLoading } = useModifySymptom('/symptoms/update-symptoms');
-  
   useEffect(() => {
-    if (data) {
-      if (JSON.stringify(symptom) !== JSON.stringify(data)) {
-        dispatch(setSymptom(data));
-      }
+    if (data?.results) {
+      dispatch(setSymptom(data));
     }
-  }, [data?.results, dispatch, symptom]);
+  }, [data?.results?.length]);
 
-  const handleEditClick = (id: string, symptomData: any) => { 
-    setEditData(symptomData);
-    setPathKey(id); 
-    setOpenModal(true); 
-  };
-
-  const handleModalSubmit = async (formData: { name: string; description: string }) => {
-    try {
-      if (pathKey) {
-        const response = await modifySymptom(`symptoms/update-symptoms`, formData);
-        console.log("Updated Symptom Response:", response);
-      } else {
-        console.error("No pathKey provided to update the symptom.");
-        return;
-      }
-
-      await refetch(); 
-      setOpenModal(false); 
-      setEditData(null);
-      setPathKey(""); 
-    } catch (error) {
-      console.error("Error during submission:", error.response?.data || error.message);
-    }
+  const handleOpenDialog = (symptomId: string | null = null) => {
+    setSelectedSymptomId(symptomId);
+    setOpenDialog(!openDialog);
+    console.log('open dialog hua call')
   };
 
   const handlePageChange = (newPage: number) => {
@@ -72,46 +52,45 @@ const Page: React.FC = () => {
       {/* Data Table and Actions */}
       <Card>
         <Stack spacing={2} sx={{ padding: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-          <Search
-          refetchAPI={refetch}
-        />
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: 'space-between' }}>
+            <Search
+              refetchAPI={refetch}
+            />
             <Button
               variant="contained"
-              color="primary"
-              onClick={() => {
-                setEditData(null); 
-                setPathKey(""); 
-                setOpenModal(true);
+              startIcon={<CreateIcon />}
+              onClick={() => handleOpenDialog(null)}
+              sx={{
+                borderRadius: '100px',
+                background: 'linear-gradient(45deg, #2196F3 30%, #1976D2 90%)',
+                px: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}
-              sx={{ marginLeft: "auto" }}
             >
               Create Symptom
             </Button>
           </Box>
         </Stack>
-
         {/* DataGrid for Displaying Symptoms */}
         <ServerPaginationGrid
-          columns={symptomDatagridColumns(handleEditClick)}
+          columns={symptomDatagridColumns(handleOpenDialog)}
           count={symptom?.total}
           paginationMode='server'
           rows={symptom?.results}
-          loading={reduxLoading || modifyLoading}
+          loading={reduxLoading}
           page={currentPage - 1}
           pageSize={ITEMS_PER_PAGE}
-          pageSizeOptions={[5, 10, 20]}
-          onPageChange={(params) => handlePageChange(params + 1)}
+          pageSizeOptions={[10, 15, 20]}
+          onPageChange={(params: any) => handlePageChange(params + 1)}
         />
       </Card>
-
-      {/* Modal for Creating/Editing Symptom */}
       <FormInModal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        onSubmit={handleModalSubmit}
-        pathKey={pathKey}
-        initialData={editData}
+        openDialog={openDialog}
+        setOpenDialog={setOpenDialog}
+        symptomId={selectedSymptomId}
+        refetch={refetch}
       />
     </Stack>
   );

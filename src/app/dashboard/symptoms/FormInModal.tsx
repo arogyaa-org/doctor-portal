@@ -1,190 +1,265 @@
-import * as React from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Button,
   TextField,
-  Stack,
-  CircularProgress,
   Typography,
   Box,
-  Avatar,
+  useMediaQuery,
+  InputAdornment,
 } from '@mui/material';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { useTheme } from "@mui/material/styles";
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import DescriptionIcon from '@mui/icons-material/Description';
+import { Formik, Field } from "formik";
+
+import Loader from '@/components/common/Loader';
+import Toast from '@/components/common/Toast';
+import type { AppDispatch, RootState } from '@/redux/store';
 import { useCreateSymptom, useModifySymptom } from '@/hooks/symptoms';
+import { fetcher } from '@/apis/apiClient';
+import { setSymptom } from '@/redux/features/symptomsSlice';
+import { Utility } from '@/utils';
+import { SymptomData } from '@/types/symptom';
+
+interface SymptomFormValues {
+  _id?: string | number;
+  name: string;
+  description: string;
+}
+const initialValues: SymptomFormValues = {
+  name: "",
+  description: "",
+};
 
 interface FormInModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit?: (data: { id?: number; name: string; description: string }) => void;
-  pathKey: string;
-  initialData?: { id?: number; name: string; description: string };
+  openDialog: boolean;
+  setOpenDialog: (value: boolean) => void;
+  symptomId: string | null;
+  refetch: () => Promise<any>;
 }
 
 const FormInModal: React.FC<FormInModalProps> = ({
-  open,
-  onClose,
-  onSubmit,
-  pathKey,
-  initialData,
+  openDialog,
+  setOpenDialog,
+  symptomId,
+  refetch
 }) => {
-  const [formData, setFormData] = React.useState({ name: '', description: '' });
-  //const [formId, setFormId] = React.useState({ id:'' });
-  const [editingSymptomId, setEditingSymptomId] = React.useState<string>();
+  const [title, setTitle] = useState<"Create" | "Edit">("Create");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [formValues, setFormValues] = useState<SymptomFormValues>(initialValues);
 
-  const { createSymptom, loading: createLoading, error: createError } = useCreateSymptom();
-  const { modifySymptom, loading: modifyLoading, error: modifyError } = useModifySymptom(`/symptoms/update-symptoms/${pathKey}`);
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
+  const dispatch: AppDispatch = useDispatch();
+  const { toast } = useSelector((state: RootState) => state.toast);
+  const { toastAndNavigate } = Utility();
 
-  React.useEffect(() => {
-    if (initialData) {
-      setFormData({
-        name: initialData.name,
-        description: initialData.description,
-      });
-      setEditingSymptomId(pathKey);
-    }
-  }, [initialData]);
+  const { createSymptom } = useCreateSymptom("symptoms/create-symptoms");
+  const { modifySymptom } = useModifySymptom(`/symptoms/update-symptom`);
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleDialogClose = () => {
+    setOpenDialog(false);
   };
 
-  const handleSaveEditSymptom = async () => {
-    console.log(editingSymptomId,"sandhya:");
-    if (!formData.name.trim() || !formData.description.trim()) {
-      console.error('Name and description are required.');
-      return;
+  //Create/Edit/Populate Symptom
+  useEffect(() => {
+    if (symptomId) {
+      setTitle("Edit");
+      populateData(symptomId);
+    } else {
+      setFormValues(initialValues);
+      setTitle("Create");
     }
-  
-    const updatedSymptomData = { name: formData.name, description: formData.description };
-  
+  }, [symptomId, openDialog]);
+
+  const create = useCallback(async (values: SymptomFormValues) => {
+    setLoading(true);
     try {
-      let response;
-      if (editingSymptomId) {
-        // Update the existing symptom
-        console.log(`/symptoms/update-symptoms/${editingSymptomId}`);
-
-        response = await modifySymptom(`/symptoms/update-symptoms/${editingSymptomId}`, formData);
-        console.log('Updated symptom:', response); 
-      } else {
-        // Create a new symptom
-        response = await createSymptom(updatedSymptomData);
-        console.log('Created new symptom:', response); 
-      }
-  
-      if (onSubmit) {
-        onSubmit({ id: editingSymptomId, ...updatedSymptomData });
-      }
-  
-      console.log('Final submitted data:', updatedSymptomData);
-      onClose();
-      setFormData({ name: '', description: '' });
-    } catch (err) {
-      console.error('Error saving the symptom:', err);
+      await createSymptom(values);
+      toastAndNavigate(dispatch, true, "success", "Created Successfully");
+      setTimeout(async () => {
+        handleDialogClose();
+        const updatedSymptom = await refetch();
+        if (updatedSymptom) {
+          dispatch(setSymptom(updatedSymptom));
+        }
+      }, 2200);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || "Error creating symptom, please try again.";
+      toastAndNavigate(dispatch, true, "error", errorMessage);
+      setTimeout(() => {
+        handleDialogClose();
+      }, 2200);
+    } finally {
+      setLoading(false);
     }
-  };
-  
+  }, []);
 
-  const loading = createLoading || modifyLoading;
-  const error = createError || modifyError;
+  const populateData = useCallback(async (id: string | number) => {
+    setLoading(true);
+    try {
+      const response = await fetcher<SymptomData>(`symptoms/get-symptoms/${id}`);
+      console.log(response, 'response')
+      setFormValues(response);
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.msg || "An Error Occurred";
+      toastAndNavigate(dispatch, true, "error", errorMessage);
+      setTimeout(() => {
+        handleDialogClose();
+      }, 2200);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const update = useCallback(async (values: any) => {
+    setLoading(true);
+    try {
+      await modifySymptom(values);
+      setLoading(false);
+      toastAndNavigate(dispatch, true, "info", "Successfully Updated");
+      setTimeout(async () => {
+        handleDialogClose();
+        const updatedUsers = await refetch();
+        if (updatedUsers) {
+          dispatch(setSymptom(updatedUsers));
+        }
+      }, 2200);
+    } catch (err: any) {
+      setLoading(false);
+      const errorMessage = err?.response?.data?.message || "Error Occurred. Please Try Again";
+      toastAndNavigate(dispatch, true, "error", errorMessage);
+      setTimeout(() => {
+        handleDialogClose();
+      }, 2200);
+    } finally {
+      setLoading(false);
+    }
+  }, [formValues]);
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>
-        <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
-          <Avatar sx={{ bgcolor: '#4caf50' }}>
-            <AddCircleIcon />
-          </Avatar>
-          <Typography variant="h5" component="div" fontWeight="bold" color="primary">
-            {editingSymptomId ? 'Edit Symptom' : 'Create New Symptom'}
-          </Typography>
-        </Stack>
-      </DialogTitle>
-      <DialogContent>
+    <Dialog
+      fullScreen={fullScreen}
+      open={openDialog}
+      onClose={handleDialogClose}
+      aria-labelledby="responsive-dialog-title"
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          p: 2
+        }}
+      >
         <Box
           sx={{
-            py: 3,
-            px: 2,
-            borderRadius: 2,
-            background: 'linear-gradient(135deg, #e3f2fd, #e8f5e9)',
-            boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.1)',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            p: 2,
           }}
         >
-          <Stack spacing={3}>
-            <TextField
-              label="Symptom Name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              fullWidth
-              variant="outlined"
-              placeholder="Enter the symptom name"
-              InputLabelProps={{ style: { fontWeight: 600 } }}
-            />
-            <TextField
-              label="Description"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              fullWidth
-              multiline
-              rows={4}
-              variant="outlined"
-              placeholder="Provide a detailed description of the symptom"
-              InputLabelProps={{ style: { fontWeight: 600 } }}
-            />
-            {error && (
-              <Typography
-                color="error"
-                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-              >
-                <ErrorOutlineIcon fontSize="small" />
-                {error.message}
-              </Typography>
-            )}
-          </Stack>
+          <Typography
+            variant="h4"
+            gutterBottom
+          >
+            {title} Symptom
+          </Typography>
         </Box>
-      </DialogContent>
-      <DialogActions sx={{ justifyContent: 'center', py: 3 }}>
-        <Button
-          onClick={onClose}
-          color="secondary"
-          variant="outlined"
-          disabled={loading}
-          sx={{
-            borderRadius: 5,
-            px: 3,
-            py: 1,
-            fontSize: '0.875rem',
-            borderColor: '#f44336',
-            color: '#f44336',
-            '&:hover': { backgroundColor: '#ffebee', borderColor: '#f44336' },
+        <Formik
+          initialValues={formValues}
+          enableReinitialize //to reinitialize the form when it gets stored values from backend
+          // validationSchema={userValidation}
+          onSubmit={(values) => {
+            values._id ? update(values) : create(values);
           }}
         >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSaveEditSymptom}
-          color="primary"
-          variant="contained"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AddCircleIcon />}
-          sx={{
-            borderRadius: 5,
-            px: 3,
-            py: 1,
-            fontSize: '0.875rem',
-            backgroundColor: '#4caf50',
-            '&:hover': { backgroundColor: '#388e3c' },
-          }}
-        >
-          Save
-        </Button>
-      </DialogActions>
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleSubmit,
+            isSubmitting,
+            dirty,
+          }) => (
+
+            <form onSubmit={handleSubmit}>
+              <Box
+                display="grid"
+                gap="30px"
+                gridTemplateColumns="repeat(2, minmax(0, 1fr))"
+              >
+                <Field
+                  as={TextField}
+                  fullWidth
+                  label="*Name"
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LocalHospitalIcon sx={{ color: "black" }} />
+                      </InputAdornment>
+                    ),
+                    style: { color: "black", fontSize: "15px" },
+                  }}
+                  InputLabelProps={{ style: { color: "black" } }}
+                  error={touched.name && Boolean(errors.name)}
+                  helperText={touched.name && errors.name}
+                />
+                <Field
+                  as={TextField}
+                  fullWidth
+                  label="Description"
+                  name="description"
+                  value={values.description}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <DescriptionIcon sx={{ color: "black" }} />
+                      </InputAdornment>
+                    ),
+                    style: { color: "black", fontSize: "15px" },
+                  }}
+                  InputLabelProps={{ style: { color: "black" } }}
+                  error={touched.description && Boolean(errors.description)}
+                  helperText={touched.description && errors.description}
+                />
+              </Box>
+              <Box display="flex" justifyContent="center" p="20px">
+                <Button
+                  color="error"
+                  variant="contained"
+                  sx={{ mr: 3, width: '20%' }}
+                  onClick={handleDialogClose}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  sx={{ width: '20%' }}
+                  disabled={!dirty || isSubmitting}
+                  color={title === "Edit" ? "info" : "success"}
+                  variant="contained"
+                >
+                  Submit
+                </Button>
+              </Box>
+            </form>
+          )}
+        </Formik>
+        {loading ? <Loader /> : null}
+        <Toast
+          alerting={toast.toastAlert}
+          severity={toast.toastSeverity}
+          message={toast.toastMessage}
+        />
+      </Box>
     </Dialog>
   );
 };

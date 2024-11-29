@@ -1,9 +1,13 @@
 import { Box, Button, Typography } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
-import { format } from "date-fns";
 import { EditRounded } from "@mui/icons-material";
 
-export const symptomDatagridColumns = (handleEditClick: (_id: string, symptom: any) => void): GridColDef[] => {
+export const symptomDatagridColumns = (handleOpenDialog): GridColDef[] => {
+
+  const handleActionEdit = (_id: string | number) => {
+    console.log('edit cliekded', _id);
+    handleOpenDialog(_id);
+  }
 
   const columns: GridColDef[] = [
     {
@@ -26,48 +30,18 @@ export const symptomDatagridColumns = (handleEditClick: (_id: string, symptom: a
       ),
     },
     {
-      field: "createdAt",
-      headerName: "Created At",
-      headerClassName: "super-app-theme--header",
-      headerAlign: "center",
-      align: "center",
-      flex: 1,
-      renderCell: (params) => (
-        <Typography>
-          {params.row
-            ? format(new Date(params.row.createdAt), "dd-MM-yy hh:mm a")
-            : "N/A"}
-        </Typography>
-      ),
-    },
-    {
-      field: "updatedAt",
-      headerName: "Updated At",
-      headerClassName: "super-app-theme--header",
-      headerAlign: "center",
-      align: "center",
-      flex: 1,
-      renderCell: (params) => (
-        <Typography>
-          {params.row
-            ? format(new Date(params.row.updatedAt), "dd-MM-yy hh:mm a")
-            : "N/A"}
-        </Typography>
-      ),
-    },
-    {
       field: "action",
       headerName: "Action",
       headerAlign: "center",
       align: "center",
       flex: 1,
       minWidth: 100,
-      renderCell: ({ row: { _id, name, description } }) => (
-        <Box width="85%" m="0 auto" p="5px" display="flex" justifyContent="space-around">
+      renderCell: ({ row: { _id } }) => (
+        <Box width="85%" m="0 auto" p="5px" display="flex" justifyContent="center">
           <Button
             color="info"
             variant="contained"
-            onClick={() => handleEditClick(_id, { name, description })}
+            onClick={() => handleActionEdit(_id)}
             sx={{ minWidth: "50px" }}
           >
             <EditRounded />
