@@ -13,6 +13,7 @@ import { useTheme } from "@mui/material/styles";
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import DescriptionIcon from '@mui/icons-material/Description';
 import { Formik, Field } from "formik";
+import * as Yup from 'yup';
 
 import Loader from '@/components/common/Loader';
 import Toast from '@/components/common/Toast';
@@ -28,6 +29,7 @@ interface SymptomFormValues {
   name: string;
   description: string;
 }
+
 const initialValues: SymptomFormValues = {
   name: "",
   description: "",
@@ -101,7 +103,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
     setLoading(true);
     try {
       const response = await fetcher<SymptomData>(`symptoms/get-symptoms/${id}`);
-      console.log(response, 'response')
+      console.log(response, 'response');
       setFormValues(response);
     } catch (err: any) {
       const errorMessage = err?.response?.data?.msg || "An Error Occurred";
@@ -139,6 +141,15 @@ const FormInModal: React.FC<FormInModalProps> = ({
     }
   }, [formValues]);
 
+  // Validation Schema with Yup
+  const validationSchema = Yup.object({
+    name: Yup.string()
+      .min(3, "Name is too short!")
+      .max(40, "Name is too long!")
+      .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
+      .required("This field is required"),
+  });
+
   return (
     <Dialog
       fullScreen={fullScreen}
@@ -171,7 +182,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
         <Formik
           initialValues={formValues}
           enableReinitialize //to reinitialize the form when it gets stored values from backend
-          // validationSchema={userValidation}
+          validationSchema={validationSchema} // Add the validation schema
           onSubmit={(values) => {
             values._id ? update(values) : create(values);
           }}
@@ -185,7 +196,6 @@ const FormInModal: React.FC<FormInModalProps> = ({
             isSubmitting,
             dirty,
           }) => (
-
             <form onSubmit={handleSubmit}>
               <Box
                 display="grid"
