@@ -5,6 +5,7 @@ import patientReducer from './features/patientSlice';
 import doctorReducer from './features/doctorSlice';
 import specialityReducer from './features/specialitySlice'
 import symptomsReducer from './features/symptomsSlice'
+import qualifuicationReducer from './features/qualificationSlice'
 import toastReducer from "./features/toastSlice";
 
 export const store = configureStore({
@@ -14,6 +15,7 @@ export const store = configureStore({
     doctor: doctorReducer,
     speciality: specialityReducer,
     symptoms: symptomsReducer,
+    qualification: qualifuicationReducer,
     toast: toastReducer,
   },
 });
