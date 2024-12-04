@@ -13,12 +13,12 @@ import { useTheme } from "@mui/material/styles";
 import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 import DescriptionIcon from "@mui/icons-material/Description";
 import { Formik, Field } from "formik";
+import * as Yup from "yup";
 
 import Loader from "@/components/common/Loader";
 import Toast from "@/components/common/Toast";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { useCreateSpeciality, useModifySpeciality } from "@/hooks/Speciality";
-import { fetcher } from "@/apis/apiClient";
 import { setSpeciality } from "@/redux/features/specialitySlice";
 import { Utility } from "@/utils";
 import { SpecialityData } from "@/types/speciality";
@@ -28,6 +28,7 @@ interface SpecialityFormValues {
   name: string;
   description: string;
 }
+
 const initialValues: SpecialityFormValues = {
   name: "",
   description: "",
@@ -36,14 +37,14 @@ const initialValues: SpecialityFormValues = {
 interface FormInModalProps {
   openDialog: boolean;
   setOpenDialog: (value: boolean) => void;
-  SpecialityId: string | null;
+  specialityId: string | null;
   refetch: () => Promise<any>;
 }
 
 const FormInModal: React.FC<FormInModalProps> = ({
   openDialog,
   setOpenDialog,
-  SpecialityId,
+  specialityId,
   refetch,
 }) => {
   const [title, setTitle] = useState<"Create" | "Edit">("Create");
@@ -57,8 +58,12 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
 
-  const { createSpeciality } = useCreateSpeciality(`/speciality/create-speciality`);
-  const { modifySpeciality } = useModifySpeciality(`/speciality/update-speciality`);
+  const { createSpeciality } = useCreateSpeciality(
+    "specialities/create-speciality"
+  );
+  const { modifySpeciality } = useModifySpeciality(
+    `/specialities/update-speciality`
+  );
 
   const handleDialogClose = () => {
     setOpenDialog(false);
@@ -66,14 +71,14 @@ const FormInModal: React.FC<FormInModalProps> = ({
 
   //Create/Edit/Populate Speciality
   useEffect(() => {
-    if (SpecialityId) {
+    if (specialityId) {
       setTitle("Edit");
-      populateData(SpecialityId);
+      populateData(specialityId);
     } else {
       setFormValues(initialValues);
       setTitle("Create");
     }
-  }, [SpecialityId, openDialog]);
+  }, [specialityId, openDialog]);
 
   const create = useCallback(async (values: SpecialityFormValues) => {
     setLoading(true);
@@ -90,7 +95,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
-        "Error creating Speciality, please try again.";
+        "Error creating speciality, please try again.";
       toastAndNavigate(dispatch, true, "error", errorMessage);
       setTimeout(() => {
         handleDialogClose();
@@ -104,9 +109,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
     setLoading(true);
     try {
       const response = await fetcher<SpecialityData>(
-        `speciality/get-speciality/${id}`
+        `specialities/get-speciality/${id}`
       );
-      console.log(response, "response");
       setFormValues(response);
     } catch (err: any) {
       const errorMessage = err?.response?.data?.msg || "An Error Occurred";
@@ -120,7 +124,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
   }, []);
 
   const update = useCallback(
-    async (values: any) => {
+    async (values: SpecialityFormValues) => {
       setLoading(true);
       try {
         await modifySpeciality(values);
@@ -128,9 +132,9 @@ const FormInModal: React.FC<FormInModalProps> = ({
         toastAndNavigate(dispatch, true, "info", "Successfully Updated");
         setTimeout(async () => {
           handleDialogClose();
-          const updatedUsers = await refetch();
-          if (updatedUsers) {
-            dispatch(setSpeciality(updatedUsers));
+          const updatedSpeciality = await refetch();
+          if (updatedSpeciality) {
+            dispatch(setSpeciality(updatedSpeciality));
           }
         }, 2200);
       } catch (err: any) {
@@ -147,6 +151,18 @@ const FormInModal: React.FC<FormInModalProps> = ({
     },
     [formValues]
   );
+
+  // Validation Schema with Yup
+  const validationSchema = Yup.object({
+    name: Yup.string()
+      .min(3, "Name is too short!")
+      .max(40, "Name is too long!")
+      .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
+      .required("This field is required"),
+    description: Yup.string()
+      .min(10, "Description is too short!")
+      .required("This field is required"),
+  });
 
   return (
     <Dialog
@@ -177,7 +193,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
         <Formik
           initialValues={formValues}
           enableReinitialize //to reinitialize the form when it gets stored values from backend
-          // validationSchema={userValidation}
+          validationSchema={validationSchema} // Add the validation schema
           onSubmit={(values) => {
             values._id ? update(values) : create(values);
           }}

@@ -32,7 +32,7 @@ const Page: React.FC = () => {
   // Fetch data based on currentPage and pageSize
   const { value: data, refetch } = useGetSpeciality(
     null,
-    "Speciality/get-Speciality",
+    "speciality/get-speciality",
     currentPage,
     pageSize // Pass current page size here
   );
