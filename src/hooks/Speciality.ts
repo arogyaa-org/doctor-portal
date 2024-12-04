@@ -1,111 +1,105 @@
 "use client";
 
-import { useState } from 'react';
-import useSWR, { mutate } from 'swr';
+import { useState } from "react";
+import useSWR, { mutate } from "swr";
 
-import { creator, fetcher, modifier } from '@/apis/apiClient';
-import { SpecialityData, Speciality } from '@/types/speciality';
+import { creator, fetcher, modifier } from "@/apis/apiClient";
+import { Speciality, SpecialityData } from "@/types/speciality";
 
 /**
- * Hook for fetching specialities with SWR (stale-while-revalidate) strategy.
+ * Hook for fetching Specialitys with SWR (stale-while-revalidate) strategy.
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
- * @param pathKey - The API path key used by SWR to fetch speciality data.
- * @param patientId - The ID of the speciality to fetch.
- * @param page - The page number for pagination.
- * @param limit - The number of items per page.
- * @returns An object containing the fetched specialities, loading, error state and refetch function.
+ * @param pathKey - The API path key used by SWR to fetch Speciality data.
+ * @param page
+ * @param limit
+ * @returns An object containing the fetched Specialitys, loading, error state and refetch function.
  */
 export const useGetSpeciality = (
-    initialData: Speciality | null,
-    pathKey: string,
-    patientId: string,
-    page: number = 1,
-    limit: number = 5
+  initialData: Speciality | null,
+  pathKey: string,
+  page: number = 1,
+  limit: number = 5
 ) => {
-    const url = `${pathKey}/${patientId}?page=${page}&limit=${limit}`;
+  // Construct the URL dynamically with page and limit
+  const url = `${pathKey}?page=${page}&limit=${limit}`;
 
-    const { data: swrData, error } = useSWR<Speciality | null>(
-        url,
-        fetcher,
-        {
-            fallbackData: initialData,
-            refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
-            revalidateOnFocus: false,                  // Disable revalidation on window focus
-        }
-    );
+  // Fetch data using SWR
+  const { data: swrData, error } = useSWR<Speciality | null>(url, fetcher, {
+    fallbackData: initialData,
+    refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
+    revalidateOnFocus: false, // Disable revalidation on window focus
+  });
 
-    // Manually re-trigger re-fetch
-    const refetch = async (keyword?: string) => {
-        await mutate(`${url}?keyword=${keyword}`);
-    };
+  // Refetch function with optional keyword for search
+  const refetch = async (keyword?: string) => {
+    const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
+    return await mutate(refetchUrl); // Re-fetch the data
+  };
 
-    return {
-        value: swrData || {
-            results: [],
-            total: 0,
-            page: 1,
-            limit,
-            totalPages: 1,
-        },
-        swrLoading: !error && !swrData,
-        error,
-        refetch
-    };
+  return {
+    value: swrData || {
+      results: [],
+      total: 0,
+      page: 1,
+      limit,
+      totalPages: 1,
+    },
+    swrLoading: !error && !swrData,
+    error,
+    refetch,
+  };
 };
 
-/**
- * Hook for creating a new speciality.
- * 
- * @param pathKey - The API path key used to create a new speciality.
- * @returns An object containing the created speciality, loading state, error state, and the createSpeciality function.
- */
 export const useCreateSpeciality = (pathKey: string) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [createdSpeciality, setCreatedSpeciality] = useState<SpecialityData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-    const createSpeciality = async (newSpecialityData: SpecialityData) => {
-        setLoading(true);
-        setError(null);
+  const createSpeciality = async (dataObj: object) => {
+    setLoading(true);
+    setError(null);
 
-        try {
-            const speciality = await creator<SpecialityData, SpecialityData>(pathKey, newSpecialityData);
-            setCreatedSpeciality(speciality);
-        } catch (err) {
-            setError(err as Error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return { createdSpeciality, loading, error, createSpeciality };
+    try {
+      // Use pathKey for the dynamic API endpoint
+      const Speciality = await creator(pathKey, dataObj);
+      return Speciality;
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { loading, error, createSpeciality };
 };
 
 /**
- * Hook for modifying an existing speciality.
- * 
- * @param pathKey - The API path key used to modify a speciality.
- * @returns An object containing the updated speciality, loading state, error state, and the modifySpeciality function.
+ * Hook for modifying an existing Speciality.
+ *
+ * @param pathKey - The API path key used to modify a Speciality.
+ * @returns An object containing the updated Speciality, loading state, error state, and the modifySpeciality function.
  */
+
 export const useModifySpeciality = (pathKey: string) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [updatedSpeciality, setUpdatedSpeciality] = useState<SpecialityData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-    const modifySpeciality = async (updatedSpecialityData: SpecialityData) => {
-        setLoading(true);
-        setError(null);
+  const modifySpeciality = async (
+    updatedSpecialityData: Partial<SpecialityData>
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const Speciality = await modifier<
+        SpecialityData,
+        Partial<SpecialityData>
+      >(pathKey, updatedSpecialityData);
+      return Speciality;
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        try {
-            const speciality = await modifier<SpecialityData, SpecialityData>(pathKey, updatedSpecialityData);
-            setUpdatedSpeciality(speciality);
-        } catch (err) {
-            setError(err as Error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return { updatedSpeciality, loading, error, modifySpeciality };
+  return { loading, error, modifySpeciality };
 };
