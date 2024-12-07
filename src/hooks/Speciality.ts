@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from 'react';
-import useSWR, { mutate } from 'swr';
+import { useState } from "react";
+import useSWR, { mutate } from "swr";
 
-import { creator, fetcher, modifier } from '@/apis/apiClient';
-import { SpecialityData, Speciality } from '@/types/speciality';
+import { creator, fetcher, modifier } from "@/apis/apiClient";
+import { Speciality, SpecialityData } from "@/types/speciality";
 
 /**
- * Hook for fetching specialities with SWR (stale-while-revalidate) strategy.
+ * Hook for fetching Specialitys with SWR (stale-while-revalidate) strategy.
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
  * @param pathKey - The API path key used by SWR to fetch speciality data.
@@ -23,20 +23,18 @@ export const useGetSpeciality = (
 ) => {
     const url = `${pathKey}?page=${page}&limit=${limit}`;
 
-    const { data: swrData, error } = useSWR<Speciality | null>(
-        url,
-        fetcher,
-        {
-            fallbackData: initialData,
-            refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
-            revalidateOnFocus: false,                  // Disable revalidation on window focus
-        }
-    );
+  // Fetch data using SWR
+  const { data: swrData, error } = useSWR<Speciality | null>(url, fetcher, {
+    fallbackData: initialData,
+    refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
+    revalidateOnFocus: false, // Disable revalidation on window focus
+  });
 
-    // Manually re-trigger re-fetch
-    const refetch = async (keyword?: string) => {
-        await mutate(`${url}?keyword=${keyword}`);
-    };
+  // Refetch function with optional keyword for search
+  const refetch = async (keyword?: string) => {
+    const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
+    return await mutate(refetchUrl); // Re-fetch the data
+  };
 
     return {
         value: swrData || {
@@ -50,19 +48,13 @@ export const useGetSpeciality = (
     };
 };
 
-/**
- * Hook for creating a new speciality.
- * 
- * @param pathKey - The API path key used to create a new speciality.
- * @returns An object containing the created speciality, loading state, error state, and the createSpeciality function.
- */
 export const useCreateSpeciality = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const createSpeciality = async (newSpecialityData: SpecialityData) => {
-        setLoading(true);
-        setError(null);
+  const createSpeciality = async (dataObj: object) => {
+    setLoading(true);
+    setError(null);
 
         try {
             const speciality = await creator<SpecialityData, SpecialityData>(pathKey, newSpecialityData);
@@ -78,11 +70,12 @@ export const useCreateSpeciality = (pathKey: string) => {
 };
 
 /**
- * Hook for modifying an existing speciality.
- * 
- * @param pathKey - The API path key used to modify a speciality.
- * @returns An object containing the updated speciality, loading state, error state, and the modifySpeciality function.
+ * Hook for modifying an existing Speciality.
+ *
+ * @param pathKey - The API path key used to modify a Speciality.
+ * @returns An object containing the updated Speciality, loading state, error state, and the modifySpeciality function.
  */
+
 export const useModifySpeciality = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);

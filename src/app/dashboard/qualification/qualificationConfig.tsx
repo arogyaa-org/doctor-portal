@@ -1,17 +1,17 @@
+import { EditRounded } from "@mui/icons-material";
 import { Box, Button, Typography } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
-import { EditRounded } from "@mui/icons-material";
 
-export const SpecialityDatagridColumns = (handleOpenDialog): GridColDef[] => {
+export const qualificationDatagridColumns = (handleOpenDialog): GridColDef[] => {
+  
   const handleActionEdit = (_id: string | number) => {
-    console.log("edit clicked", _id);
     handleOpenDialog(_id);
   };
 
   const columns: GridColDef[] = [
     {
       field: "name",
-      headerName: "Speciality Name",
+      headerName: "Qualification Name",
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",
@@ -36,13 +36,7 @@ export const SpecialityDatagridColumns = (handleOpenDialog): GridColDef[] => {
       flex: 1,
       minWidth: 100,
       renderCell: ({ row: { _id } }) => (
-        <Box
-          width="85%"
-          m="0 auto"
-          p="5px"
-          display="flex"
-          justifyContent="center"
-        >
+        <Box width="85%" m="0 auto" p="5px" display="flex" justifyContent="center">
           <Button
             color="info"
             variant="contained"
@@ -55,5 +49,6 @@ export const SpecialityDatagridColumns = (handleOpenDialog): GridColDef[] => {
       ),
     },
   ];
-  return columns;
+
+  return columns; 
 };

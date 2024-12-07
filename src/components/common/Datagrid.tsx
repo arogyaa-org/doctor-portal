@@ -27,7 +27,7 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
     loading,
     pageSizeOptions,
 }) => {
-    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ page: 0, pageSize: 10 });
+    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ page: 1, pageSize: 10 });
     const [rowCountState, setRowCountState] = useState<number>(count);
 
     const handlePaginationModelChange = (params: GridPaginationModel) => {
