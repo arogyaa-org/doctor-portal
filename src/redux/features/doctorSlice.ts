@@ -1,9 +1,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { Doctor, DoctorData } from '@/types/doctor';
+import type { Doctor } from '@/types/doctor';
 
 interface DoctorInitialState {
-    doctor: DoctorData | null; 
+    doctor: Doctor | null; 
     reduxLoading: boolean;
 }
 

@@ -43,9 +43,7 @@ export const useGetAppointment = (
         value: swrData || {
             results: [],
             total: 0,
-            page: 1,
-            limit,
-            totalPages: 1,
+            pages: 0,
         },
         swrLoading: !error && !swrData,
         error,
@@ -62,7 +60,6 @@ export const useGetAppointment = (
 export const useCreateAppointment = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [createdAppointment, setCreatedAppointment] = useState<AppointmentData | null>(null);
 
     const createAppointment = async (newAppointmentData: AppointmentData) => {
         setLoading(true);
@@ -70,7 +67,7 @@ export const useCreateAppointment = (pathKey: string) => {
 
         try {
             const appointment = await creator<AppointmentData, AppointmentData>(pathKey, newAppointmentData);
-            setCreatedAppointment(appointment);
+            return appointment;
         } catch (err) {
             setError(err as Error);
         } finally {
@@ -78,7 +75,7 @@ export const useCreateAppointment = (pathKey: string) => {
         }
     };
 
-    return { createdAppointment, loading, error, createAppointment };
+    return { loading, error, createAppointment };
 };
 
 /**
@@ -90,15 +87,14 @@ export const useCreateAppointment = (pathKey: string) => {
 export const useModifyAppointment = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [updatedAppointment, setUpdatedAppointment] = useState<AppointmentData | null>(null);
 
-    const modifyAppointment = async (updatedAppointmentData: AppointmentData) => {
+    const modifyAppointment = async (updatedAppointmentData: Partial<AppointmentData>) => {
         setLoading(true);
         setError(null);
 
         try {
-            const appointment = await modifier<AppointmentData, AppointmentData>(pathKey, updatedAppointmentData);
-            setUpdatedAppointment(appointment);
+            const appointment = await modifier<AppointmentData, Partial<AppointmentData>>(pathKey, updatedAppointmentData);
+            return appointment;
         } catch (err) {
             setError(err as Error);
         } finally {
@@ -106,5 +102,5 @@ export const useModifyAppointment = (pathKey: string) => {
         }
     };
 
-    return { updatedAppointment, loading, error, modifyAppointment };
+    return { loading, error, modifyAppointment };
 };

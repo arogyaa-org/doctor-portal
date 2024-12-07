@@ -14,11 +14,8 @@ export interface DoctorData {
     __v: number;
 }
 
-export interface DoctorData {
-    patientId: number;
+export interface Doctor {
     results: DoctorData[];
     total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    pages: number;
 }

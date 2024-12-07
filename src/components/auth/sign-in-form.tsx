@@ -1,15 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
+import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { CircularProgress } from '@mui/material';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
-import Link from '@mui/material/Link';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -18,67 +18,90 @@ import { EyeSlash as EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlas
 import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
 
-import { paths } from '@/paths';
-import { authClient } from '@/lib/auth/client';
-import { useUser } from '@/hooks/use-user';
+import Toast from '@/components/common/Toast';
+import { AppDispatch, RootState } from '@/redux/store';
+import { useCreateDoctor } from '@/hooks/doctor';
+import { Utility } from "@/utils";
+
+interface DoctorResponse {
+  statusCode: number;
+  message: string;
+  token?: string | null;
+}
 
 const schema = zod.object({
   email: zod.string().min(1, { message: 'Email is required' }).email(),
-  password: zod.string().min(1, { message: 'Password is required' }),
+  password: zod.string().min(8, { message: 'Minimum Length should be 8' }),
 });
 
 type Values = zod.infer<typeof schema>;
 
-const defaultValues = { email: 'sofia@devias.io', password: 'Secret1' } satisfies Values;
+const defaultValues = { email: 'john.doe@example.com', password: 'John@123' } satisfies Values;
 
 export function SignInForm(): React.JSX.Element {
-  const router = useRouter();
-
-  const { checkSession } = useUser();
-
   const [showPassword, setShowPassword] = React.useState<boolean>();
-
-  const [isPending, setIsPending] = React.useState<boolean>(false);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const router = useRouter();
+  const dispatch: AppDispatch = useDispatch();
+  const { toast } = useSelector((state: RootState) => state.toast);
+  const { decodedToken, toastAndNavigate } = Utility();
 
   const {
     control,
     handleSubmit,
     setError,
-    formState: { errors },
-  } = useForm<Values>({ defaultValues, resolver: zodResolver(schema) });
+    formState: { errors, isValid, isDirty },
+  } = useForm<Values>({
+    defaultValues,
+    resolver: zodResolver(schema),
+    mode: 'onChange',  // Trigger validation on change to enable/disable submit button
+  });
 
+  const { createDoctor } = useCreateDoctor("/login");
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
-      setIsPending(true);
+      setLoading(true);
+      try {
+        const response: DoctorResponse | undefined = await createDoctor({
+          email: values.email,
+          password: values.password,
+        });
+        console.log(response, 'this is response from login');
+        if (response?.statusCode === 200) {
+          // Save the token in a cookie manually
+          document.cookie = `token=${response.token}; path=/; max-age=${1 * 24 * 60 * 60}; secure; samesite=strict`;
 
-      const { error } = await authClient.signInWithPassword(values);
-
-      if (error) {
-        setError('root', { type: 'server', message: error });
-        setIsPending(false);
-        return;
+          // Decode the token and get the role
+          const role = decodedToken(response.token)?.role;
+          if (role === 'admin') {
+            router.push('/dashboard');
+          } else if (role === 'doctor') {
+            router.push('/dashboard/account');
+          }
+        } else if (response?.statusCode === 409) {
+          toastAndNavigate(dispatch, true, "error", 'Doctor not found');
+        } else if (response?.statusCode === 400) {
+          toastAndNavigate(dispatch, true, "error", 'Invalid Password');
+        }
+      } catch (error) {
+        console.error('Login failed', error);
+        toastAndNavigate(dispatch, true, "error", "An error occurred. Please Try Again");
+        setTimeout(() => {
+          setLoading(false);
+        }, 2200);
+      } finally {
+        setTimeout(() => {
+          setLoading(false);
+        }, 12000);
       }
-
-      // Refresh the auth state
-      await checkSession?.();
-
-      // UserProvider, for this case, will not refresh the router
-      // After refresh, GuestGuard will handle the redirect
-      router.refresh();
     },
-    [checkSession, router, setError]
+    [decodedToken]
   );
 
   return (
     <Stack spacing={4}>
       <Stack spacing={1}>
         <Typography variant="h4">Sign in</Typography>
-        <Typography color="text.secondary" variant="body2">
-          Don&apos;t have an account?{' '}
-          <Link component={RouterLink} href={paths.auth.signUp} underline="hover" variant="subtitle2">
-            Sign up
-          </Link>
-        </Typography>
       </Stack>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={2}>
@@ -127,27 +150,32 @@ export function SignInForm(): React.JSX.Element {
               </FormControl>
             )}
           />
-          <div>
+          {/* <div>
             <Link component={RouterLink} href={paths.auth.resetPassword} variant="subtitle2">
               Forgot password?
             </Link>
-          </div>
+          </div> */}
           {errors.root ? <Alert color="error">{errors.root.message}</Alert> : null}
-          <Button disabled={isPending} type="submit" variant="contained">
-            Sign in
+          <Button disabled={loading} type="submit" variant="contained">
+            {loading ? <CircularProgress size={22} /> : 'Sign in'}
           </Button>
         </Stack>
       </form>
       <Alert color="warning">
         Use{' '}
         <Typography component="span" sx={{ fontWeight: 700 }} variant="inherit">
-          sofia@devias.io
+          john.doe@example.com
         </Typography>{' '}
         with password{' '}
         <Typography component="span" sx={{ fontWeight: 700 }} variant="inherit">
-          Secret1
+          John@123
         </Typography>
       </Alert>
+      <Toast
+        alerting={toast.toastAlert}
+        severity={toast.toastSeverity}
+        message={toast.toastMessage}
+      />
     </Stack>
   );
 }

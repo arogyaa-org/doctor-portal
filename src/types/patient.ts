@@ -13,10 +13,7 @@ export interface PatientData {
 }
 
 export interface Patient {
-    patientId: number;
     results: PatientData[];
     total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    pages: number;
 }

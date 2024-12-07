@@ -12,7 +12,5 @@ export interface AppointmentData {
 export interface Appointment {
     results: AppointmentData[];
     total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    pages: number;
 }

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 
 import { creator, fetcher, modifier } from '@/apis/apiClient';
-import { DoctorData } from '@/types/doctor';
+import { Doctor, DoctorData } from '@/types/doctor';
 
 /**
  * Hook for fetching doctors with SWR (stale-while-revalidate) strategy.
@@ -16,14 +16,14 @@ import { DoctorData } from '@/types/doctor';
  * @returns An object containing the fetched doctors, loading, error state, and refetch function.
  */
 export const useGetDoctor = (
-    initialData: DoctorData[] | null,
+    initialData: Doctor | null,
     pathKey: string,
     page: number = 1,
     limit: number = 5
 ) => {
     const url = `${pathKey}?page=${page}&limit=${limit}`;
 
-    const { data: swrData, error } = useSWR<DoctorData[] | null>(
+    const { data: swrData, error } = useSWR<Doctor | null>(
         url,
         fetcher,
         {
@@ -55,15 +55,14 @@ export const useGetDoctor = (
 export const useCreateDoctor = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [createdDoctor, setCreatedDoctor] = useState<DoctorData | null>(null);
 
-    const createDoctor = async (newDoctorData: DoctorData) => {
+    const createDoctor = async (newDoctorData: Partial<DoctorData>) => {
         setLoading(true);
         setError(null);
 
         try {
-            const doctor = await creator<DoctorData, DoctorData>(pathKey, newDoctorData);
-            setCreatedDoctor(doctor);
+            const doctor = await creator<DoctorData, Partial<DoctorData>>(pathKey, newDoctorData);
+            return doctor;
         } catch (err) {
             setError(err as Error);
         } finally {
@@ -71,7 +70,7 @@ export const useCreateDoctor = (pathKey: string) => {
         }
     };
 
-    return { createdDoctor, loading, error, createDoctor };
+    return { loading, error, createDoctor };
 };
 
 /**
@@ -83,15 +82,14 @@ export const useCreateDoctor = (pathKey: string) => {
 export const useModifyDoctor = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [updatedDoctor, setUpdatedDoctor] = useState<DoctorData | null>(null);
 
-    const modifyDoctor = async (updatedDoctorData: DoctorData) => {
+    const modifyDoctor = async (updatedDoctorData: Partial<DoctorData>) => {
         setLoading(true);
         setError(null);
 
         try {
-            const doctor = await modifier<DoctorData, DoctorData>(pathKey, updatedDoctorData);
-            setUpdatedDoctor(doctor);
+            const doctor = await modifier<DoctorData, Partial<DoctorData>>(pathKey, updatedDoctorData);
+            return doctor;
         } catch (err) {
             setError(err as Error);
         } finally {
@@ -99,5 +97,5 @@ export const useModifyDoctor = (pathKey: string) => {
         }
     };
 
-    return { updatedDoctor, loading, error, modifyDoctor };
+    return { loading, error, modifyDoctor };
 };

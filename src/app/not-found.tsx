@@ -28,7 +28,7 @@ export default function NotFound(): React.JSX.Element {
           404: The page you are looking for isn&apos;t here
         </Typography>
         <Typography color="text.secondary" variant="body1" sx={{ textAlign: 'center' }}>
-          You either tried some shady route or you came here by mistake. Whichever it is, try using the navigation
+          You either tried some shady route or you came here by mistake.
         </Typography>
         <Button
           component={RouterLink}

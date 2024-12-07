@@ -44,9 +44,7 @@ export const useGetPatient = (
         value: swrData || {
             results: [],
             total: 0,
-            page: 1,
-            limit,
-            totalPages: 1,
+            pages: 0,
         },
         swrLoading: !error && !swrData,
         error,
@@ -63,7 +61,6 @@ export const useGetPatient = (
 export const useCreatePatient = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [createdPatient, setCreatedPatient] = useState<PatientData | null>(null);
 
     const createPatient = async (newPatientData: PatientData) => {
         setLoading(true);
@@ -71,7 +68,7 @@ export const useCreatePatient = (pathKey: string) => {
 
         try {
             const patient = await creator<PatientData, PatientData>(pathKey, newPatientData);
-            setCreatedPatient(patient);
+            return patient;
         } catch (err) {
             setError(err as Error);
         } finally {
@@ -79,7 +76,7 @@ export const useCreatePatient = (pathKey: string) => {
         }
     };
 
-    return { createdPatient, loading, error, createPatient };
+    return { loading, error, createPatient };
 };
 
 /**
@@ -91,15 +88,14 @@ export const useCreatePatient = (pathKey: string) => {
 export const useModifyPatient = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [updatedPatient, setUpdatedPatient] = useState<PatientData | null>(null);
 
-    const modifyPatient = async (updatedPatientData: PatientData) => {
+    const modifyPatient = async (updatedPatientData: Partial<PatientData>) => {
         setLoading(true);
         setError(null);
 
         try {
-            const patient = await modifier<PatientData, PatientData>(pathKey, updatedPatientData);
-            setUpdatedPatient(patient);
+            const patient = await modifier<PatientData, Partial<PatientData>>(pathKey, updatedPatientData);
+            return patient;
         } catch (err) {
             setError(err as Error);
         } finally {
@@ -107,5 +103,5 @@ export const useModifyPatient = (pathKey: string) => {
         }
     };
 
-    return { updatedPatient, loading, error, modifyPatient };
+    return { loading, error, modifyPatient };
 };

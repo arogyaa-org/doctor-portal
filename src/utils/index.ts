@@ -1,10 +1,19 @@
 import { AlertColor } from "@mui/material/Alert";
-// import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 import { User } from "@/types/user";
 import { setToast } from "@/redux/features/toastSlice";
 
 export const Utility = () => {
+  /**
+ * Function to capitalize 1st letter of a string
+ * @param str - The string whose 1st letter is to be capitalized
+ * @returns 
+ */
+  const capitalizeFirstLetter = (str: string) => {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
   /**
    * Fetches data from a given API endpoint.
    * @param {string} url - The base URL of the API endpoint.
@@ -21,7 +30,6 @@ export const Utility = () => {
     const response = await fetch(`${url}?_page=${page}&_limit=${size}`, {
       cache: "no-store",
     });
-
     if (!response.ok) {
       throw new Error(`Failed to fetch data: ${response.statusText}`);
     }
@@ -98,7 +106,6 @@ export const Utility = () => {
    * @param {string} severity - The severity level of the toast alert (e.g., 'success', 'info', 'warning', 'error').
    * @param {string} msg - The message to be displayed in the toast alert.
    * @param {function|null} navigateTo - The navigation function to be called after the delay.
-   * @param {string|null} [path] - The optional path to navigate to after hiding the toast alert.
    * @returns {void} This function does not return any value.
    */
 
@@ -108,9 +115,9 @@ export const Utility = () => {
     severity: AlertColor,
     msg: string,
     navigateTo: Function | null = null,
-    path: string | null = null,
     reload = false
   ): void => {
+    // Show the toast
     dispatch(
       setToast({
         toastAlert: display,
@@ -118,6 +125,7 @@ export const Utility = () => {
         toastMessage: msg,
       })
     );
+    // After 2500ms, hide the toast and optionally navigate or reload
     setTimeout(() => {
       dispatch(
         setToast({
@@ -126,8 +134,8 @@ export const Utility = () => {
           toastMessage: "",
         })
       );
-      if (path && navigateTo) {
-        navigateTo(path);
+      if (navigateTo) {
+        navigateTo();
       }
       if (reload) {
         location.reload();
@@ -173,29 +181,37 @@ export const Utility = () => {
    * @returns {any | null} - Decoded token payload, or null if token not found or invalid.
    */
   const decodedToken = (token = null): any | null => {
+    // Prioritize server-side provided token
     if (typeof document === "undefined") {
-      return {};
+      if (token) {
+        try {
+          return jwtDecode(token);
+        } catch (error) {
+          console.log("Error decoding token (server-side):", error);
+          return null;
+        }
+      }
+      return {}; // No token provided server-side
     }
+    // Client-side handling
     if (!token) {
       const cookies = getCookies();
       token = cookies?.token;
     }
-
     if (token) {
       try {
-        const decodedToken = jwtDecode(token);
-        return decodedToken;
+        return jwtDecode(token);
       } catch (error) {
-        console.log("Error decoding token:", error);
+        console.log("Error decoding token (client-side):", error);
         return null;
       }
-    } else {
-      console.log("No token found in cookies");
-      return null;
     }
+    console.log("No token found in cookies");
+    return null;
   };
 
   return {
+    capitalizeFirstLetter,
     decodedToken,
     fetchData,
     getSessionStorage,

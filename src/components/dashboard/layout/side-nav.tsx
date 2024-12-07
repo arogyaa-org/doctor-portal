@@ -10,7 +10,7 @@ import Typography from '@mui/material/Typography';
 
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
-import { isNavItemActive } from '@/lib/is-nav-item-active';
+import { isNavItemActive } from '@/utils/is-nav-item-active';
 import { Logo } from '@/components/core/logo';
 
 import { navItems } from './config';
