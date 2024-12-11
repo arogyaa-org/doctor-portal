@@ -24,7 +24,7 @@ const Page: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const { symptom, reduxLoading } = useSelector((state: RootState) => state.symptoms);
 
-  const { value: data, refetch } = useGetSymptom(null, "symptoms/get-symptoms", currentPage, ITEMS_PER_PAGE);
+  const { value: data, refetch } = useGetSymptom(null, "/get-symptoms", currentPage, ITEMS_PER_PAGE);
 
   useEffect(() => {
     if (data?.results) {
@@ -35,7 +35,6 @@ const Page: React.FC = () => {
   const handleOpenDialog = (symptomId: string | null = null) => {
     setSelectedSymptomId(symptomId);
     setOpenDialog(!openDialog);
-    console.log('open dialog hua call')
   };
 
   const handlePageChange = (newPage: number) => {

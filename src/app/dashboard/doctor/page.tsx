@@ -1,64 +1,81 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Card, Stack } from '@mui/material';
-import Typography from '@mui/material/Typography';
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Box, Button, Card, Stack, Typography } from "@mui/material";
+import CreateIcon from "@mui/icons-material/Create";
+import { useRouter } from "next/navigation"; 
 
-import Search from '@/components/common/Search';
-import ServerPaginationGrid from '@/components/common/Datagrid';
-import type { AppDispatch, RootState } from '@/redux/store';
-import type { DoctorData } from '@/types/doctor';
-import { doctorDatagridColumns as datagridColumns } from './doctorConfig';
-import { useGetDoctor } from '@/hooks/doctor';
-import { setDoctor, setLoading } from '@/redux/features/doctorSlice';
+import Search from "@/components/common/Search";
+import ServerPaginationGrid from "@/components/common/Datagrid";
+
+import type { AppDispatch, RootState } from "@/redux/store";
+import { setDoctor } from "@/redux/features/doctorSlice";
+import { useGetDoctor } from "@/hooks/doctor";
+import { doctorDatagridColumns } from "./doctorConfig";
+
+const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const dispatch: AppDispatch = useDispatch();
+  const router = useRouter();
   const { doctor, reduxLoading } = useSelector((state: RootState) => state.doctor);
 
   const { value: data, refetch } = useGetDoctor(
-    {} as DoctorData,
-    '/doctor/get',
-    '672c637fff727fed2ffb3693',
+    null,
+    "get-doctors",
     currentPage,
-    limit,
+    ITEMS_PER_PAGE
   );
 
-  const handleDispatch = React.useCallback(() => {
-    dispatch(setLoading(true));
-    if (data) {
+  useEffect(() => {
+    if (data?.results) {
       dispatch(setDoctor(data));
-      dispatch(setLoading(false));
-    } else {
-      dispatch(setLoading(false));
     }
   }, [data?.results?.length, dispatch]);
 
-  React.useEffect(() => {
-    handleDispatch();
-  }, [handleDispatch]);
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+  const handleActionEdit = (doctorId: string) => {
+    router.push(`/dashboard/doctor/create?doctorId=${doctorId}`); // This will trigger the form to populate
+  };
+  
 
-  console.log("doctor data:", doctor);
-  console.log("total items:", data);
+  const handleCreateDoctor = () => {
+    router.push("/dashboard/doctor/create");
+  };
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
-        <Typography variant="h4">Doctor</Typography>
+      <Stack spacing={1} sx={{ flex: "1 1 auto" }}>
+        <Typography variant="h4">Doctors</Typography>
       </Stack>
+
       <Card>
-        <Search
-          refetchAPI={refetch}
-        />
+        <Stack spacing={2} sx={{ padding: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Search refetchAPI={refetch} />
+            <Button
+              variant="contained"
+              startIcon={<CreateIcon />}
+              onClick={handleCreateDoctor} 
+            >
+              Create Doctor
+            </Button>
+          </Box>
+        </Stack>
+
         <ServerPaginationGrid
-          columns={datagridColumns()}
-          count={doctor?.totalPages}
+          columns={doctorDatagridColumns(handleActionEdit)} 
+          count={doctor?.count || 0}
           rows={doctor?.results || []}
           loading={reduxLoading}
-          pageSizeOptions={[5, 10, 20]}
+          page={currentPage - 1}
+          pageSize={ITEMS_PER_PAGE}
+          pageSizeOptions={[10, 15, 20]}
+          onPageChange={(params: any) => handlePageChange(params + 1)}
         />
       </Card>
     </Stack>

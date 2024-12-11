@@ -58,8 +58,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
 
-  const { createSymptom } = useCreateSymptom("symptoms/create-symptoms");
-  const { modifySymptom } = useModifySymptom(`/symptoms/update-symptom`);
+  const { createSymptom } = useCreateSymptom("create-symptoms");
+  const { modifySymptom } = useModifySymptom(`update-symptom`);
 
   const handleDialogClose = () => {
     setOpenDialog(false);
@@ -102,7 +102,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const populateData = useCallback(async (id: string | number) => {
     setLoading(true);
     try {
-      const response = await fetcher<SymptomData>(`symptoms/get-symptoms/${id}`);
+      const response = await fetcher<SymptomData>(`get-symptom-by-id/${id}`);
       console.log(response, 'response');
       setFormValues(response);
     } catch (err: any) {
