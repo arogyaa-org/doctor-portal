@@ -1,11 +1,13 @@
     export interface DoctorData {
-        data: any;
-        experience: string;
-        gender: string;
         _id: string;
         username: string;
         email: string;
         password: string;
+        contact: number;
+        gender: string;
+        dob: number;
+        languagespoken: string;
+        address: string
         specializationIds: string[];
         qualificationIds: string[];
         experienceYears: number;

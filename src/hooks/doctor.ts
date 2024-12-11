@@ -48,26 +48,6 @@ export const useGetDoctor = (
 
 
 /**
- * Hook for fetching a specific doctor by ID.
- *
- * @param doctorId - The ID of the doctor to fetch.
- * @param pathKey - The API path key used to fetch doctor details.
- * @returns An object containing the doctor data, loading state, error state.
- */
-export const useGetDoctorById = (doctorId: string | null, pathKey: string) => {
-  const { data, error } = useSWR<DoctorData | null>(doctorId ? `${pathKey}/${doctorId}` : null, fetcher, {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-  });
-
-  return {
-    doctorData: data,
-    loading: !data && !error,
-    error,
-  };
-};
-
-/**
  * Hook for creating a new doctor.
  * 
  * @param pathKey - The API path key used to create a new doctor.

@@ -38,6 +38,7 @@ const DoctorForm = ({
     email: "",
     password: "",
     gender: "",
+    dob:"",
     experience: "",
     bio: "",
     languagesSpoken: "",
@@ -112,35 +113,19 @@ const DoctorForm = ({
     [dispatch, modifyDoctor, refetch, router]
   );
 
+
+  
+  
   const populateData = useCallback(async (id: string | number) => {
     setLoading(true);
     try {
       const response = await fetcher<DoctorData>(`get-doctor-by-id/${id}`);
-      const doctor = response.data; // Assuming response.data contains the doctor object
-  
-      console.log(doctor, 'Doctor data fetched'); // Log the doctor data for inspection
-  
-      setFormData({
-        username: doctor.username || "",
-        email: doctor.email || "",
-        password: "", // Do not populate password
-        gender: doctor.gender || "",
-        experience: doctor.experience || "", // Make sure experience is a string
-        bio: doctor.bio || "",
-        languagesSpoken: doctor.languagesSpoken?.join(", ") || "",
-        hospitalAffiliations: doctor.hospitalAffiliations?.join(", ") || "",
-        specializationIds: doctor.specializationIds?.join(", ") || "",
-        qualificationIds: doctor.qualificationIds?.join(", ") || "",
-        availability: doctor.availability?.join(", ") || "",
-        role: doctor.role.toString() || "", // Convert role to string if it's a number
-        status: doctor.status || "active", // Default to "active" if not provided
-      });
+      console.log("Fetched Data:", response);
+      const mappedData = { /* mapping logic as above */ };
+      setFormData(response);
+      console.log("Mapped Data:", response);
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.msg || "An Error Occurred";
-      toastAndNavigate(dispatch, true, "error", errorMessage);
-      setTimeout(() => {
-        handleDialogClose();
-      }, 2200);
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
@@ -274,6 +259,16 @@ const DoctorForm = ({
               name="gender"
               fullWidth
               value={formData.gender}
+              onChange={handleInputChange}
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Date Of Birth"
+              name="dob"
+              fullWidth
+              value={formData.dob}
               onChange={handleInputChange}
               required
             />
