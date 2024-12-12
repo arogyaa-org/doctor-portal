@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
+
 import { creator, fetcher, modifier } from '@/apis/apiClient';
 import { Doctor, DoctorData } from '@/types/doctor';
 
@@ -20,32 +21,34 @@ export const useGetDoctor = (
     page: number = 1,
     limit: number = 5
 ) => {
-  const url = `${pathKey}?page=${page}&limit=${limit}`;
-
+    const url = `${pathKey}?page=${page}&limit=${limit}`;
     const { data: swrData, error } = useSWR<Doctor | null>(
         url,
         fetcher,
         {
             fallbackData: initialData,
-            refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
-            revalidateOnFocus: false,                  // Disable revalidation on window focus
+            refreshInterval: initialData ? 3600000 : 0,
+            revalidateOnFocus: false,
         }
     );
 
-  // Refetch function
-  const refetch = async (keyword?: string) => {
-    const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
-    return await mutate(refetchUrl);
-  };
+    const refetch = async (keyword?: string) => {
+        const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
+        return await mutate(refetchUrl);
+    };
 
-  return {
-    value: swrData || [],
-    swrLoading: !error && !swrData,
-    error,
-    refetch,
-  };
+    return {
+        value: swrData || {
+            results: [], // Default structure for an empty result
+            count: 0,
+            pages: 0,
+            errorMessage: null
+        },
+        swrLoading: !error && !swrData,
+        error,
+        refetch,
+    };
 };
-
 
 /**
  * Hook for creating a new doctor.
@@ -53,7 +56,6 @@ export const useGetDoctor = (
  * @param pathKey - The API path key used to create a new doctor.
  * @returns An object containing the created doctor, loading state, error state, and the createDoctor function.
  */
-
 export const useCreateDoctor = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
@@ -61,7 +63,6 @@ export const useCreateDoctor = (pathKey: string) => {
     const createDoctor = async (newDoctorData: Partial<DoctorData>) => {
         setLoading(true);
         setError(null);
-
         try {
             const doctor = await creator<DoctorData, Partial<DoctorData>>(pathKey, newDoctorData);
             return doctor;
@@ -71,12 +72,8 @@ export const useCreateDoctor = (pathKey: string) => {
             setLoading(false);
         }
     };
-
     return { loading, error, createDoctor };
 };
-
-
-
 
 /**
  * Hook for modifying an existing doctor.
@@ -91,7 +88,6 @@ export const useModifyDoctor = (pathKey: string) => {
     const modifyDoctor = async (updatedDoctorData: Partial<DoctorData>) => {
         setLoading(true);
         setError(null);
-
         try {
             const doctor = await modifier<DoctorData, Partial<DoctorData>>(pathKey, updatedDoctorData);
             return doctor;
@@ -101,6 +97,5 @@ export const useModifyDoctor = (pathKey: string) => {
             setLoading(false);
         }
     };
-
     return { loading, error, modifyDoctor };
 };

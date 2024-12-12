@@ -11,6 +11,7 @@ export interface AppointmentData {
 
 export interface Appointment {
     results: AppointmentData[];
-    total: number;
+    count: number;
     pages: number;
+    errorMessage?: string | null;
 }

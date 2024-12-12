@@ -9,6 +9,7 @@ export interface SpecialityData {
 
 export interface Speciality {
     results: SpecialityData[];
-    total: number;
+    count: number;
     pages: number;
+    errorMessage?: string | null;
 }

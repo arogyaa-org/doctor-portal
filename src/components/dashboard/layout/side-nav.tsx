@@ -91,7 +91,7 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title }: N
         {...(href
           ? {
             component: external ? 'a' : RouterLink,
-            href,
+            href: paths.dashboard[href as keyof typeof paths.dashboard] || href,
             target: external ? '_blank' : undefined,
             rel: external ? 'noreferrer' : undefined,
           }
@@ -134,6 +134,6 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title }: N
           </Typography>
         </Box>
       </Box>
-    </li>
+    </li >
   );
 }

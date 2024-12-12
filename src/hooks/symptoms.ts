@@ -21,11 +21,9 @@ export const useGetSymptom = (
   page: number = 1,
   limit: number = 5
 ) => {
-  // Construct the URL without requiring a symptomId
   const url = `${pathKey}?page=${page}&limit=${limit}`;
-
-  // Fetch data using SWR
-  const { data: swrData, error } = useSWR<Symptom | null>(url,
+  const { data: swrData, error } = useSWR<Symptom | null>(
+    url,
     fetcher,
     {
       fallbackData: initialData,
@@ -33,18 +31,17 @@ export const useGetSymptom = (
       revalidateOnFocus: false, // Disable revalidation on window focus
     });
 
-  // Refetch function with an optional search keyword
   const refetch = async (keyword?: string) => {
     const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
     return await mutate(refetchUrl);
   };
 
-  // Return structured data
   return {
     value: swrData || {
       results: [], // Default structure for an empty result
-      total: 0,
+      count: 0,
       pages: 0,
+      errorMessage: null
     },
     swrLoading: !error && !swrData,
     error,
@@ -59,9 +56,7 @@ export const useCreateSymptom = (pathKey: string) => {
   const createSymptom = async (dataObj: object) => {
     setLoading(true);
     setError(null);
-
     try {
-      // Use pathKey for the dynamic API endpoint
       const symptom = await creator(pathKey, dataObj);
       return symptom;
     } catch (err) {
@@ -99,6 +94,5 @@ export const useModifySymptom = (pathKey: string) => {
       setLoading(false);
     }
   };
-
   return { loading, error, modifySymptom };
 };

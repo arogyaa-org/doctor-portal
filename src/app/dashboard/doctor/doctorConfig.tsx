@@ -1,11 +1,15 @@
+import { useRouter } from "next/navigation";
 import { Typography, Button, Box } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
 import { EditRounded } from "@mui/icons-material";
 
-export const doctorDatagridColumns = (handleOpenDialog: { (doctorId?: string | null): void; (arg0: string | number): void; }): GridColDef[] => {
-  const handleActionEdit = (_id: string | number) => {
-    console.log("Edit clicked", _id);
-    handleOpenDialog(_id);
+import { paths } from "@/paths";
+
+export const doctorDatagridColumns = (): GridColDef[] => {
+  const router = useRouter();
+
+  const handleActionEdit = (doctorId: string | number) => {
+    router.push(paths.dashboard.doctorUpdate(doctorId));
   };
 
   return [
@@ -24,19 +28,6 @@ export const doctorDatagridColumns = (handleOpenDialog: { (doctorId?: string | n
       headerAlign: "center",
       align: "center",
       flex: 1.5,
-    },
-    {
-      field: "specializationIds",
-      headerName: "Specializations",
-      headerClassName: "super-app-theme--header",
-      headerAlign: "center",
-      align: "center",
-      flex: 1.5,
-      renderCell: (params) => (
-        <Typography>
-          {params.row.specializationIds?.join(", ") || "N/A"}
-        </Typography>
-      ),
     },
     {
       field: "experience",
@@ -67,7 +58,7 @@ export const doctorDatagridColumns = (handleOpenDialog: { (doctorId?: string | n
           <Button
             variant="contained"
             color="primary"
-            onClick={() => handleActionEdit(_id)}  
+            onClick={() => handleActionEdit(_id)}
             startIcon={<EditRounded />}
           >
             Edit
@@ -75,6 +66,6 @@ export const doctorDatagridColumns = (handleOpenDialog: { (doctorId?: string | n
         </Box>
       ),
     }
-    
+
   ];
 };

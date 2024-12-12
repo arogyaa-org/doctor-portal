@@ -11,7 +11,7 @@ import ServerPaginationGrid from "@/components/common/Datagrid";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setSymptom } from "@/redux/features/symptomsSlice";
-import { useGetSymptom, useModifySymptom } from "@/hooks/symptoms";
+import { useGetSymptom } from "@/hooks/symptoms";
 import { symptomDatagridColumns } from "./symptomsConfig";
 
 const ITEMS_PER_PAGE = 10;

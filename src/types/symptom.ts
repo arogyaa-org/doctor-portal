@@ -9,6 +9,7 @@ export interface SymptomData {
 
 export interface Symptom {
     results: SymptomData[];
-    total: number;
+    count: number;
     pages: number;
+    errorMessage?: string | null;
 }

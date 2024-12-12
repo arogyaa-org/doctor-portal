@@ -21,30 +21,27 @@ export const useGetQualification = (
   page: number = 1,
   limit: number = 5
 ) => {
-  // Construct the URL for the API call
   const url = `${pathKey}?page=${page}&limit=${limit}`;
+  const { data: swrData, error } = useSWR<Qualification | null>(
+    url,
+    fetcher,
+    {
+      fallbackData: initialData,
+      refreshInterval: initialData ? 3600000 : 0,
+      revalidateOnFocus: false,
+    });
 
-  // Fetch data using SWR
-  const { data: swrData, error } = useSWR<Qualification | null>(url, fetcher, {
-    fallbackData: initialData,
-    refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
-    revalidateOnFocus: false, // Disable revalidation on window focus
-  });
-
-  // Refetch function with an optional search keyword
   const refetch = async (keyword?: string) => {
     const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
     return await mutate(refetchUrl);
   };
 
-  // Return structured data
   return {
     value: swrData || {
       results: [],
-      total: 0,
-      page: 1,
-      limit,
-      totalPages: 1,
+      count: 0,
+      pages: 0,
+      errorMessage: null
     },
     swrLoading: !error && !swrData,
     error,
@@ -65,7 +62,6 @@ export const useCreateQualification = (pathKey: string) => {
   const createQualification = async (dataObj: object) => {
     setLoading(true);
     setError(null);
-
     try {
       const qualification = await creator(pathKey, dataObj);
       return qualification;
@@ -75,7 +71,6 @@ export const useCreateQualification = (pathKey: string) => {
       setLoading(false);
     }
   };
-
   return { loading, error, createQualification };
 };
 
@@ -94,7 +89,6 @@ export const useModifyQualification = (pathKey: string) => {
   ) => {
     setLoading(true);
     setError(null);
-
     try {
       const qualification = await modifier<QualificationData, Partial<QualificationData>>(
         pathKey,
@@ -107,6 +101,5 @@ export const useModifyQualification = (pathKey: string) => {
       setLoading(false);
     }
   };
-
   return { loading, error, modifyQualification };
 };

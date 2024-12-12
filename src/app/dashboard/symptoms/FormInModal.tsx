@@ -58,7 +58,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
 
-  const { createSymptom } = useCreateSymptom("create-symptoms");
+  const { createSymptom } = useCreateSymptom("create-symptom");
   const { modifySymptom } = useModifySymptom(`update-symptom`);
 
   const handleDialogClose = () => {
@@ -103,7 +103,6 @@ const FormInModal: React.FC<FormInModalProps> = ({
     setLoading(true);
     try {
       const response = await fetcher<SymptomData>(`get-symptom-by-id/${id}`);
-      console.log(response, 'response');
       setFormValues(response);
     } catch (err: any) {
       const errorMessage = err?.response?.data?.msg || "An Error Occurred";

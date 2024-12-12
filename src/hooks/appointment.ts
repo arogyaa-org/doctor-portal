@@ -24,17 +24,15 @@ export const useGetAppointment = (
     limit: number = 5
 ) => {
     const url = `${pathKey}/${appointmentId}?page=${page}&limit=${limit}`;
-
     const { data: swrData, error } = useSWR<Appointment | null>(
         url,
         fetcher,
         {
             fallbackData: initialData,
-            refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
-            revalidateOnFocus: false,                  // Disable revalidation on window focus
+            refreshInterval: initialData ? 3600000 : 0,
+            revalidateOnFocus: false,
         });
 
-    // Manually re-trigger re-fetch
     const refetch = async (keyword?: string) => {
         await mutate(`${url}?keyword=${keyword}`);
     };
@@ -44,6 +42,7 @@ export const useGetAppointment = (
             results: [],
             total: 0,
             pages: 0,
+            errorMessage: null
         },
         swrLoading: !error && !swrData,
         error,
@@ -64,7 +63,6 @@ export const useCreateAppointment = (pathKey: string) => {
     const createAppointment = async (newAppointmentData: AppointmentData) => {
         setLoading(true);
         setError(null);
-
         try {
             const appointment = await creator<AppointmentData, AppointmentData>(pathKey, newAppointmentData);
             return appointment;
@@ -74,7 +72,6 @@ export const useCreateAppointment = (pathKey: string) => {
             setLoading(false);
         }
     };
-
     return { loading, error, createAppointment };
 };
 
@@ -91,7 +88,6 @@ export const useModifyAppointment = (pathKey: string) => {
     const modifyAppointment = async (updatedAppointmentData: Partial<AppointmentData>) => {
         setLoading(true);
         setError(null);
-
         try {
             const appointment = await modifier<AppointmentData, Partial<AppointmentData>>(pathKey, updatedAppointmentData);
             return appointment;
@@ -101,6 +97,5 @@ export const useModifyAppointment = (pathKey: string) => {
             setLoading(false);
         }
     };
-
     return { loading, error, modifyAppointment };
 };
