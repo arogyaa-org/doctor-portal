@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-
 import { creator, fetcher, modifier } from '@/apis/apiClient';
 import { Doctor, DoctorData } from '@/types/doctor';
 
@@ -11,8 +10,8 @@ import { Doctor, DoctorData } from '@/types/doctor';
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
  * @param pathKey - The API path key used by SWR to fetch doctor data.
- * @param page - The page number for pagination.
- * @param limit - The number of items per page.
+ * @param page 
+ * @param limit 
  * @returns An object containing the fetched doctors, loading, error state, and refetch function.
  */
 export const useGetDoctor = (
@@ -21,7 +20,7 @@ export const useGetDoctor = (
     page: number = 1,
     limit: number = 5
 ) => {
-    const url = `${pathKey}?page=${page}&limit=${limit}`;
+  const url = `${pathKey}?page=${page}&limit=${limit}`;
 
     const { data: swrData, error } = useSWR<Doctor | null>(
         url,
@@ -33,18 +32,20 @@ export const useGetDoctor = (
         }
     );
 
-    // Manually re-trigger re-fetch
-    const refetch = async (keyword?: string) => {
-        await mutate(`${url}&keyword=${keyword}`);
-    };
+  // Refetch function
+  const refetch = async (keyword?: string) => {
+    const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
+    return await mutate(refetchUrl);
+  };
 
-    return {
-        value: swrData || [],
-        swrLoading: !error && !swrData,
-        error,
-        refetch
-    };
+  return {
+    value: swrData || [],
+    swrLoading: !error && !swrData,
+    error,
+    refetch,
+  };
 };
+
 
 /**
  * Hook for creating a new doctor.
@@ -52,6 +53,7 @@ export const useGetDoctor = (
  * @param pathKey - The API path key used to create a new doctor.
  * @returns An object containing the created doctor, loading state, error state, and the createDoctor function.
  */
+
 export const useCreateDoctor = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
@@ -72,6 +74,9 @@ export const useCreateDoctor = (pathKey: string) => {
 
     return { loading, error, createDoctor };
 };
+
+
+
 
 /**
  * Hook for modifying an existing doctor.

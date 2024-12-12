@@ -7,6 +7,7 @@ export const paths = {
     doctor: '/dashboard/doctor',
     patient: '/dashboard/patient',
     speciality: '/dashboard/speciality',
+    qualification:'/dashboard/qualification',
     symptoms: '/dashboard/symptoms',
     customers: '/dashboard/appointment',
     integrations: '/dashboard/integrations',

@@ -1,96 +1,80 @@
-import { Typography } from '@mui/material';
-import { GridColDef } from '@mui/x-data-grid';
-import { format } from 'date-fns';
+import { Typography, Button, Box } from "@mui/material";
+import { GridColDef } from "@mui/x-data-grid";
+import { EditRounded } from "@mui/icons-material";
 
-export const doctorDatagridColumns = (): GridColDef[] => {
-    const columns: GridColDef[] = [
-        {
-            field: 'username',
-            headerName: 'Name',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1,
-        },
-        {
-            field: 'email',
-            headerName: 'Email',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1.5,
-        },
-        {
-            field: 'specializationId',
-            headerName: 'Specializations',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1.5,
-            renderCell: (params) => (
-                <Typography>
-                    {params.row.specializationId ? params.row.specializationId.join(', ') : 'N/A'}
-                </Typography>
-            ),
-        },
-        {
-            field: 'qualificationIds',
-            headerName: 'Qualifications',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1.5,
-            renderCell: (params) => (
-                <Typography>
-                    {params.row.qualificationIds ? params.row.qualificationIds.join(', ') : 'N/A'}
-                </Typography>
-            ),
-        },
-        {
-            field: 'experienceYears',
-            headerName: 'Experience (Years)',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1,
-        },
-        {
-            field: 'bio',
-            headerName: 'Bio',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 2,
-            renderCell: (params) => (
-                <Typography>{params.row.bio || 'N/A'}</Typography>
-            ),
-        },
-        {
-            field: 'availability',
-            headerName: 'Availability',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1.5,
-            renderCell: (params) => (
-                <Typography>
-                    {params.row.availability ? params.row.availability.join(', ') : 'N/A'}
-                </Typography>
-            ),
-        },
-        {
-            field: 'createdAt',
-            headerName: 'Created At',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1,
-            renderCell: (params) => (
-                <Typography>
-                    {params.row ? format(new Date(params.row.createdAt), 'dd-MM-yy hh:mm a') : 'N/A'}
-                </Typography>
-            ),
-        },
-    ];
-    return columns;
+export const doctorDatagridColumns = (handleOpenDialog: { (doctorId?: string | null): void; (arg0: string | number): void; }): GridColDef[] => {
+  const handleActionEdit = (_id: string | number) => {
+    console.log("Edit clicked", _id);
+    handleOpenDialog(_id);
+  };
+
+  return [
+    {
+      field: "username",
+      headerName: "Name",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 1,
+    },
+    {
+      field: "email",
+      headerName: "Email",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 1.5,
+    },
+    {
+      field: "specializationIds",
+      headerName: "Specializations",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 1.5,
+      renderCell: (params) => (
+        <Typography>
+          {params.row.specializationIds?.join(", ") || "N/A"}
+        </Typography>
+      ),
+    },
+    {
+      field: "experience",
+      headerName: "Experience (Years)",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 1,
+    },
+    {
+      field: "bio",
+      headerName: "Bio",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 2,
+      renderCell: (params) => <Typography>{params.row.bio || "N/A"}</Typography>,
+    },
+    {
+      field: "action",
+      headerName: "Action",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 1,
+      renderCell: ({ row: { _id } }) => (
+        <Box display="flex" justifyContent="center">
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleActionEdit(_id)}  
+            startIcon={<EditRounded />}
+          >
+            Edit
+          </Button>
+        </Box>
+      ),
+    }
+    
+  ];
 };
