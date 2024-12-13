@@ -4,8 +4,7 @@ import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircularProgress, Box, Link, Stack } from "@mui/material";
-import Alert from "@mui/material/Alert";
+import { CircularProgress, Box, Stack } from "@mui/material";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import FormHelperText from "@mui/material/FormHelperText";
@@ -36,7 +35,7 @@ const schema = zod.object({
 type Values = zod.infer<typeof schema>;
 
 const defaultValues = {
-  email: "john.doe@examplle.com",
+  email: "john.doe@example.com",
   password: "John@123",
 } satisfies Values;
 
@@ -52,14 +51,15 @@ export function SignInForm(): React.JSX.Element {
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid, isDirty },
   } = useForm<Values>({
     defaultValues,
     resolver: zodResolver(schema),
-    mode: "onChange",
+    mode: 'onChange',  // Trigger validation on change to enable/disable submit button
   });
 
   const { createDoctor } = useCreateDoctor("/login");
+
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
       setLoading(true);
@@ -68,34 +68,38 @@ export function SignInForm(): React.JSX.Element {
           email: values.email,
           password: values.password,
         });
+        console.log(response, 'this is response from login');
         if (response?.statusCode === 200) {
           document.cookie = `token=${response.token}; path=/; max-age=${1 * 24 * 60 * 60}; secure; samesite=strict`;
 
+          // Decoding token to get role
           const role = decodedToken(response.token)?.role;
-          if (role === "admin") {
-            router.push("/dashboard");
-          } else if (role === "doctor") {
-            router.push("/dashboard/account");
+          if (role === 'admin') {
+            router.push('/dashboard');
+          } else if (role === 'doctor') {
+            router.push('/dashboard/account');
           }
         } else if (response?.statusCode === 409) {
-          toastAndNavigate(
-            dispatch,
-            true,
-            "error",
-            "Doctor With This Email Not Found"
-          );
+          toastAndNavigate(dispatch, true, "error", 'Doctor not found');
+          setTimeout(() => {
+            setLoading(false);
+          }, 2200);
         } else if (response?.statusCode === 400) {
-          toastAndNavigate(dispatch, true, "error", "Invalid Password");
+          toastAndNavigate(dispatch, true, "error", 'Invalid Password');
+          setTimeout(() => {
+            setLoading(false);
+          }, 2200);
         }
       } catch (error) {
-        toastAndNavigate(
-          dispatch,
-          true,
-          "error",
-          "Error Logging In Please Try Again"
-        );
+        console.error('Login failed', error);
+        toastAndNavigate(dispatch, true, "error", "An error occurred. Please Try Again");
+        setTimeout(() => {
+          setLoading(false);
+        }, 2200);
       } finally {
-        setLoading(false);
+        setTimeout(() => {
+          setLoading(false);
+        }, 12000);
       }
     },
     [decodedToken]
@@ -132,10 +136,10 @@ export function SignInForm(): React.JSX.Element {
               name="email"
               render={({ field }) => (
                 <FormControl error={Boolean(errors.email)}>
-                  <InputLabel>Email address</InputLabel>
+                  <InputLabel>*Email Address</InputLabel>
                   <OutlinedInput
                     {...field}
-                    label="Email address"
+                    label="*Email address"
                     type="email"
                   />
                   {errors.email ? (
@@ -149,7 +153,7 @@ export function SignInForm(): React.JSX.Element {
               name="password"
               render={({ field }) => (
                 <FormControl error={Boolean(errors.password)}>
-                  <InputLabel>Password</InputLabel>
+                  <InputLabel>*Password</InputLabel>
                   <OutlinedInput
                     {...field}
                     endAdornment={
@@ -194,28 +198,10 @@ export function SignInForm(): React.JSX.Element {
                 </Link>
               </Typography> */}
             <Button disabled={loading} type="submit" variant="contained">
-              {loading ? <CircularProgress size={22} /> : "Sign in"}
+              {loading ? <CircularProgress size={22} /> : 'Sign in'}
             </Button>
           </Stack>
         </form>
-        <Alert color="warning">
-          Use{" "}
-          <Typography
-            component="span"
-            sx={{ fontWeight: 700 }}
-            variant="inherit"
-          >
-            john.doe@examplle.com
-          </Typography>{" "}
-          with password{" "}
-          <Typography
-            component="span"
-            sx={{ fontWeight: 700 }}
-            variant="inherit"
-          >
-            John@123
-          </Typography>
-        </Alert>
       </Stack>
       <Toast
         alerting={toast.toastAlert}
