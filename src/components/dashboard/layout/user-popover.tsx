@@ -37,7 +37,6 @@ export function UserPopover({
     if (popoverRef.current) {
       const nameLength = user?.name?.length || 0;
       const emailLength = user?.email?.length || 0;
-
       const longestTextLength = Math.max(nameLength, emailLength);
 
       // Calculate the required width dynamically based on text length
@@ -45,8 +44,6 @@ export function UserPopover({
         400,
         Math.max(230, longestTextLength * 10)
       );
-
-      // Set the popover width dynamically
       popoverRef.current.style.width = `${requiredWidth}px`;
     }
   }, [user?.name, user?.email]);
@@ -70,7 +67,7 @@ export function UserPopover({
       slotProps={{
         paper: {
           sx: {
-            maxWidth: "400px", 
+            maxWidth: "400px",
             minWidth: "230px",
             boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
             borderRadius: 2,
