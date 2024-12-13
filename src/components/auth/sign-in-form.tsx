@@ -43,15 +43,11 @@ const defaultValues = {
 export function SignInForm(): React.JSX.Element {
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [loading, setLoading] = React.useState<boolean>(false);
-  const [toastAlert, setToastAlert] = React.useState(false);
-  const [toastMessage, setToastMessage] = React.useState("");
-  const [toastSeverity, setToastSeverity] = React.useState<"success" | "error">(
-    "success"
-  );
+  const { toast } = useSelector((state: RootState) => state.toast);
 
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
-  const { decodedToken } = Utility();
+  const { decodedToken, toastAndNavigate } = Utility();
 
   const {
     control,
@@ -67,7 +63,6 @@ export function SignInForm(): React.JSX.Element {
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
       setLoading(true);
-      setToastAlert(false);
       try {
         const response: DoctorResponse | undefined = await createDoctor({
           email: values.email,
@@ -83,26 +78,22 @@ export function SignInForm(): React.JSX.Element {
             router.push("/dashboard/account");
           }
         } else if (response?.statusCode === 409) {
-          setToastMessage("Doctor not found. Please check your email.");
-          setToastSeverity("error");
-          setToastAlert(true);
-        } else if (
-          response?.statusCode === 400 &&
-          response.message === "Invalid id and password"
-        ) {
-          setToastMessage("Invalid id and password. Please try again.");
-          setToastSeverity("error");
-          setToastAlert(true);
+          toastAndNavigate(
+            dispatch,
+            true,
+            "error",
+            "Doctor With This Email Not Found"
+          );
         } else if (response?.statusCode === 400) {
-          setToastMessage("Invalid password. Please try again.");
-          setToastSeverity("error");
-          setToastAlert(true);
+          toastAndNavigate(dispatch, true, "error", "Invalid Password");
         }
       } catch (error) {
-        console.error("Login failed", error);
-        setToastMessage("An unexpected error occurred. Please try again.");
-        setToastSeverity("error");
-        setToastAlert(true);
+        toastAndNavigate(
+          dispatch,
+          true,
+          "error",
+          "Error Logging In Please Try Again"
+        );
       } finally {
         setLoading(false);
       }
@@ -111,92 +102,85 @@ export function SignInForm(): React.JSX.Element {
   );
 
   return (
-    <>
-      <Toast
-        alerting={toastAlert}
-        message={toastMessage}
-        severity={toastSeverity}
-      />
-
-      <Box
-        sx={{
-          backgroundColor: "#f9f9f9",
-          padding: 4,
-          borderRadius: 2,
-          boxShadow: 1,
-          maxWidth: 500,
-          margin: "auto",
-          marginTop: 4,
-          transform: "translateY(-30px)",
-        }}
-      >
-        <Stack spacing={2}>
-          <Typography variant="h4" align="center" sx={{ fontWeight: "bold" }}>
-            Sign In
-          </Typography>
-          <Typography
-            variant="h5"
-            align="center"
-            sx={{ fontWeight: "medium", color: "gray" }}
-          >
-            Welcome Back
-          </Typography>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Stack spacing={2}>
-              <Controller
-                control={control}
-                name="email"
-                render={({ field }) => (
-                  <FormControl error={Boolean(errors.email)}>
-                    <InputLabel>Email address</InputLabel>
-                    <OutlinedInput
-                      {...field}
-                      label="Email address"
-                      type="email"
-                    />
-                    {errors.email ? (
-                      <FormHelperText>{errors.email.message}</FormHelperText>
-                    ) : null}
-                  </FormControl>
-                )}
-              />
-              <Controller
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <FormControl error={Boolean(errors.password)}>
-                    <InputLabel>Password</InputLabel>
-                    <OutlinedInput
-                      {...field}
-                      endAdornment={
-                        showPassword ? (
-                          <EyeIcon
-                            cursor="pointer"
-                            fontSize="var(--icon-fontSize-md)"
-                            onClick={(): void => {
-                              setShowPassword(false);
-                            }}
-                          />
-                        ) : (
-                          <EyeSlashIcon
-                            cursor="pointer"
-                            fontSize="var(--icon-fontSize-md)"
-                            onClick={(): void => {
-                              setShowPassword(true);
-                            }}
-                          />
-                        )
-                      }
-                      label="Password"
-                      type={showPassword ? "text" : "password"}
-                    />
-                    {errors.password ? (
-                      <FormHelperText>{errors.password.message}</FormHelperText>
-                    ) : null}
-                  </FormControl>
-                )}
-              />
-              {/* <Typography align="right">
+    <Box
+      sx={{
+        backgroundColor: "#f9f9f9",
+        padding: 4,
+        borderRadius: 2,
+        boxShadow: 1,
+        maxWidth: 500,
+        margin: "auto",
+        marginTop: 4,
+        transform: "translateY(-30px)",
+      }}
+    >
+      <Stack spacing={2}>
+        <Typography variant="h4" align="center" sx={{ fontWeight: "bold" }}>
+          Sign In
+        </Typography>
+        <Typography
+          variant="h5"
+          align="center"
+          sx={{ fontWeight: "medium", color: "gray" }}
+        >
+          Welcome Back
+        </Typography>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Stack spacing={2}>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field }) => (
+                <FormControl error={Boolean(errors.email)}>
+                  <InputLabel>Email address</InputLabel>
+                  <OutlinedInput
+                    {...field}
+                    label="Email address"
+                    type="email"
+                  />
+                  {errors.email ? (
+                    <FormHelperText>{errors.email.message}</FormHelperText>
+                  ) : null}
+                </FormControl>
+              )}
+            />
+            <Controller
+              control={control}
+              name="password"
+              render={({ field }) => (
+                <FormControl error={Boolean(errors.password)}>
+                  <InputLabel>Password</InputLabel>
+                  <OutlinedInput
+                    {...field}
+                    endAdornment={
+                      showPassword ? (
+                        <EyeIcon
+                          cursor="pointer"
+                          fontSize="var(--icon-fontSize-md)"
+                          onClick={(): void => {
+                            setShowPassword(false);
+                          }}
+                        />
+                      ) : (
+                        <EyeSlashIcon
+                          cursor="pointer"
+                          fontSize="var(--icon-fontSize-md)"
+                          onClick={(): void => {
+                            setShowPassword(true);
+                          }}
+                        />
+                      )
+                    }
+                    label="Password"
+                    type={showPassword ? "text" : "password"}
+                  />
+                  {errors.password ? (
+                    <FormHelperText>{errors.password.message}</FormHelperText>
+                  ) : null}
+                </FormControl>
+              )}
+            />
+            {/* <Typography align="right">
                 <Link
                   href="/reset-password"
                   variant="body2"
@@ -209,31 +193,35 @@ export function SignInForm(): React.JSX.Element {
                   Forgot password?
                 </Link>
               </Typography> */}
-              <Button disabled={loading} type="submit" variant="contained">
-                {loading ? <CircularProgress size={22} /> : "Sign in"}
-              </Button>
-            </Stack>
-          </form>
-          <Alert color="warning">
-            Use{" "}
-            <Typography
-              component="span"
-              sx={{ fontWeight: 700 }}
-              variant="inherit"
-            >
-              john.doe@examplle.com
-            </Typography>{" "}
-            with password{" "}
-            <Typography
-              component="span"
-              sx={{ fontWeight: 700 }}
-              variant="inherit"
-            >
-              John@123
-            </Typography>
-          </Alert>
-        </Stack>
-      </Box>
-    </>
+            <Button disabled={loading} type="submit" variant="contained">
+              {loading ? <CircularProgress size={22} /> : "Sign in"}
+            </Button>
+          </Stack>
+        </form>
+        <Alert color="warning">
+          Use{" "}
+          <Typography
+            component="span"
+            sx={{ fontWeight: 700 }}
+            variant="inherit"
+          >
+            john.doe@examplle.com
+          </Typography>{" "}
+          with password{" "}
+          <Typography
+            component="span"
+            sx={{ fontWeight: 700 }}
+            variant="inherit"
+          >
+            John@123
+          </Typography>
+        </Alert>
+      </Stack>
+      <Toast
+        alerting={toast.toastAlert}
+        severity={toast.toastSeverity}
+        message={toast.toastMessage}
+      />
+    </Box>
   );
 }
