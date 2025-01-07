@@ -37,6 +37,25 @@ export const Utility = () => {
   };
 
   /**
+   * Returns the appropriate base URL based on the service name.
+   *
+   * @param serviceName - The key representing the microservice.
+   * @returns The base URL for the specified microservice.
+   */
+  const getServiceUrl = (serviceName: string): string => {
+    const urls: Record<string, string> = {
+      appointment: process.env.NEXT_PUBLIC_APPOINTMENT_URL as string,
+      speciality: process.env.NEXT_PUBLIC_SPECIALITY_URL as string,
+      symptom: process.env.NEXT_PUBLIC_SYMPTOM_URL as string,
+      qualification: process.env.NEXT_PUBLIC_QUALIFICATION_URL as string,
+      doctor: process.env.NEXT_PUBLIC_DOCTOR_URL as string,
+      patient: process.env.NEXT_PUBLIC_PATIENT_URL as string,
+    };
+
+    return urls[serviceName] || "";
+  };
+
+  /**
    * Utility to store value in sessionStorage.
    * @param {string} key - The key to set in sessionStorage.
    * @param {any} value - The value to store.
@@ -214,6 +233,7 @@ export const Utility = () => {
     capitalizeFirstLetter,
     decodedToken,
     fetchData,
+    getServiceUrl,
     getSessionStorage,
     setSessionStorage,
     getLocalStorage,

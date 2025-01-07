@@ -21,7 +21,7 @@ const Page: React.FC = () => {
 
   const { value: data, refetch } = useGetPatient(
     {} as Patient,
-    '/patient-service/get-patient',
+    'get-patient-by-id',
     '672c681f76ab84e9f25f0539',
     currentPage,
     limit
@@ -55,7 +55,7 @@ const Page: React.FC = () => {
         />
         <ServerPaginationGrid
           columns={datagridColumns()}
-          count={patient?.totalPages}
+          count={patient?.count}
           rows={patient?.results || []}
           loading={reduxLoading}
           pageSizeOptions={[5, 10, 20]}

@@ -22,7 +22,13 @@ import { useCreateSymptom, useModifySymptom } from '@/hooks/symptoms';
 import { fetcher } from '@/apis/apiClient';
 import { setSymptom } from '@/redux/features/symptomsSlice';
 import { Utility } from '@/utils';
-import { SymptomData } from '@/types/symptom';
+import { Symptom } from '@/types/symptom';
+
+interface PopulateDataResponse {
+  statusCode: string | number;
+  message: string;
+  data: any;
+}
 
 interface SymptomFormValues {
   _id?: string | number;
@@ -102,8 +108,10 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const populateData = useCallback(async (id: string | number) => {
     setLoading(true);
     try {
-      const response = await fetcher<SymptomData>(`get-symptom-by-id/${id}`);
-      setFormValues(response);
+      const response: PopulateDataResponse = await fetcher<Symptom>('symptom', `get-symptom-by-id/${id}`);
+      if (response?.statusCode === 200) {
+        setFormValues(response.data);
+      }
     } catch (err: any) {
       const errorMessage = err?.response?.data?.msg || "An Error Occurred";
       toastAndNavigate(dispatch, true, "error", errorMessage);
@@ -147,6 +155,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
       .max(40, "Name is too long!")
       .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
       .required("This field is required"),
+    description: Yup.string()
+      .min(5, "Description is too short!")
   });
 
   return (

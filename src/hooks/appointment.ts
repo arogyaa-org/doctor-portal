@@ -24,9 +24,9 @@ export const useGetAppointment = (
     limit: number = 5
 ) => {
     const url = `${pathKey}/${appointmentId}?page=${page}&limit=${limit}`;
-    const { data: swrData, error } = useSWR<Appointment | null>(
+    const { data: swrData, error, isValidating } = useSWR<Appointment | null>(
         url,
-        fetcher,
+        () => fetcher('appointment', url),
         {
             fallbackData: initialData,
             refreshInterval: initialData ? 3600000 : 0,
@@ -44,7 +44,7 @@ export const useGetAppointment = (
             pages: 0,
             errorMessage: null
         },
-        swrLoading: !error && !swrData,
+        swrLoading: !error && !swrData && isValidating,
         error,
         refetch
     };
@@ -64,7 +64,11 @@ export const useCreateAppointment = (pathKey: string) => {
         setLoading(true);
         setError(null);
         try {
-            const appointment = await creator<AppointmentData, AppointmentData>(pathKey, newAppointmentData);
+            const appointment = await creator<AppointmentData, AppointmentData>(
+                'appointment',
+                pathKey,
+                newAppointmentData
+            );
             return appointment;
         } catch (err) {
             setError(err as Error);
@@ -89,7 +93,11 @@ export const useModifyAppointment = (pathKey: string) => {
         setLoading(true);
         setError(null);
         try {
-            const appointment = await modifier<AppointmentData, Partial<AppointmentData>>(pathKey, updatedAppointmentData);
+            const appointment = await modifier<AppointmentData, Partial<AppointmentData>>(
+                'appointment',
+                pathKey,
+                updatedAppointmentData
+            );
             return appointment;
         } catch (err) {
             setError(err as Error);

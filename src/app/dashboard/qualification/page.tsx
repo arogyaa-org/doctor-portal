@@ -11,7 +11,7 @@ import ServerPaginationGrid from "@/components/common/Datagrid";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setQualification } from "@/redux/features/qualificationSlice";
-import { useGetQualification } from "@/hooks/qualification"; 
+import { useGetQualification } from "@/hooks/qualification";
 import { qualificationDatagridColumns } from "./qualificationConfig";
 
 const ITEMS_PER_PAGE = 10;
@@ -24,7 +24,7 @@ const Page: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const { qualification, reduxLoading } = useSelector((state: RootState) => state.qualification);
 
-  const { value: data, refetch } = useGetQualification(null, "qualification/get-qualification", currentPage, ITEMS_PER_PAGE);
+  const { value: data, refetch } = useGetQualification(null, "get-qualifications", currentPage, ITEMS_PER_PAGE);
 
   useEffect(() => {
     if (data?.results) {
@@ -33,7 +33,7 @@ const Page: React.FC = () => {
   }, [data?.results?.length]);
 
   const handleOpenDialog = (qualificationId: string | null = null) => {
-   
+
     setSelectedQualificationId(qualificationId);
     setOpenDialog(!openDialog);
   };
@@ -75,7 +75,7 @@ const Page: React.FC = () => {
         {/* DataGrid for Displaying Qualifications */}
         <ServerPaginationGrid
           columns={qualificationDatagridColumns(handleOpenDialog)}
-          count={qualification?.total || 0}
+          count={qualification?.count || 0}
           paginationMode="server"
           rows={qualification?.results || []}
           loading={reduxLoading}

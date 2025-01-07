@@ -1,12 +1,15 @@
 export interface PatientData {
-    _id: string;
+    _id?: string;
     username: string;
+    age: string;
     email: string;
     phone: string;
     gender: string;
-    dob: string;
-    city: string;
+    dob: Date;
     medical_history: string[];
+    address: string;
+    profilePicture: string;
+    password: string;
     createdAt: string;
     updatedAt: string;
     __v: number;
@@ -14,6 +17,7 @@ export interface PatientData {
 
 export interface Patient {
     results: PatientData[];
-    total: number;
+    count: number;
     pages: number;
+    errorMessage?: string;
 }

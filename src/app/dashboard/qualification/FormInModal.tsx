@@ -58,8 +58,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
 
-  const { createQualification } = useCreateQualification("qualification/create-qualification");
-  const { modifyQualification } = useModifyQualification("qualification/update-qualification");
+  const { createQualification } = useCreateQualification("create-qualification");
+  const { modifyQualification } = useModifyQualification("update-qualification");
 
   const handleDialogClose = () => {
     setOpenDialog(false);
@@ -67,7 +67,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
 
   useEffect(() => {
     if (qualificationId) {
-        console.log("qualificationId:", qualificationId);
+      console.log("qualificationId:", qualificationId);
       setTitle("Edit");
       populateData(qualificationId);
     } else {
@@ -101,9 +101,9 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const populateData = useCallback(async (id: string | number) => {
     setLoading(true);
     try {
-      const response = await fetcher<QualificationData>(`qualification/get-qualification/${id}`);
-      if (response) {
-        setFormValues(response);
+      const response = await fetcher<QualificationData>(`qualification`, `get-qualification-by-id/${id}`);
+      if (response?.statusCode === 200) {
+        setFormValues(response.data);
       }
     } catch (err: any) {
       const errorMessage = err?.response?.data?.msg || "An Error Occurred";
@@ -115,8 +115,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
       setLoading(false);
     }
   }, []);
-  
-  
+
+
   const update = useCallback(async (values: any) => {
     setLoading(true);
     try {
@@ -142,8 +142,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
       setLoading(false);
     }
   }, [formValues]);
-  
-  
+
+
   const validationSchema = Yup.object({
     name: Yup.string()
       .min(2, "Name is too short!")

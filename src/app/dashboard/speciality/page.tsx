@@ -7,11 +7,11 @@ import CreateIcon from "@mui/icons-material/Create";
 
 import FormInModal from "./FormInModal";
 import Search from "@/components/common/Search";
-import ServerPaginationGrid from "@/components/common/Datagrid"; 
+import ServerPaginationGrid from "@/components/common/Datagrid";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setSpeciality } from "@/redux/features/specialitySlice";
-import { useGetSpeciality } from "@/hooks/Speciality"; 
+import { useGetSpeciality } from "@/hooks/speciality";
 import { SpecialityDatagridColumns } from "./specialityConfig";
 
 const ITEMS_PER_PAGE = 10;
@@ -21,8 +21,8 @@ const Page: React.FC = () => {
   const [selectedSpecialityId, setSelectedSpecialityId] = useState<
     string | null
   >(null);
-  const [currentPage, setCurrentPage] = useState(1); 
-  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE); 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
 
   const dispatch: AppDispatch = useDispatch();
   const { Speciality, reduxLoading } = useSelector(
@@ -32,26 +32,25 @@ const Page: React.FC = () => {
   // Fetch data based on currentPage and pageSize
   const { value: data, refetch } = useGetSpeciality(
     null,
-    "speciality/get-speciality",
+    "get-specialities",
     currentPage,
     pageSize // Pass current page size here
   );
 
   useEffect(() => {
     if (data?.results) {
-      dispatch(setSpeciality(data)); 
+      dispatch(setSpeciality(data));
     }
   }, [data?.results?.length, currentPage]);
 
   const handleOpenDialog = (SpecialityId: string | null = null) => {
     setSelectedSpecialityId(SpecialityId);
     setOpenDialog(!openDialog);
-    console.log("open dialog called");
   };
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage); 
+    setCurrentPage(newPage);
   };
 
   // Handle page size change
@@ -99,7 +98,7 @@ const Page: React.FC = () => {
         {/* DataGrid for Displaying Speciality */}
         <ServerPaginationGrid
           columns={SpecialityDatagridColumns(handleOpenDialog)}
-          count={Speciality?.total}
+          count={Speciality?.count}
           rows={Speciality?.results}
           loading={reduxLoading}
           pageSizeOptions={[10, 15, 20]} // Options for page size
@@ -110,7 +109,7 @@ const Page: React.FC = () => {
       <FormInModal
         openDialog={openDialog}
         setOpenDialog={setOpenDialog}
-        SpecialityId={selectedSpecialityId}
+        specialityId={selectedSpecialityId}
         refetch={refetch}
       />
     </Stack>

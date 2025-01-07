@@ -18,10 +18,11 @@ import * as Yup from "yup";
 import Loader from "@/components/common/Loader";
 import Toast from "@/components/common/Toast";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { useCreateSpeciality, useModifySpeciality } from "@/hooks/Speciality";
+import { useCreateSpeciality, useModifySpeciality } from "@/hooks/speciality";
 import { setSpeciality } from "@/redux/features/specialitySlice";
 import { Utility } from "@/utils";
 import { SpecialityData } from "@/types/speciality";
+import { fetcher } from "@/apis/apiClient";
 
 interface SpecialityFormValues {
   _id?: string | number;
@@ -59,10 +60,10 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const { toastAndNavigate } = Utility();
 
   const { createSpeciality } = useCreateSpeciality(
-    "specialities/create-speciality"
+    "create-speciality"
   );
   const { modifySpeciality } = useModifySpeciality(
-    `/specialities/update-speciality`
+    "update-speciality"
   );
 
   const handleDialogClose = () => {
@@ -109,9 +110,12 @@ const FormInModal: React.FC<FormInModalProps> = ({
     setLoading(true);
     try {
       const response = await fetcher<SpecialityData>(
-        `specialities/get-speciality/${id}`
+        'speciality',
+        `get-speciality-by-id/${id}`
       );
-      setFormValues(response);
+      if (response?.statusCode === 200) {
+        setFormValues(response.data);
+      }
     } catch (err: any) {
       const errorMessage = err?.response?.data?.msg || "An Error Occurred";
       toastAndNavigate(dispatch, true, "error", errorMessage);
@@ -160,8 +164,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
       .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
       .required("This field is required"),
     description: Yup.string()
-      .min(10, "Description is too short!")
-      .required("This field is required"),
+      .min(5, "Description is too short!")
   });
 
   return (

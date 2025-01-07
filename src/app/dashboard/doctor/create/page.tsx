@@ -43,8 +43,7 @@ import dayjs from "dayjs";
 import { useCreateDoctor, useModifyDoctor } from "@/hooks/doctor";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
-import { setDoctor } from "@/redux/features/doctorSlice";
-import { useGetSpeciality } from "@/hooks/Speciality";
+import { useGetSpeciality } from "@/hooks/speciality";
 import { useGetQualification } from "@/hooks/qualification";
 import { validationSchema } from "./ValidationSchema";
 
@@ -595,7 +594,7 @@ const DoctorForm = () => {
               <Grid item xs={12} sm={12}>
                 <Typography variant="h6" gutterBottom>
                   Availability
-                  </Typography>
+                </Typography>
                 {values.availability.map((slot, index) => (
                   <Grid
                     container
@@ -705,11 +704,11 @@ const DoctorForm = () => {
                   value={
                     values.speciality && specialities?.results
                       ? values.speciality.map(
-                          (name) =>
-                            specialities.results.find(
-                              (item) => item.name === name
-                            ) || { name }
-                        )
+                        (name) =>
+                          specialities.results.find(
+                            (item) => item.name === name
+                          ) || { name }
+                      )
                       : []
                   }
                   onChange={(event, newValue) => {
@@ -770,13 +769,13 @@ const DoctorForm = () => {
                   value={
                     values.qualification && qualifications?.results
                       ? values.qualification.map(
-                          (name) =>
-                            qualifications.results.find(
-                              (item) => item.name === name
-                            ) || {
-                              name,
-                            }
-                        )
+                        (name) =>
+                          qualifications.results.find(
+                            (item) => item.name === name
+                          ) || {
+                            name,
+                          }
+                      )
                       : []
                   }
                   onChange={(event, newValue) => {
@@ -856,8 +855,8 @@ const DoctorForm = () => {
                     const file = e.currentTarget.files[0];
                     if (file) {
                       setFieldValue("profilePicture", file);
-                      const previewURL = URL.createObjectURL(file); 
-                      setFieldValue("previewURL", previewURL); 
+                      const previewURL = URL.createObjectURL(file);
+                      setFieldValue("previewURL", previewURL);
                     }
                   }}
                 />
@@ -917,7 +916,7 @@ const DoctorForm = () => {
                       }}
                       onClick={() => {
                         setFieldValue("profilePicture", null);
-                        setFieldValue("previewURL", null); 
+                        setFieldValue("previewURL", null);
                       }}
                     >
                       <CloseIcon color="error" fontSize="small" />

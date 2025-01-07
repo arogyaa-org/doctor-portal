@@ -22,9 +22,9 @@ export const useGetSymptom = (
   limit: number = 5
 ) => {
   const url = `${pathKey}?page=${page}&limit=${limit}`;
-  const { data: swrData, error } = useSWR<Symptom | null>(
+  const { data: swrData, error, isValidating } = useSWR<Symptom | null>(
     url,
-    fetcher,
+    () => fetcher<Symptom>('symptom', url),
     {
       fallbackData: initialData,
       refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
@@ -43,7 +43,7 @@ export const useGetSymptom = (
       pages: 0,
       errorMessage: null
     },
-    swrLoading: !error && !swrData,
+    swrLoading: !error && !swrData && isValidating,
     error,
     refetch,
   };
@@ -53,11 +53,11 @@ export const useCreateSymptom = (pathKey: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const createSymptom = async (dataObj: object) => {
+  const createSymptom = async (dataObj: SymptomData) => {
     setLoading(true);
     setError(null);
     try {
-      const symptom = await creator(pathKey, dataObj);
+      const symptom = await creator('symptom', pathKey, dataObj);
       return symptom;
     } catch (err) {
       setError(err as Error);
@@ -86,7 +86,7 @@ export const useModifySymptom = (pathKey: string) => {
     setLoading(true);
     setError(null);
     try {
-      const symptom = await modifier<SymptomData, Partial<SymptomData>>(pathKey, updatedSymptomData);
+      const symptom = await modifier<SymptomData, Partial<SymptomData>>('symptom', pathKey, updatedSymptomData);
       return symptom;
     } catch (err) {
       setError(err as Error);

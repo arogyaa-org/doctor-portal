@@ -22,9 +22,9 @@ export const useGetQualification = (
   limit: number = 5
 ) => {
   const url = `${pathKey}?page=${page}&limit=${limit}`;
-  const { data: swrData, error } = useSWR<Qualification | null>(
+  const { data: swrData, error, isValidating } = useSWR<Qualification | null>(
     url,
-    fetcher,
+    () => fetcher<Qualification>('qualification', url),
     {
       fallbackData: initialData,
       refreshInterval: initialData ? 3600000 : 0,
@@ -43,7 +43,7 @@ export const useGetQualification = (
       pages: 0,
       errorMessage: null
     },
-    swrLoading: !error && !swrData,
+    swrLoading: !error && !swrData && isValidating,
     error,
     refetch,
   };
@@ -59,11 +59,11 @@ export const useCreateQualification = (pathKey: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const createQualification = async (dataObj: object) => {
+  const createQualification = async (dataObj: QualificationData) => {
     setLoading(true);
     setError(null);
     try {
-      const qualification = await creator(pathKey, dataObj);
+      const qualification = await creator('qualification', pathKey, dataObj);
       return qualification;
     } catch (err) {
       setError(err as Error);
@@ -91,6 +91,7 @@ export const useModifyQualification = (pathKey: string) => {
     setError(null);
     try {
       const qualification = await modifier<QualificationData, Partial<QualificationData>>(
+        'qualification',
         pathKey,
         updatedQualificationData
       );

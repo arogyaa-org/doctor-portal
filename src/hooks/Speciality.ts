@@ -22,9 +22,9 @@ export const useGetSpeciality = (
     limit: number = 5
 ) => {
     const url = `${pathKey}?page=${page}&limit=${limit}`;
-    const { data: swrData, error } = useSWR<Speciality | null>(
+    const { data: swrData, error, isValidating } = useSWR<Speciality | null>(
         url,
-        fetcher,
+        () => fetcher<Speciality>('speciality', url),
         {
             fallbackData: initialData,
             refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
@@ -43,7 +43,7 @@ export const useGetSpeciality = (
             pages: 0,
             errorMessage: null
         },
-        swrLoading: !error && !swrData,
+        swrLoading: !error && !swrData && isValidating,
         error,
         refetch
     };
@@ -57,7 +57,7 @@ export const useCreateSpeciality = (pathKey: string) => {
         setLoading(true);
         setError(null);
         try {
-            const speciality = await creator<SpecialityData, SpecialityData>(pathKey, dataObj);
+            const speciality = await creator<SpecialityData, SpecialityData>('speciality', pathKey, dataObj);
             return speciality;
         } catch (err) {
             setError(err as Error);
@@ -82,7 +82,7 @@ export const useModifySpeciality = (pathKey: string) => {
         setLoading(true);
         setError(null);
         try {
-            const speciality = await modifier<SpecialityData, Partial<SpecialityData>>(pathKey, updatedSpecialityData);
+            const speciality = await modifier<SpecialityData, Partial<SpecialityData>>('speciality', pathKey, updatedSpecialityData);
             return speciality;
         } catch (err) {
             setError(err as Error);

@@ -21,8 +21,8 @@ const Page: React.FC = () => {
 
   const { value: data, refetch } = useGetAppointment(
     {} as Appointment,
-    'appointments/get-doctorsappointment',
-    
+    'get-doctors-appointment',
+    '674eedea9275f96f06a60c95',
     currentPage,
     limit
   );
@@ -56,7 +56,7 @@ const Page: React.FC = () => {
           />
           <ServerPaginationGrid
             columns={datagridColumns()}
-            count={appointment?.total}
+            count={appointment?.count}
             rows={appointment?.results || []}
             loading={reduxLoading}
             pageSizeOptions={[5, 10, 20]}

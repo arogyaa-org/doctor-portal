@@ -24,7 +24,7 @@ const Page: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const { symptom, reduxLoading } = useSelector((state: RootState) => state.symptoms);
 
-  const { value: data, refetch } = useGetSymptom(null, "/get-symptoms", currentPage, ITEMS_PER_PAGE);
+  const { value: data, refetch } = useGetSymptom(null, "get-symptoms", currentPage, ITEMS_PER_PAGE);
 
   useEffect(() => {
     if (data?.results) {
@@ -75,7 +75,7 @@ const Page: React.FC = () => {
         {/* DataGrid for Displaying Symptoms */}
         <ServerPaginationGrid
           columns={symptomDatagridColumns(handleOpenDialog)}
-          count={symptom?.total}
+          count={symptom?.count}
           paginationMode='server'
           rows={symptom?.results}
           loading={reduxLoading}
