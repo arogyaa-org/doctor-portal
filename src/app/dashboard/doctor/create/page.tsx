@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Formik, Form, Field } from "formik";
-import * as Yup from "yup";
 import {
   Box,
   Button,
@@ -16,11 +14,10 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Autocomplete,
   CircularProgress,
   IconButton,
+  Autocomplete,
 } from "@mui/material";
-
 import {
   Person as PersonIcon,
   Email as EmailIcon,
@@ -28,26 +25,28 @@ import {
   Call as CallIcon,
   Language as LanguageIcon,
   Place as PlaceIcon,
-  AttachMoney as MoneyIcon,
   Work as WorkIcon,
   Assignment as AssignmentIcon,
   EventAvailable as EventAvailableIcon,
   Upload as UploadIcon,
   Close as CloseIcon,
   Info as InfoIcon,
-  CalendarToday as CalendarTodayIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import WcIcon from "@mui/icons-material/Wc";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import { fetcher } from "@/apis/apiClient";
 import Toast from "@/components/common/Toast";
 import { Utility } from "@/utils";
+import dayjs from "dayjs";
 import { useCreateDoctor, useModifyDoctor } from "@/hooks/doctor";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { setDoctor } from "@/redux/features/doctorSlice";
 import { useGetSpeciality } from "@/hooks/Speciality";
 import { useGetQualification } from "@/hooks/qualification";
+import { validationSchema } from "./ValidationSchema";
 
 interface DoctorFormValues {
   _id?: string | number;
@@ -90,55 +89,17 @@ const initialValues: DoctorFormValues = {
   availability: [],
 };
 
-const validationSchema = Yup.object({
-  username: Yup.string()
-    .matches(/^[a-zA-Z\s]*$/, "Username must contain only letters and spaces")
-    .required("Username is required"),
-  email: Yup.string()
-    .email("Invalid email format")
-    .required("Email is required"),
-  password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .required("Password is required"),
-  contact: Yup.string()
-    .matches(/^\d{1,10}$/, "Contact must be a number with up to 10 digits")
-    .required("Contact is required"),
-  gender: Yup.string().required("Gender is required"),
-  dob: Yup.string()
-    .required("Date of Birth is required")
-    .matches(/^\d{4}-\d{2}-\d{2}$/),
-  experience: Yup.number()
-    .min(0, "Experience cannot be negative")
-    .required("Experience is required"),
-  bio: Yup.string().required("Bio is required"),
-  languageSpoken: Yup.string().required("At least one language is required"),
-  address: Yup.string().required("Address is required"),
-  profilePicture: Yup.mixed().required("Profile picture is required"),
-  consultationFee: Yup.number()
-    .min(0, "Consultation fee cannot be negative")
-    .required("Consultation fee is required"),
-  status: Yup.string().required("Status is required"),
-  role: Yup.string().required("Role is required"),
-  speciality: Yup.array()
-    .of(Yup.string().required("Each speciality must be a valid string"))
-    .min(1, "At least one specialization is required")
-    .required("Specialization is required"),
-  qualification: Yup.array()
-    .of(Yup.string().required("Each qualification must be a valid string"))
-    .min(1, "At least one qualification is required")
-    .required("Qualification is required"),
-  availability: Yup.string().required("Availability is required"),
-});
-
 const DoctorForm = () => {
-  const [title, setTitle] = useState("Create");
+  const [title, setTitle] = useState("");
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<DoctorFormValues>(initialValues);
   const [specialityInput, setSpecialityInput] = useState<string>("");
   const [qualificationInput, setQualificationInput] = useState<string>("");
 
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const router = useRouter();
-  const pathname = usePathname();
   const dispatch: AppDispatch = useDispatch();
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
@@ -146,7 +107,37 @@ const DoctorForm = () => {
   const { createDoctor } = useCreateDoctor("create-doctor");
   const { modifyDoctor } = useModifyDoctor("update-doctor");
 
-  const doctorId = pathname.split("/").pop();
+  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
+  const [updatePasswordButtonText, setUpdatePasswordButtonText] =
+    useState("Update Password");
+
+  const params = useParams();
+  const doctorId = params?.id;
+  const isEditMode = !!doctorId;
+
+  const fetchQualificationById = async (id) => {
+    try {
+      const response = await fetcher(
+        `http://localhost:4002/api/v1/qualification-service/get-qualification-by-id/${id}`
+      );
+      return response?.data?.name || "";
+    } catch (err) {
+      console.error(`Error fetching qualification by ID (${id}):`, err);
+      return "";
+    }
+  };
+
+  const fetchSpecialityById = async (id) => {
+    try {
+      const response = await fetcher(
+        `http://localhost:4002/api/v1/speciality-service/get-speciality-by-id/${id}`
+      );
+      return response?.data?.name || "";
+    } catch (err) {
+      console.error(`Error fetching speciality by ID (${id}):`, err);
+      return "";
+    }
+  };
 
   const { value: specialities, swrLoading: specialityLoading } =
     useGetSpeciality(
@@ -159,26 +150,56 @@ const DoctorForm = () => {
       null,
       "http://localhost:4002/api/v1/qualification-service/get-qualifications"
     );
-  console.log("value");
+
+  console.log("doctorId", doctorId);
+
+  const [showUpdatePasswordButton, setShowUpdatePasswordButton] =
+    useState(false);
 
   useEffect(() => {
     if (doctorId) {
       setTitle("Edit");
+      setShowUpdatePasswordButton(true);
+      setShowPasswordField(false);
       populateData(doctorId);
     } else {
       setFormValues(initialValues);
+      setShowUpdatePasswordButton(false);
+      setShowPasswordField(true);
       setTitle("Create");
     }
   }, [doctorId]);
 
   const populateData = useCallback(
-    async (id: string | number) => {
+    async (doctorId: string | number) => {
       setLoading(true);
       try {
-        const response = await fetcher(`get-doctor-by-id/${id}`);
+        const response = await fetcher(
+          `http://localhost:4004/api/v1/doctor-service/get-doctor-by-id/${doctorId}`
+        );
+
         if (response?.statusCode === 200) {
-          setFormValues(response);
-          dispatch(setDoctor(response));
+          const doctorData = response.data;
+
+          const qualifications = await Promise.all(
+            doctorData.qualificationIds.map((id) => fetchQualificationById(id))
+          );
+
+          const specialities = await Promise.all(
+            doctorData.specializationIds.map((id) => fetchSpecialityById(id))
+          );
+
+          setFormValues({
+            ...doctorData,
+            languageSpoken: doctorData.languagesSpoken || [],
+            qualification: qualifications,
+            speciality: specialities,
+          });
+          console.log("Populated Form Values:", {
+            ...doctorData,
+            qualification: qualifications,
+            speciality: specialities,
+          });
         } else {
           console.log("Doctor not found or server error");
         }
@@ -188,7 +209,7 @@ const DoctorForm = () => {
         setLoading(false);
       }
     },
-    [dispatch]
+    [doctorId]
   );
 
   const handleSubmit = async (values, { setSubmitting }) => {
@@ -250,8 +271,28 @@ const DoctorForm = () => {
         boxShadow: 4,
         backgroundColor: "white",
         border: "1px solid #e0e0e0",
+        position: "relative",
       }}
     >
+      {showUpdatePasswordButton && (
+        <Button
+          variant="outlined"
+          sx={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+          }}
+          onClick={() => {
+            setShowPasswordField((prev) => !prev);
+            setUpdatePasswordButtonText((prev) =>
+              prev === "Update Password" ? "Hide Password" : "Update Password"
+            );
+          }}
+        >
+          {updatePasswordButtonText}
+        </Button>
+      )}
+
       <Typography
         variant="h4"
         gutterBottom
@@ -262,7 +303,7 @@ const DoctorForm = () => {
 
       <Formik
         initialValues={formValues}
-        validationSchema={validationSchema}
+        validationSchema={validationSchema(isEditMode)}
         onSubmit={handleSubmit}
         enableReinitialize
       >
@@ -291,7 +332,6 @@ const DoctorForm = () => {
                   helperText={touched.username && errors.username}
                 />
               </Grid>
-
               {/* Email Field */}
               <Grid item xs={12} sm={6}>
                 <Field
@@ -311,25 +351,39 @@ const DoctorForm = () => {
                 />
               </Grid>
 
-              {/* Password Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  label="Password *"
-                  name="password"
-                  type="password"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PasswordIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={touched.password && Boolean(errors.password)}
-                  helperText={touched.password && errors.password}
-                />
-              </Grid>
+              {/* password */}
+              {showPasswordField && (
+                <Grid item xs={12} sm={6}>
+                  <MuiTextField
+                    label="Password *"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    fullWidth
+                    value={values.password}
+                    onChange={(e) => setFieldValue("password", e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PasswordIcon color="primary" />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={togglePasswordVisibility}>
+                            {showPassword ? (
+                              <VisibilityIcon color="primary" />
+                            ) : (
+                              <VisibilityOffIcon color="primary" />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    error={touched.password && Boolean(errors.password)}
+                    helperText={touched.password && errors.password}
+                  />
+                </Grid>
+              )}
 
               {/* Contact Field */}
               <Grid item xs={12} sm={6}>
@@ -350,17 +404,24 @@ const DoctorForm = () => {
                 />
               </Grid>
 
-              {/* DOB */}
               <Grid item xs={12} sm={6}>
                 <MuiTextField
                   label="Date of Birth *"
                   name="dob"
                   fullWidth
                   type="date"
-                  value={values.dob}
-                  onChange={(e) => setFieldValue("dob", e.target.value)}
+                  value={
+                    values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""
+                  }
+                  onChange={(e) => {
+                    const formattedDate = dayjs(e.target.value).format(
+                      "YYYY-MM-DD"
+                    );
+                    setFieldValue("dob", formattedDate);
+                  }}
                   InputLabelProps={{ shrink: true }}
                   error={touched.dob && Boolean(errors.dob)}
+                  helperText={touched.dob && errors.dob}
                 />
               </Grid>
 
@@ -370,9 +431,9 @@ const DoctorForm = () => {
                   fullWidth
                   error={touched.gender && Boolean(errors.gender)}
                 >
-                  <InputLabel>Gender *</InputLabel>
+                  <InputLabel>Gender </InputLabel>
                   <Select
-                    label="Gender *"
+                    label="Gender "
                     name="gender"
                     value={values.gender}
                     onChange={(e) => setFieldValue("gender", e.target.value)}
@@ -393,12 +454,11 @@ const DoctorForm = () => {
                   )}
                 </FormControl>
               </Grid>
-
               {/* Experience Field */}
               <Grid item xs={12} sm={6}>
                 <Field
                   as={MuiTextField}
-                  label="Experience *"
+                  label="Experience "
                   name="experience"
                   fullWidth
                   InputProps={{
@@ -417,9 +477,17 @@ const DoctorForm = () => {
               <Grid item xs={12} sm={6}>
                 <Field
                   as={MuiTextField}
-                  label="Languages Spoken *"
+                  type="text"
+                  label="Languages Spoken"
                   name="languageSpoken"
                   fullWidth
+                  value={values.languageSpoken.join(", ")}
+                  onChange={(e) =>
+                    setFieldValue(
+                      "languageSpoken",
+                      e.target.value.split(",").map((item) => item.trim())
+                    )
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -438,7 +506,7 @@ const DoctorForm = () => {
               <Grid item xs={12} sm={6}>
                 <Field
                   as={MuiTextField}
-                  label="Address *"
+                  label="Address "
                   name="address"
                   fullWidth
                   InputProps={{
@@ -452,12 +520,11 @@ const DoctorForm = () => {
                   helperText={touched.address && errors.address}
                 />
               </Grid>
-
               {/* Consultation Fee Field with Rupee Icon */}
               <Grid item xs={12} sm={6}>
                 <Field
                   as={MuiTextField}
-                  label="Consultation Fee *"
+                  label="Consultation Fee "
                   name="consultationFee"
                   fullWidth
                   InputProps={{
@@ -476,16 +543,15 @@ const DoctorForm = () => {
                   helperText={touched.consultationFee && errors.consultationFee}
                 />
               </Grid>
-
               {/* Status Field */}
               <Grid item xs={12} sm={6}>
                 <FormControl
                   fullWidth
                   error={touched.status && Boolean(errors.status)}
                 >
-                  <InputLabel>Status *</InputLabel>
+                  <InputLabel>Status </InputLabel>
                   <Select
-                    label="Status *"
+                    label="Status "
                     name="status"
                     value={values.status}
                     onChange={(e) => setFieldValue("status", e.target.value)}
@@ -506,7 +572,6 @@ const DoctorForm = () => {
                   )}
                 </FormControl>
               </Grid>
-
               {/* Role Field */}
               <Grid item xs={12} sm={6}>
                 <Field
@@ -528,21 +593,104 @@ const DoctorForm = () => {
 
               {/* Availability Field */}
               <Grid item xs={12} sm={12}>
-                <Field
-                  as={MuiTextField}
-                  label="Availability *"
-                  name="availability"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EventAvailableIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={touched.availability && Boolean(errors.availability)}
-                  helperText={touched.availability && errors.availability}
-                />
+                <Typography variant="h6" gutterBottom>
+                  Availability
+                  </Typography>
+                {values.availability.map((slot, index) => (
+                  <Grid
+                    container
+                    spacing={2}
+                    key={index}
+                    alignItems="center"
+                    sx={{ mb: 2 }}
+                  >
+                    <Grid item xs={4}>
+                      <Autocomplete
+                        options={[
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                          "Saturday",
+                          "Sunday",
+                        ]}
+                        getOptionLabel={(option) => option}
+                        value={slot.day || ""}
+                        onChange={(event, newValue) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].day = newValue || "";
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        renderInput={(params) => (
+                          <MuiTextField
+                            {...params}
+                            label="Day"
+                            fullWidth
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Field
+                        as={MuiTextField}
+                        label="Start Time"
+                        name={`availability[${index}].startTime`}
+                        type="time"
+                        value={slot.startTime || ""}
+                        onChange={(e) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].startTime = e.target.value;
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Field
+                        as={MuiTextField}
+                        label="End Time"
+                        name={`availability[${index}].endTime`}
+                        type="time"
+                        value={slot.endTime || ""}
+                        onChange={(e) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].endTime = e.target.value;
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => {
+                          const updatedAvailability =
+                            values.availability.filter(
+                              (_, idx) => idx !== index
+                            );
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        fullWidth
+                      >
+                        Remove
+                      </Button>
+                    </Grid>
+                  </Grid>
+                ))}
+                <Button
+                  variant="outlined"
+                  onClick={() =>
+                    setFieldValue("availability", [
+                      ...values.availability,
+                      { day: "", startTime: "", endTime: "" },
+                    ])
+                  }
+                  sx={{ mt: 1 }}
+                >
+                  Add Slot
+                </Button>
               </Grid>
 
               {/* Speciality Autocomplete */}
@@ -554,12 +702,16 @@ const DoctorForm = () => {
                   getOptionLabel={(option) =>
                     typeof option === "string" ? option : option.name || ""
                   }
-                  value={values.speciality.map(
-                    (name) =>
-                      specialities.results.find(
-                        (item) => item.name === name
-                      ) || { name }
-                  )}
+                  value={
+                    values.speciality && specialities?.results
+                      ? values.speciality.map(
+                          (name) =>
+                            specialities.results.find(
+                              (item) => item.name === name
+                            ) || { name }
+                        )
+                      : []
+                  }
                   onChange={(event, newValue) => {
                     setFieldValue(
                       "speciality",
@@ -611,16 +763,22 @@ const DoctorForm = () => {
                 <Autocomplete
                   multiple
                   freeSolo
-                  options={qualifications.results || []}
+                  options={qualifications?.results || []}
                   getOptionLabel={(option) =>
                     typeof option === "string" ? option : option.name || ""
                   }
-                  value={values.qualification.map(
-                    (name) =>
-                      qualifications.results.find(
-                        (item) => item.name === name
-                      ) || { name }
-                  )}
+                  value={
+                    values.qualification && qualifications?.results
+                      ? values.qualification.map(
+                          (name) =>
+                            qualifications.results.find(
+                              (item) => item.name === name
+                            ) || {
+                              name,
+                            }
+                        )
+                      : []
+                  }
                   onChange={(event, newValue) => {
                     setFieldValue(
                       "qualification",
@@ -637,7 +795,7 @@ const DoctorForm = () => {
                   renderInput={(params) => (
                     <MuiTextField
                       {...params}
-                      label="Qualification *"
+                      label="Qualification"
                       InputProps={{
                         ...params.InputProps,
                         startAdornment: (
@@ -671,7 +829,7 @@ const DoctorForm = () => {
               <Grid item xs={12} sm={12}>
                 <Field
                   as={MuiTextField}
-                  label="Bio *"
+                  label="Bio "
                   name="bio"
                   fullWidth
                   multiline
@@ -687,7 +845,6 @@ const DoctorForm = () => {
                   helperText={touched.bio && errors.bio}
                 />
               </Grid>
-
               {/* Image Upload and Bio Order: Updated */}
               <Grid item xs={12} sm={6}>
                 <input
@@ -696,7 +853,12 @@ const DoctorForm = () => {
                   id="profilePicture"
                   type="file"
                   onChange={(e) => {
-                    setFieldValue("profilePicture", e.currentTarget.files[0]);
+                    const file = e.currentTarget.files[0];
+                    if (file) {
+                      setFieldValue("profilePicture", file);
+                      const previewURL = URL.createObjectURL(file); 
+                      setFieldValue("previewURL", previewURL); 
+                    }
                   }}
                 />
                 <label htmlFor="profilePicture">
@@ -718,7 +880,7 @@ const DoctorForm = () => {
                       },
                     }}
                   >
-                    Upload Profile Picture *
+                    Upload Profile Picture
                   </Button>
                 </label>
                 {touched.profilePicture && errors.profilePicture && (
@@ -729,7 +891,7 @@ const DoctorForm = () => {
               </Grid>
 
               {/* Image Preview */}
-              {values.profilePicture && (
+              {values.previewURL && (
                 <Grid item xs={12}>
                   <Box
                     mt={2}
@@ -753,14 +915,17 @@ const DoctorForm = () => {
                         boxShadow: 1,
                         "&:hover": { backgroundColor: "#f0f0f0" },
                       }}
-                      onClick={() => setFieldValue("profilePicture", null)}
+                      onClick={() => {
+                        setFieldValue("profilePicture", null);
+                        setFieldValue("previewURL", null); 
+                      }}
                     >
                       <CloseIcon color="error" fontSize="small" />
                     </Button>
 
                     {/* Image Preview */}
                     <img
-                      src={URL.createObjectURL(values.profilePicture)}
+                      src={values.previewURL}
                       alt="Profile Preview"
                       style={{
                         maxWidth: "200px",
@@ -785,7 +950,7 @@ const DoctorForm = () => {
                   }}
                   disabled={isSubmitting || loading}
                 >
-                  {isSubmitting || loading ? "Saving..." : "Submit"}
+                  {isSubmitting || loading ? "Saving..." : `${title} Doctor`}
                 </Button>
               </Grid>
             </Grid>
