@@ -19,7 +19,9 @@ const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const { doctor, reduxLoading } = useSelector((state: RootState) => state.doctor);
+  const { doctor, reduxLoading } = useSelector(
+    (state: RootState) => state.doctor
+  );
 
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
@@ -49,7 +51,13 @@ const Page: React.FC = () => {
 
       <Card>
         <Stack spacing={2} sx={{ padding: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
             <Search refetchAPI={refetch} />
             <Button
               variant="contained"
@@ -71,8 +79,8 @@ const Page: React.FC = () => {
           pageSizeOptions={[10, 15, 20]}
           onPageChange={(params: any) => handlePageChange(params + 1)}
         />
-      </Card >
-    </Stack >
+      </Card>
+    </Stack>
   );
 };
 
