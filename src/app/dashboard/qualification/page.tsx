@@ -11,89 +11,82 @@ import ServerPaginationGrid from "@/components/common/Datagrid";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setQualification } from "@/redux/features/qualificationSlice";
-import { useGetQualification } from "@/hooks/qualification";
-import { qualificationDatagridColumns } from "./qualificationConfig";
+import { useGetQualification } from "@/hooks/qualification"; 
+import { qualificationDatagridColumns as qualificationDatagridColumns } from "./qualificationConfig";
 
-const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedQualificationId, setSelectedQualificationId] = useState<string | null>(null);
+ 
+   const [pageSize, setPageSize] = React.useState(10);
+    const [searchQuery, setSearchQuery] = React.useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const dispatch: AppDispatch = useDispatch();
   const { qualification, reduxLoading } = useSelector((state: RootState) => state.qualification);
 
-  const { value: data, refetch } = useGetQualification(null, "get-qualifications", currentPage, ITEMS_PER_PAGE);
+  const { value: data, swrLoading, error, refetch } = useGetQualification(
+    null,
+     "get-qualifications",
+    currentPage,
+    pageSize,
+    searchQuery
+  );
+
+  console.log(data,"data is:")
 
   useEffect(() => {
-    if (data?.results) {
-      dispatch(setQualification(data));
-    }
-  }, [data?.results?.length]);
+     if (data?.results?.length > 0 && data.results !== qualification?.results) {
+       console.log("Dispatching valid data to Redux:", data);
+       dispatch(setQualification(data));
+     }
+   }, [data?.results?.length, dispatch]);
+   
 
-  const handleOpenDialog = (qualificationId: string | null = null) => {
+      const handlePageChange = (newPage: number) => {
+        setCurrentPage(newPage);
+       
+      };
 
-    setSelectedQualificationId(qualificationId);
-    setOpenDialog(!openDialog);
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); 
+    
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);  
+    await refetch(query);
   };
 
   return (
-    <Stack spacing={3}>
-      {/* Page Header */}
-      <Stack spacing={1} sx={{ flex: "1 1 auto" }}>
-        <Typography variant="h4">Qualifications</Typography>
-      </Stack>
-
-      {/* Data Table and Actions */}
-      <Card>
-        <Stack spacing={2} sx={{ padding: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: 'space-between' }}>
-            <Search refetchAPI={refetch} />
-            <Button
-              variant="contained"
-              startIcon={<CreateIcon />}
-              onClick={() => handleOpenDialog(null)}
-              sx={{
-                borderRadius: '100px',
-                background: 'linear-gradient(45deg, #2196F3 30%, #1976D2 90%)',
-                px: 3,
-                textTransform: 'none',
-                fontWeight: 600,
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-              }}
-            >
-              Create Qualification
-            </Button>
-          </Box>
+    <>
+      <Stack spacing={3}>
+        <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
+          <Typography variant="h4">Qualification</Typography>
         </Stack>
+        <Card>
+          <Search refetchAPI={handleSearch} placeholderText="Search Qualification" />
+          <ServerPaginationGrid
+            columns={qualificationDatagridColumns()}
+            count={qualification?.total || 0}
+            rows={qualification?.results || []}
+            loading={reduxLoading || swrLoading}
+            page={currentPage - 1}
+            pageSize={pageSize} 
+            pageSizeOptions={[5, 10, 20]} 
+            onPageChange={(params: number) => handlePageChange(params + 1)}
+            onPageSizeChange={(newSize: number) => handlePageSizeChange(newSize)}
+          />
+        </Card>
 
-        {/* DataGrid for Displaying Qualifications */}
-        <ServerPaginationGrid
-          columns={qualificationDatagridColumns(handleOpenDialog)}
-          count={qualification?.count || 0}
-          paginationMode="server"
-          rows={qualification?.results || []}
-          loading={reduxLoading}
-          page={currentPage - 1}
-          pageSize={ITEMS_PER_PAGE}
-          pageSizeOptions={[10, 15, 20]}
-          onPageChange={(params: any) => handlePageChange(params + 1)}
-        />
-      </Card>
-
-      {/* Modal for creating or modifying a qualification */}
-      <FormInModal
-        openDialog={openDialog}
-        setOpenDialog={setOpenDialog}
-        qualificationId={selectedQualificationId}
-        refetch={refetch}
-      />
-    </Stack>
+        {error && (
+          <Typography color="error" align="center">
+            Failed to load qualification. Please try again.
+          </Typography>
+        )}
+      </Stack>
+    </>
   );
 };
 

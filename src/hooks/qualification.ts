@@ -13,16 +13,19 @@ import { Qualification, QualificationData } from "@/types/qualification";
  * @param pathKey - The API path key used by SWR to fetch qualification data.
  * @param page - The current page number for pagination.
  * @param limit - The number of qualifications per page.
+ * @param searchQuery - (Optional) The search query for filtering results.
  * @returns An object containing the fetched qualifications, loading, error state, and refetch function.
  */
 export const useGetQualification = (
   initialData: Qualification | null,
   pathKey: string,
   page: number = 1,
-  limit: number = 5
+  limit: number = 5,
+  searchQuery: string = ""
 ) => {
-  const url = `${pathKey}?page=${page}&limit=${limit}`;
-  const { data: swrData, error, isValidating } = useSWR<Qualification | null>(
+  const url = `${pathKey}?page=${page}&limit=${limit}${searchQuery ? `&search=${searchQuery}` : ""}`;
+    
+  const { data: swrData, error } = useSWR<Qualification | null>(
     url,
     () => fetcher<Qualification>('qualification', url),
     {
@@ -31,10 +34,13 @@ export const useGetQualification = (
       revalidateOnFocus: false,
     });
 
-  const refetch = async (keyword?: string) => {
-    const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
-    return await mutate(refetchUrl);
-  };
+    const refetch = async (query?: string) => {
+      const refetchUrl = query
+        ? `${pathKey}?page=${page}&limit=${limit}&search=${query}`
+        : url;
+      return await mutate(refetchUrl);
+    };
+  
 
   return {
     value: swrData || {
@@ -43,7 +49,7 @@ export const useGetQualification = (
       pages: 0,
       errorMessage: null
     },
-    swrLoading: !error && !swrData && isValidating,
+    swrLoading: !error && !swrData,
     error,
     refetch,
   };

@@ -3,61 +3,70 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Box, Button, Card, Stack, Typography } from "@mui/material";
-import CreateIcon from "@mui/icons-material/Create";
+import CreateIcon from '@mui/icons-material/Create';
 
 import FormInModal from "./FormInModal";
-import Search from "@/components/common/Search";
+import Search from '@/components/common/Search';
 import ServerPaginationGrid from "@/components/common/Datagrid";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setSpeciality } from "@/redux/features/specialitySlice";
-import { useGetSpeciality } from "@/hooks/speciality";
-import { SpecialityDatagridColumns } from "./specialityConfig";
+import { useGetSpeciality } from "@/hooks/Speciality"; 
+import { SpecialityDatagridColumns as SpecialityDatagridColumns } from "./specialityConfig";
 
-const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedSpecialityId, setSelectedSpecialityId] = useState<
-    string | null
-  >(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedSpecialityId, setSelectedSpecialityId] = useState<string | null>(null);
 
+  const { speciality, reduxLoading } = useSelector((state: RootState) => state.speciality);
   const dispatch: AppDispatch = useDispatch();
-  const { Speciality, reduxLoading } = useSelector(
-    (state: RootState) => state.speciality
-  );
 
-  // Fetch data based on currentPage and pageSize
-  const { value: data, refetch } = useGetSpeciality(
+  const { value: data, swrLoading, error, refetch } = useGetSpeciality(
     null,
     "get-specialities",
     currentPage,
-    pageSize // Pass current page size here
+    pageSize,
+    searchQuery
   );
 
-  useEffect(() => {
-    if (data?.results) {
-      dispatch(setSpeciality(data));
-    }
-  }, [data?.results?.length, currentPage]);
+  console.log("Data fetched:", data);
 
-  const handleOpenDialog = (SpecialityId: string | null = null) => {
-    setSelectedSpecialityId(SpecialityId);
+  useEffect(() => {
+    if (data?.results?.length > 0) {
+      console.log("Dispatching data to Redux:", data);
+      dispatch(setSpeciality(data));
+    } else {
+      console.log("No data available.");
+    }
+  }, [data, dispatch]);
+
+  const handleOpenDialog = (specialityId: string | null = null) => {
+    setSelectedSpecialityId(specialityId);
     setOpenDialog(!openDialog);
   };
 
-  // Handle page change
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
-  // Handle page size change
   const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize); // Update the page size when changed
-    setCurrentPage(1); // Reset to the first page when page size changes
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    await refetch(query);
+  };
+
+  if (error) {
+    return <Typography color="error">Failed to fetch data. Please try again later.</Typography>;
+  }
 
   return (
     <Stack spacing={3}>
@@ -69,14 +78,8 @@ const Page: React.FC = () => {
       {/* Data Table and Actions */}
       <Card>
         <Stack spacing={2} sx={{ padding: 2 }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Search refetchAPI={refetch} />
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Search refetchAPI={handleSearch} placeholderText="Search Specialities" />
             <Button
               variant="contained"
               startIcon={<CreateIcon />}
@@ -94,16 +97,17 @@ const Page: React.FC = () => {
             </Button>
           </Box>
         </Stack>
-
-        {/* DataGrid for Displaying Speciality */}
+        {/* DataGrid for Displaying Specialities */}
         <ServerPaginationGrid
           columns={SpecialityDatagridColumns(handleOpenDialog)}
-          count={Speciality?.count}
-          rows={Speciality?.results}
-          loading={reduxLoading}
-          pageSizeOptions={[10, 15, 20]} // Options for page size
-          onPageChange={(params: any) => handlePageChange(params + 1)} // Adjust page (0-based)
-          onPageSizeChange={handlePageSizeChange} // Handle page size change
+          count={speciality?.count || 0}
+          rows={speciality?.results || []}
+          loading={reduxLoading || swrLoading}
+          page={currentPage - 1}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 15, 20]}
+          onPageChange={(params: any) => handlePageChange(params + 1)}
+          onPageSizeChange={(newSize: number) => handlePageSizeChange(newSize)}
         />
       </Card>
       <FormInModal

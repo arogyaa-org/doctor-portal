@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
@@ -15,50 +14,62 @@ import { doctorDatagridColumns } from "./doctorConfig";
 import { setDoctor } from "@/redux/features/doctorSlice";
 import { useGetDoctor } from "@/hooks/doctor";
 
-const ITEMS_PER_PAGE = 10;
-
 const Page: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const { doctor, reduxLoading } = useSelector(
-    (state: RootState) => state.doctor
-  );
+  const [currentPage, setCurrentPage] = useState(1); 
+  const [pageSize, setPageSize] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { doctor, reduxLoading } = useSelector((state: RootState) => state.doctor);
 
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
 
-  const { value: data, refetch } = useGetDoctor(
+  const { value: data, swrLoading, error, refetch } = useGetDoctor(
     null,
     "get-doctors",
     currentPage,
-    ITEMS_PER_PAGE
+    pageSize,
+    searchQuery
   );
-
+console.log(data, "is missing")
   useEffect(() => {
-    if (data?.results) {
+    if (data?.results && data?.results !== doctor?.results) {
       dispatch(setDoctor(data));
     }
-  }, [data?.results?.length]);
+  }, [data?.results?.length ||0, dispatch]);
+  
 
   const handlePageChange = (newPage: number) => {
+    console.log("next")
     setCurrentPage(newPage);
+   
+};
+
+const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); 
+};
+
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    await refetch(query);
   };
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={1} sx={{ flex: "1 1 auto" }}>
-        <Typography variant="h4">Doctors</Typography>
-      </Stack>
+      <Typography variant="h4">Doctors</Typography>
 
       <Card>
         <Stack spacing={2} sx={{ padding: 2 }}>
           <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
+            sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
           >
-            <Search refetchAPI={refetch} />
+            {/* Search Component */}
+            <Search refetchAPI={handleSearch} placeholderText="Search Doctor" />
+
+            {/* Create Button */}
             <Button
               variant="contained"
               startIcon={<CreateIcon />}
@@ -69,17 +80,28 @@ const Page: React.FC = () => {
           </Box>
         </Stack>
 
+        {/* Data Grid */}
         <ServerPaginationGrid
           columns={doctorDatagridColumns()}
-          count={doctor?.count}
+          count={doctor?.count || 0}
           rows={doctor?.results || []}
-          loading={reduxLoading}
+          loading={reduxLoading || swrLoading}
           page={currentPage - 1}
-          pageSize={ITEMS_PER_PAGE}
-          pageSizeOptions={[10, 15, 20]}
-          onPageChange={(params: any) => handlePageChange(params + 1)}
+          pageSize={pageSize} 
+          pageSizeOptions={[10, 15, 20]} 
+          onPageChange={(page, pageSize) => {
+            handlePageChange(page);
+            handlePageSizeChange(pageSize);
+        }}
         />
       </Card>
+
+      {/* Error Handling */}
+      {error && (
+        <Typography color="error" align="center">
+          Failed to load doctors. Please try again.
+        </Typography>
+      )}
     </Stack>
   );
 };

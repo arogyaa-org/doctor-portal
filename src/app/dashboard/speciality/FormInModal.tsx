@@ -18,7 +18,7 @@ import * as Yup from "yup";
 import Loader from "@/components/common/Loader";
 import Toast from "@/components/common/Toast";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { useCreateSpeciality, useModifySpeciality } from "@/hooks/speciality";
+import { useCreateSpeciality, useModifySpeciality } from "@/hooks/Speciality";
 import { setSpeciality } from "@/redux/features/specialitySlice";
 import { Utility } from "@/utils";
 import { SpecialityData } from "@/types/speciality";
@@ -61,6 +61,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
 
   const { createSpeciality } = useCreateSpeciality(
     "create-speciality"
+    
   );
   const { modifySpeciality } = useModifySpeciality(
     "update-speciality"
@@ -110,8 +111,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
     setLoading(true);
     try {
       const response = await fetcher<SpecialityData>(
-        'speciality',
-        `get-speciality-by-id/${id}`
+        `get-specialities/${id}`
       );
       if (response?.statusCode === 200) {
         setFormValues(response.data);
