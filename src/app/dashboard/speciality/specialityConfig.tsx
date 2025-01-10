@@ -2,7 +2,7 @@ import { Box, Button, Typography } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
 import { EditRounded } from "@mui/icons-material";
 
-export const SpecialityDatagridColumns = (handleOpenDialog): GridColDef[] => {
+export const SpecialityDatagridColumns = (handleOpenDialog: { (SpecialityId?: string | null): void; (arg0: string | number): void; }): GridColDef[] => {
   const handleActionEdit = (_id: string | number) => {
     console.log("edit clicked", _id);
     handleOpenDialog(_id);

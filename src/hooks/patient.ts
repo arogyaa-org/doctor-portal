@@ -11,33 +11,40 @@ import { PatientData, Patient } from '@/types/patient';
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
  * @param pathKey - The API path key used by SWR to fetch patient data.
- * @param patientId - The ID of the patient to fetch.
  * @param page - The page number for pagination.
  * @param limit - The number of items per page.
- * @returns An object containing the fetched patients, loading, error state and refetch function.
+ * @param searchQuery - (Optional) The search query for filtering results.
+ * @returns An object containing the fetched patients, loading, error state, and refetch function.
  */
 export const useGetPatient = (
     initialData: Patient | null,
     pathKey: string,
-    patientId: string,
     page: number = 1,
-    limit: number = 5
+    limit: number = 5,
+    searchQuery: string = ""
 ) => {
-    const url = `${pathKey}/${patientId}?page=${page}&limit=${limit}`;
+    const url = `${pathKey}?page=${page}&limit=${limit}${searchQuery.trim() ? `&search=${searchQuery.trim()}` : ""}`;
 
     const { data: swrData, error, isValidating } = useSWR<Patient | null>(
         url,
         () => fetcher('patient', url),
         {
             fallbackData: initialData,
-            refreshInterval: initialData ? 3600000 : 0, // 1 hour refresh if initialData exists
-            revalidateOnFocus: false,                  // Disable revalidation on window focus
+            refreshInterval: initialData ? 3600000 : 0,
+            revalidateOnFocus: false,
         }
     );
 
-    // Manually re-trigger re-fetch
-    const refetch = async (keyword?: string) => {
-        await mutate(`${url}?keyword=${keyword}`);
+    const refetch = async (query?: string) => {
+        const refetchUrl = query
+            ? `${pathKey}?page=${page}&limit=${limit}&search=${query.trim()}`
+            : url;
+        try {
+            console.log('Refetch URL:', refetchUrl);
+            await mutate(refetchUrl);
+        } catch (error) {
+            console.error("Error during refetch:", error);
+        }
     };
 
     return {
@@ -46,11 +53,12 @@ export const useGetPatient = (
             total: 0,
             pages: 0,
         },
-        swrLoading: !error && !swrData && isValidating,
+        swrLoading: !error && !swrData ,
         error,
-        refetch
+        refetch,
     };
 };
+
 
 /**
  * Hook for creating a new patient.

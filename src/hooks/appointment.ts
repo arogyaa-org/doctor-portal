@@ -11,20 +11,21 @@ import { AppointmentData, Appointment } from '@/types/appointment';
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
  * @param pathKey - The API path key used by SWR to fetch customer data.
- * @param appointmentId
- * @param page
- * @param limit
+ * @param page - The page number for pagination.
+ * @param limit - The number of items per page.
+ * @param searchQuery - (Optional) The search query for filtering results.
  * @returns An object containing the fetched appointments, loading, error state and refetch function.
  */
 export const useGetAppointment = (
     initialData: Appointment | null,
     pathKey: string,
-    appointmentId: string,
     page: number = 1,
-    limit: number = 5
+    limit: number = 5,
+    searchQuery: string = ""
 ) => {
-    const url = `${pathKey}/${appointmentId}?page=${page}&limit=${limit}`;
-    const { data: swrData, error, isValidating } = useSWR<Appointment | null>(
+    const url = `${pathKey}?page=${page}&limit=${limit}${searchQuery ? `&search=${searchQuery}` : ""}`;
+
+    const { data: swrData, error } = useSWR<Appointment | null>(
         url,
         () => fetcher('appointment', url),
         {
@@ -33,9 +34,13 @@ export const useGetAppointment = (
             revalidateOnFocus: false,
         });
 
-    const refetch = async (keyword?: string) => {
-        await mutate(`${url}?keyword=${keyword}`);
-    };
+        const refetch = async (query?: string) => {
+            const refetchUrl = query
+              ? `${pathKey}?page=${page}&limit=${limit}&search=${query}`
+              : url;
+            return await mutate(refetchUrl);
+          };
+        
 
     return {
         value: swrData || {
@@ -44,7 +49,7 @@ export const useGetAppointment = (
             pages: 0,
             errorMessage: null
         },
-        swrLoading: !error && !swrData && isValidating,
+        swrLoading: !error && !swrData,
         error,
         refetch
     };

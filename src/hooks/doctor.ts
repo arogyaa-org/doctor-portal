@@ -11,44 +11,55 @@ import { Doctor, DoctorData } from '@/types/doctor';
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
  * @param pathKey - The API path key used by SWR to fetch doctor data.
- * @param page 
- * @param limit 
+ * @param page - The page number for pagination.
+ * @param limit - The number of items per page.
+ * @param searchQuery - (Optional) The search query for filtering results.
  * @returns An object containing the fetched doctors, loading, error state, and refetch function.
  */
 export const useGetDoctor = (
     initialData: Doctor | null,
     pathKey: string,
     page: number = 1,
-    limit: number = 5
-) => {
-    const url = `${pathKey}?page=${page}&limit=${limit}`;
-    const { data: swrData, error, isValidating } = useSWR<Doctor | null>(
-        url,
-        () => fetcher<Doctor>('doctor', url),
-        {
-            fallbackData: initialData,
-            refreshInterval: initialData ? 3600000 : 0,
-            revalidateOnFocus: false,
-        }
-    );
-
-    const refetch = async (keyword?: string) => {
-        const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
-        return await mutate(refetchUrl);
+    limit: number = 5,
+    searchQuery: string = ""
+  ) => {
+    const url = `${pathKey}?page=${page}&limit=${limit}${searchQuery.trim() ? `&search=${searchQuery.trim()}` : ""}`;
+  
+    const { data: swrData, error } = useSWR<Doctor | null>(
+      url,
+      () => fetcher<Doctor>('doctor', url),
+      {
+      fallbackData: initialData,
+      refreshInterval: initialData ? 3600000 : 0,
+      revalidateOnFocus: false,
+    }
+  );
+  
+  const refetch = async (query?: string) => {
+    const refetchUrl = query
+        ? `${pathKey}?page=${page}&limit=${limit}&search=${query.trim()}`
+        : url;
+    try {
+        console.log('Refetch URL:', refetchUrl);
+        await mutate(refetchUrl);
+    } catch (error) {
+        console.error("Error during refetch:", error);
+    }
     };
-
+  
     return {
-        value: swrData || {
-            results: [], // Default structure for an empty result
-            count: 0,
-            pages: 0,
-            errorMessage: null
-        },
-        swrLoading: !error && !swrData && isValidating,
-        error,
-        refetch,
+      value: swrData || {
+        results: [], // Default structure for an empty result
+        count: 0,
+        pages: 0,
+        errorMessage: null
+      },
+      swrLoading: !error && !swrData ,
+      error,
+      refetch,
     };
-};
+  };
+  
 
 /**
  * Hook for creating a new doctor.

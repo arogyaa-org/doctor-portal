@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 export const patientDatagridColumns = (): GridColDef[] => {
     const columns: GridColDef[] = [
         {
-            field: 'patientId',
+            field: 'username',
             headerName: 'Name',
             headerClassName: 'super-app-theme--header',
             headerAlign: 'center',

@@ -6,48 +6,59 @@ import useSWR, { mutate } from "swr";
 import { creator, fetcher, modifier } from "@/apis/apiClient";
 import { Speciality, SpecialityData } from "@/types/speciality";
 
+
 /**
- * Hook for fetching Specialitys with SWR (stale-while-revalidate) strategy.
+ * Hook for fetching doctors with SWR (stale-while-revalidate) strategy.
  *
  * @param initialData - The initial data to be used before SWR fetches fresh data.
- * @param pathKey - The API path key used by SWR to fetch speciality data.
+ * @param pathKey - The API path key used by SWR to fetch doctor data.
  * @param page - The page number for pagination.
  * @param limit - The number of items per page.
- * @returns An object containing the fetched specialities, loading, error state and refetch function.
+ * @param searchQuery - (Optional) The search query for filtering results.
+ * @returns An object containing the fetched doctors, loading, error state, and refetch function.
  */
 export const useGetSpeciality = (
     initialData: Speciality | null,
     pathKey: string,
     page: number = 1,
-    limit: number = 5
-) => {
-    const url = `${pathKey}?page=${page}&limit=${limit}`;
-    const { data: swrData, error, isValidating } = useSWR<Speciality | null>(
-        url,
-        () => fetcher<Speciality>('speciality', url),
-        {
-            fallbackData: initialData,
-            refreshInterval: initialData ? 3600000 : 0, // Refresh every hour if initialData exists
-            revalidateOnFocus: false, // Disable revalidation on window focus
-        });
-
-    const refetch = async (keyword?: string) => {
-        const refetchUrl = keyword ? `${url}&keyword=${keyword}` : url;
-        return await mutate(refetchUrl);
+    limit: number = 5,
+    searchQuery: string = ""
+  ) => {
+    const url = `${pathKey}?page=${page}&limit=${limit}${searchQuery.trim() ? `&search=${searchQuery.trim()}` : ""}`;
+    const { data: swrData, error } = useSWR<Speciality | null>(
+      url,
+      () => fetcher<Speciality>('speciality', url),
+      {
+      fallbackData: initialData,
+      refreshInterval: initialData ? 3600000 : 0,
+      revalidateOnFocus: false,
+    }
+  );
+  
+  const refetch = async (query?: string) => {
+    const refetchUrl = query
+        ? `${pathKey}?page=${page}&limit=${limit}&search=${query.trim()}`
+        : url;
+    try {
+        console.log('Refetch URL:', refetchUrl);
+        await mutate(refetchUrl);
+    } catch (error) {
+        console.error("Error during refetch:", error);
+    }
     };
-
+  
     return {
-        value: swrData || {
-            results: [],
-            count: 0,
-            pages: 0,
-            errorMessage: null
-        },
-        swrLoading: !error && !swrData && isValidating,
-        error,
-        refetch
+      value: swrData || {
+        results: [], // Default structure for an empty result
+        count: 0,
+        pages: 0,
+        errorMessage: null
+      },
+      swrLoading: !error && !swrData ,
+      error,
+      refetch,
     };
-};
+  };
 
 export const useCreateSpeciality = (pathKey: string) => {
     const [loading, setLoading] = useState(false);

@@ -1,48 +1,55 @@
-'use client';
-
-import * as React from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from 'react-redux';
-import { Card, Stack } from '@mui/material';
+import { Card, Box, Stack } from '@mui/material';
 import Typography from '@mui/material/Typography';
 
 import Search from '@/components/common/Search';
 import ServerPaginationGrid from '@/components/common/Datagrid';
 import type { AppDispatch, RootState } from '@/redux/store';
-import type { Appointment } from '@/types/appointment';
 import { datagridColumns } from "./appointmentConfig";
 import { useGetAppointment } from '@/hooks/appointment';
 import { setAppointment, setLoading } from '@/redux/features/appointmentSlice';
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(10);
-  const dispatch: AppDispatch = useDispatch();
+  const [pageSize, setPageSize] = React.useState(10);
+  const [searchQuery, setSearchQuery] = React.useState("");
   const { appointment, reduxLoading } = useSelector((state: RootState) => state.appointment);
 
-  const { value: data, refetch } = useGetAppointment(
-    {} as Appointment,
-    'get-doctors-appointment',
-    '674eedea9275f96f06a60c95',
+  const dispatch: AppDispatch = useDispatch();
+
+  const { value: data, swrLoading, error, refetch } = useGetAppointment(
+    null,
+    "get-appointment",
     currentPage,
-    limit
+    pageSize,
+    searchQuery
   );
 
-  const handleDispatch = React.useCallback(() => {
-    dispatch(setLoading(true));
-    if (data) {
+ useEffect(() => {
+    if (data?.results && data?.results !== appointment?.results) {
       dispatch(setAppointment(data));
-      dispatch(setLoading(false));
-    } else {
-      dispatch(setLoading(false));
     }
-  }, [data?.results?.length]);
+  }, [data?.results?.length || 0, dispatch]);
 
-  React.useEffect(() => {
-    handleDispatch();
-  }, [handleDispatch]);
 
-  console.log("appointment data:", appointment);
-  console.log("total items:", data);
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); 
+  
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);  
+    await refetch(query);
+  };
 
   return (
     <>
@@ -51,17 +58,25 @@ const Page: React.FC = () => {
           <Typography variant="h4">Appointment</Typography>
         </Stack>
         <Card>
-          <Search
-            refetchAPI={refetch}
-          />
+          <Search refetchAPI={handleSearch} placeholderText="Search Appointment" />
           <ServerPaginationGrid
             columns={datagridColumns()}
-            count={appointment?.count}
+            count={appointment?.total || 0}
             rows={appointment?.results || []}
-            loading={reduxLoading}
-            pageSizeOptions={[5, 10, 20]}
+            loading={reduxLoading || swrLoading}
+            page={currentPage - 1}
+            pageSize={pageSize} 
+            pageSizeOptions={[5, 10, 20]} 
+            onPageChange={(params: number) => handlePageChange(params + 1)}
+            onPageSizeChange={(newSize: number) => handlePageSizeChange(newSize)}
           />
         </Card>
+
+        {error && (
+          <Typography color="error" align="center">
+            Failed to load appointment. Please try again.
+          </Typography>
+        )}
       </Stack>
     </>
   );

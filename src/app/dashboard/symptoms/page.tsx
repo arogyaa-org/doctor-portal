@@ -17,21 +17,27 @@ import { symptomDatagridColumns } from "./symptomsConfig";
 const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedSymptomId, setSelectedSymptomId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1); 
+    const [pageSize, setPageSize] = useState(10);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [openDialog, setOpenDialog] = useState(false);
+    const [selectedSymptomId, setSelectedSymptomId] = useState<string | null>(null);
+    const { symptom, reduxLoading } = useSelector((state: RootState) => state.symptoms);
+    const dispatch: AppDispatch = useDispatch();
 
-  const dispatch: AppDispatch = useDispatch();
-  const { symptom, reduxLoading } = useSelector((state: RootState) => state.symptoms);
-
-  const { value: data, refetch } = useGetSymptom(null, "get-symptoms", currentPage, ITEMS_PER_PAGE);
-
-  useEffect(() => {
-    if (data?.results) {
-      dispatch(setSymptom(data));
-    }
-  }, [data?.results?.length]);
-
+    const { value: data, swrLoading, error, refetch } = useGetSymptom(
+      null,
+      "get-symptoms",
+      currentPage,
+      pageSize,
+      searchQuery
+  );
+    useEffect(() => {
+      if (data?.results?.length > 0 && data.results !== symptom?.results) {
+        dispatch(setSymptom(data));
+      }
+    }, [data?.results?.length, dispatch]);
+    
   const handleOpenDialog = (symptomId: string | null = null) => {
     setSelectedSymptomId(symptomId);
     setOpenDialog(!openDialog);
@@ -39,7 +45,22 @@ const Page: React.FC = () => {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+   
   };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); 
+  
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    await refetch(query);
+  };
+  
+
 
   return (
     <Stack spacing={3}>
@@ -53,7 +74,7 @@ const Page: React.FC = () => {
         <Stack spacing={2} sx={{ padding: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: 'space-between' }}>
             <Search
-              refetchAPI={refetch}
+              refetchAPI={handleSearch} placeholderText="Search Symptoms"
             />
             <Button
               variant="contained"
@@ -75,14 +96,14 @@ const Page: React.FC = () => {
         {/* DataGrid for Displaying Symptoms */}
         <ServerPaginationGrid
           columns={symptomDatagridColumns(handleOpenDialog)}
-          count={symptom?.count}
-          paginationMode='server'
-          rows={symptom?.results}
-          loading={reduxLoading}
+          count={symptom?.count || 0}
+          rows={symptom?.results || []}
+          loading={reduxLoading || swrLoading}
           page={currentPage - 1}
-          pageSize={ITEMS_PER_PAGE}
+          pageSize={pageSize}
           pageSizeOptions={[10, 15, 20]}
           onPageChange={(params: any) => handlePageChange(params + 1)}
+          onPageSizeChange={(newSize: number) => handlePageSizeChange(newSize)}
         />
       </Card>
       <FormInModal
