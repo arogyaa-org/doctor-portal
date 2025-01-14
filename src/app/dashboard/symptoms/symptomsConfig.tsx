@@ -12,7 +12,7 @@ export const symptomDatagridColumns = (handleOpenDialog): GridColDef[] => {
   const columns: GridColDef[] = [
     {
       field: "name",
-      headerName: "Symptom Name",
+      headerName: "Name",
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",

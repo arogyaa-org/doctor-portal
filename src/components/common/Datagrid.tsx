@@ -7,7 +7,6 @@
  */
 
 import { useEffect, useState, useMemo } from 'react';
-import { Box } from '@mui/material';
 import { DataGrid, GridToolbar, GridColDef, GridRowId, GridPaginationModel } from '@mui/x-data-grid';
 import LoadingSkeleton from './LoadingSkeleton'; 
 import NoRows from './NoRows'; 
@@ -73,28 +72,26 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
     );
 
     return (
-        <Box m="30px 0 0 0">
-            <DataGrid
-                getRowHeight={() => 'auto'}
-                sx={dataGridStyles}
-                slots={{
-                    toolbar: GridToolbar,
-                    loadingOverlay: LoadingSkeleton,
-                    noRowsOverlay: NoRows,
-                }}
-                rows={rows}
-                columns={columns}
-                loading={loading}
-                getRowId={(row: { _id: GridRowId }) => row._id}
-                paginationMode="server"
-                rowCount={rowCountState}
-                pageSizeOptions={pageSizeOptions}
-                paginationModel={paginationModel}
-                onPaginationModelChange={handlePaginationModelChange}
-                disableRowSelectionOnClick
-                keepNonExistentRowsSelected
-            />
-        </Box>
+        <DataGrid
+            getRowHeight={() => 'auto'}
+            sx={dataGridStyles}
+            slots={{
+                toolbar: GridToolbar,
+                loadingOverlay: LoadingSkeleton,
+                noRowsOverlay: NoRows,
+            }}
+            rows={rows}
+            columns={columns}
+            loading={loading}
+            getRowId={(row: { _id: GridRowId }) => row._id}
+            paginationMode="server"
+            rowCount={rowCountState}
+            pageSizeOptions={pageSizeOptions}
+            paginationModel={paginationModel}
+            onPaginationModelChange={handlePaginationModelChange}
+            disableRowSelectionOnClick
+            keepNonExistentRowsSelected
+        />
     );
 };
 

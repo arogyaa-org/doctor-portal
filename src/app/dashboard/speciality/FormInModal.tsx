@@ -190,7 +190,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
           }}
         >
           <Typography variant="h4" gutterBottom>
-            {title} Speciality
+            {title} 
           </Typography>
         </Box>
         <Formik

@@ -185,7 +185,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
             variant="h4"
             gutterBottom
           >
-            {title} Symptom
+            {title} 
           </Typography>
         </Box>
         <Formik

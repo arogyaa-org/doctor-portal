@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Button, Card, Stack, Typography } from "@mui/material";
+import { Button, Card, Stack, Typography } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
 
 import FormInModal from "./FormInModal";
@@ -11,7 +11,7 @@ import ServerPaginationGrid from "@/components/common/Datagrid";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setSpeciality } from "@/redux/features/specialitySlice";
-import { useGetSpeciality } from "@/hooks/speciality";
+import { useGetSpeciality } from "@/hooks/Speciality";
 import { SpecialityDatagridColumns } from "./specialityConfig";
 
 const ITEMS_PER_PAGE = 10;
@@ -29,12 +29,11 @@ const Page: React.FC = () => {
     (state: RootState) => state.speciality
   );
 
-  // Fetch data based on currentPage and pageSize
   const { value: data, refetch } = useGetSpeciality(
     null,
     "get-specialities",
     currentPage,
-    pageSize // Pass current page size here
+    pageSize
   );
 
   useEffect(() => {
@@ -48,62 +47,65 @@ const Page: React.FC = () => {
     setOpenDialog(!openDialog);
   };
 
-  // Handle page change
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
-  // Handle page size change
   const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize); // Update the page size when changed
-    setCurrentPage(1); // Reset to the first page when page size changes
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
   return (
     <Stack spacing={3}>
-      {/* Page Header */}
-      <Stack spacing={1} sx={{ flex: "1 1 auto" }}>
-        <Typography variant="h4">Speciality</Typography>
-      </Stack>
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <Typography
+          variant="h4"
+          sx={{
+            flex: 1,
+            fontWeight: 600,
+            marginLeft: "25px",
+          }}
+        >
+          Specialization
+        </Typography>
 
-      {/* Data Table and Actions */}
-      <Card>
-        <Stack spacing={2} sx={{ padding: 2 }}>
-          <Box
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Search refetchAPI={refetch} holderText="Specialization" />
+
+          <Button
+            variant="contained"
+            startIcon={<CreateIcon />}
+            onClick={() => handleOpenDialog(null)}
             sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              borderRadius: "100px",
+              background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+              px: 3,
+              textTransform: "none",
+              fontWeight: 600,
+              boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+              minHeight:"45px",
             }}
           >
-            <Search refetchAPI={refetch} />
-            <Button
-              variant="contained"
-              startIcon={<CreateIcon />}
-              onClick={() => handleOpenDialog(null)}
-              sx={{
-                borderRadius: "100px",
-                background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
-                px: 3,
-                textTransform: "none",
-                fontWeight: 600,
-                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-              }}
-            >
-              Create Speciality
-            </Button>
-          </Box>
+            Create
+          </Button>
         </Stack>
+      </Stack>
 
-        {/* DataGrid for Displaying Speciality */}
+      <Card>
         <ServerPaginationGrid
           columns={SpecialityDatagridColumns(handleOpenDialog)}
           count={Speciality?.count}
           rows={Speciality?.results}
           loading={reduxLoading}
-          pageSizeOptions={[10, 15, 20]} // Options for page size
-          onPageChange={(params: any) => handlePageChange(params + 1)} // Adjust page (0-based)
-          onPageSizeChange={handlePageSizeChange} // Handle page size change
+          pageSizeOptions={[10, 15, 20]}
+          onPageChange={(params: any) => handlePageChange(params + 1)}
+          onPageSizeChange={handlePageSizeChange}
         />
       </Card>
       <FormInModal

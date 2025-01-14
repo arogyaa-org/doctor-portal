@@ -11,7 +11,7 @@ export const SpecialityDatagridColumns = (handleOpenDialog): GridColDef[] => {
   const columns: GridColDef[] = [
     {
       field: "name",
-      headerName: "Speciality Name",
+      headerName: "Name",
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",
