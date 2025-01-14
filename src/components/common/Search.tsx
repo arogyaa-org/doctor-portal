@@ -1,27 +1,18 @@
-import { useState, useRef } from 'react';
-import { Card, IconButton, InputAdornment, OutlinedInput, Tooltip, useMediaQuery } from '@mui/material';
-import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
-import { X as ClearIcon } from '@phosphor-icons/react/dist/ssr/X';
+import React, { useState, useRef } from "react";
+import { InputAdornment, OutlinedInput, Box, IconButton } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 
 interface SearchProps {
   refetchAPI: (inputValue: string) => Promise<void>;
+  holderText?: string;
 }
 
-const Search: React.FC<SearchProps> = ({ refetchAPI }) => {
+const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
   const [inputValue, setInputValue] = useState<string>("");
-  const [isActive, setIsActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const isMobile = useMediaQuery("(max-width:480px)");
-  const isTab = useMediaQuery("(max-width:920px)");
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(event.target.value);
-  };
 
   const handleSearchIconClick = () => {
     if (inputValue.trim() === "") {
-      setIsActive(true);         // Activate the search field with blinking cursor
       inputRef.current?.focus();
     } else {
       handleSearch();
@@ -29,72 +20,81 @@ const Search: React.FC<SearchProps> = ({ refetchAPI }) => {
   };
 
   const handleSearch = async () => {
-    if (inputValue.trim()) {  // Prevent empty search
-      console.log('this is input value=>', inputValue);
-      // await refetchAPI(inputValue);    implement API call later
+    if (inputValue.trim()) {
+      console.log("Search Value:", inputValue);
+      await refetchAPI(inputValue);
     }
   };
 
-  // Search data by pressing down the enter key
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       handleSearch();
     }
   };
 
-  const handleClearInput = () => {
-    setInputValue("");
-    setIsActive(false);      // Deactivate the field if it’s empty
-    inputRef.current?.blur();
-  };
-
   return (
-    <Card sx={{ p: 2 }}>
+    <Box
+      sx={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        maxWidth: "600px",
+        width: "100%",
+      }}
+    >
+      <IconButton
+        onClick={handleSearchIconClick}
+        sx={{
+          background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+          borderRadius: "50%",
+          color: "white",
+          cursor: "pointer",
+          height: "50px",
+          width: "50px",
+          position: "absolute",
+          left: "-10px",
+          zIndex: 1,
+          "&:hover": {
+            background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
+          },
+        }}
+      >
+        <SearchIcon sx={{ fontSize: "20px" }} />
+      </IconButton>
+
       <OutlinedInput
         fullWidth
         inputRef={inputRef}
-        placeholder="Search Appointment"
+        placeholder={`Search ${holderText}`}
         value={inputValue}
-        onChange={handleChange}
+        onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        onFocus={() => setIsActive(true)}
-        onBlur={() => {
-          if (inputValue.trim() === "") setIsActive(false);
+        sx={{
+          borderRadius: "25px",
+          paddingLeft: "0px",
+          height: "50px",
+          backgroundColor: "white",
+          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+          fontSize: "16px",
+          color: "gray",
+          "& .MuiOutlinedInput-notchedOutline": {
+            border: "1px solid #ddd",
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#ccc",
+          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#bbb",
+          },
         }}
         startAdornment={
-          isActive && (
-            <InputAdornment position="start">
-              <IconButton
-                aria-label="search"
-                onClick={handleSearchIconClick}
-              >
-                <MagnifyingGlassIcon fontSize="var(--icon-fontSize-md)" />
-              </IconButton>
-            </InputAdornment>
-          )
-        }
-        endAdornment={
-          <InputAdornment position="end">
-            {isActive ? (
-              <IconButton aria-label="clear" onClick={handleClearInput}>
-                <ClearIcon fontSize="var(--icon-fontSize-md)" />
-              </IconButton>
-            ) : (
-              <Tooltip title="Search" arrow>
-                <IconButton
-                  aria-label="search"
-                  onClick={handleSearchIconClick}
-                >
-                  <MagnifyingGlassIcon fontSize="var(--icon-fontSize-md)" />
-                </IconButton>
-              </Tooltip>
-            )}
+          <InputAdornment position="start">
+            <Box sx={{ width: "50px" }} />
           </InputAdornment>
         }
-        sx={{ maxWidth: '400px' }}
       />
-    </Card>
+    </Box>
   );
-}
+};
 
 export default Search;

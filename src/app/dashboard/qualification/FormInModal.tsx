@@ -161,7 +161,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
       <Box sx={{ display: 'flex', flexDirection: 'column', p: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2 }}>
           <Typography variant="h4" gutterBottom>
-            {title} Qualification
+            {title} 
           </Typography>
         </Box>
 

@@ -11,7 +11,7 @@ export const qualificationDatagridColumns = (handleOpenDialog): GridColDef[] => 
   const columns: GridColDef[] = [
     {
       field: "name",
-      headerName: "Qualification Name",
+      headerName: "Name",
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",
