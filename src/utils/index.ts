@@ -36,9 +36,24 @@ export const Utility = () => {
     return await response.json();
   };
 
+  /** 
+   * Finds multiple objects in a collection by their IDs.
+   * @param {Array} ids - The array of IDs to search for.
+   * @param {Array} model - The collection (array of objects) to search within.
+   * @returns {Array} - An array containing the found objects with the specified IDs.
+   */
+  const findMultipleById = <T extends { id: string | number }>(
+    ids: string,
+    model: T[]
+  ): T[] => {
+    if (!ids || !model) {
+      return [];
+    }
+    return model.filter(obj => ids.split(',').indexOf(obj.id.toString()) > -1);
+  };
+
   /**
    * Returns the appropriate base URL based on the service name.
-   *
    * @param serviceName - The key representing the microservice.
    * @returns The base URL for the specified microservice.
    */
@@ -53,6 +68,22 @@ export const Utility = () => {
     };
 
     return urls[serviceName] || "";
+  };
+
+  /**
+   * Extracts and concatenates IDs from an array of objects.
+   * @param array - The array of objects from which to extract IDs.
+   * @returns A comma-separated string of IDs.
+   */
+  const getIdsFromObject = (array: Array<{ _id: string }>): string[] => {
+    if (!Array.isArray(array)) {
+      return [];
+    }
+    const arrayId: string[] = [];
+    array.forEach((item) => {
+      arrayId.push(item._id);
+    });
+    return arrayId;
   };
 
   /**
@@ -233,7 +264,9 @@ export const Utility = () => {
     capitalizeFirstLetter,
     decodedToken,
     fetchData,
+    findMultipleById,
     getServiceUrl,
+    getIdsFromObject,
     getSessionStorage,
     setSessionStorage,
     getLocalStorage,

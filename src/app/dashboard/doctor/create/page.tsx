@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
 import { Formik, Form, Field } from "formik";
 import {
@@ -27,25 +28,29 @@ import {
   Place as PlaceIcon,
   Work as WorkIcon,
   Assignment as AssignmentIcon,
-  EventAvailable as EventAvailableIcon,
-  Upload as UploadIcon,
-  Close as CloseIcon,
   Info as InfoIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import WcIcon from "@mui/icons-material/Wc";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
-import { fetcher } from "@/apis/apiClient";
-import Toast from "@/components/common/Toast";
-import { Utility } from "@/utils";
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import PinDrop from '@mui/icons-material/PinDrop';
+import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+import DeleteIcon from "@mui/icons-material/Delete";
+import TagIcon from "@mui/icons-material/Tag";
 import dayjs from "dayjs";
-import { useCreateDoctor, useModifyDoctor } from "@/hooks/doctor";
-import { useDispatch, useSelector } from "react-redux";
+
+import Loader from "@/components/common/Loader";
+import Toast from "@/components/common/Toast";
+import validationSchema from "./ValidationSchema";
 import { AppDispatch, RootState } from "@/redux/store";
+import { fetcher } from "@/apis/apiClient";
+import { useCreateDoctor, useModifyDoctor } from "@/hooks/doctor";
 import { useGetSpeciality } from "@/hooks/speciality";
 import { useGetQualification } from "@/hooks/qualification";
-import { validationSchema } from "./ValidationSchema";
+import { useGetSymptom } from "@/hooks/symptoms";
+import { Utility } from "@/utils";
 
 interface DoctorFormValues {
   _id?: string | number;
@@ -53,19 +58,22 @@ interface DoctorFormValues {
   email: string;
   password: string;
   contact: string;
-  experience: number;
+  experience: string | number;
   bio: string;
+  tags: string[];
   gender: string;
   dob: string;
-  languageSpoken: string[];
+  languagesSpoken: string[];
   address: string;
-  profilePicture: string;
-  consultationFee: number;
+  pincode: string | number;
+  profilePicture: any;
+  consultationFee: string | number;
   status: string;
   role: string;
-  speciality: string[];
-  qualification: string[];
-  availability: string[];
+  qualificationIds: any[];
+  specializationIds: any[];
+  symptomIds: any[];
+  availability: any[];
 }
 
 const initialValues: DoctorFormValues = {
@@ -75,130 +83,136 @@ const initialValues: DoctorFormValues = {
   contact: "",
   gender: "",
   dob: "",
-  experience: 0,
+  experience: "",
   bio: "",
-  languageSpoken: [],
+  tags: [],
+  languagesSpoken: [],
   address: "",
-  profilePicture: "",
-  consultationFee: 0,
+  pincode: "",
+  profilePicture: null,
+  consultationFee: "",
   status: "",
   role: "",
-  speciality: [],
-  qualification: [],
+  qualificationIds: [],
+  specializationIds: [],
+  symptomIds: [],
   availability: [],
 };
+let editFormValues: DoctorFormValues;
 
 const DoctorForm = () => {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState<"Create" | "Edit">("Create");
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<DoctorFormValues>(initialValues);
-  const [specialityInput, setSpecialityInput] = useState<string>("");
-  const [qualificationInput, setQualificationInput] = useState<string>("");
-
-  const [showPasswordField, setShowPasswordField] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [updatePassword, setUpdatePassword] = useState<boolean>(false);
+  const pwFieldRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const params = useParams();
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
   const { toast } = useSelector((state: RootState) => state.toast);
-  const { toastAndNavigate } = Utility();
+  const { getIdsFromObject, toastAndNavigate } = Utility();
+  const doctorId = params?.id;
 
   const { createDoctor } = useCreateDoctor("create-doctor");
   const { modifyDoctor } = useModifyDoctor("update-doctor");
 
-  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
-  const [updatePasswordButtonText, setUpdatePasswordButtonText] =
-    useState("Update Password");
-
-  const params = useParams();
-  const doctorId = params?.id;
-  const isEditMode = !!doctorId;
-
-  const fetchQualificationById = async (id) => {
-    try {
-      const response = await fetcher(
-        `http://localhost:4002/api/v1/qualification-service/get-qualification-by-id/${id}`
-      );
-      return response?.data?.name || "";
-    } catch (err) {
-      console.error(`Error fetching qualification by ID (${id}):`, err);
-      return "";
-    }
-  };
-
-  const fetchSpecialityById = async (id) => {
-    try {
-      const response = await fetcher(
-        `http://localhost:4002/api/v1/speciality-service/get-speciality-by-id/${id}`
-      );
-      return response?.data?.name || "";
-    } catch (err) {
-      console.error(`Error fetching speciality by ID (${id}):`, err);
-      return "";
-    }
-  };
-
   const { value: specialities, swrLoading: specialityLoading } =
     useGetSpeciality(
       null,
-      "http://localhost:4002/api/v1/speciality-service/get-specialities"
+      "get-specialities",
+      1,
+      200
     );
-
   const { value: qualifications, swrLoading: qualificationLoading } =
     useGetQualification(
       null,
-      "http://localhost:4002/api/v1/qualification-service/get-qualifications"
+      "get-qualifications",
+      1,
+      200
     );
-
+  const { value: symptoms, swrLoading: symptomLoading } =
+    useGetSymptom(
+      null,
+      "get-symptoms",
+      1,
+      200
+    );
   console.log("doctorId", doctorId);
 
-  const [showUpdatePasswordButton, setShowUpdatePasswordButton] =
-    useState(false);
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
 
+  const handleUpdatePassword = useCallback(() => {
+    if (formValues.password) {
+      editFormValues = { ...formValues }
+    }
+    if (!updatePassword) {
+      setFormValues((prev) => ({
+        ...prev,
+        password: "",
+      }));
+      pwFieldRef?.current?.focus();
+    } else {
+      setFormValues((prev) => ({
+        ...prev,
+        password: editFormValues.password,
+      }));
+    }
+    setUpdatePassword(!updatePassword);
+  }, [updatePassword, formValues]);
+
+  //Create/Edit/Populate Doctor
   useEffect(() => {
     if (doctorId) {
       setTitle("Edit");
-      setShowUpdatePasswordButton(true);
-      setShowPasswordField(false);
       populateData(doctorId);
     } else {
       setFormValues(initialValues);
-      setShowUpdatePasswordButton(false);
-      setShowPasswordField(true);
       setTitle("Create");
     }
   }, [doctorId]);
 
+  const create = useCallback(async (values: DoctorFormValues) => {
+    setLoading(true);
+    try {
+      const response = await createDoctor({
+        ...values,
+        gender: values.gender || null,
+        role: values.role || null,
+        status: values.status || null,
+        profilePicture: values?.profilePicture?.file || null,
+        qualificationIds: getIdsFromObject(values?.qualificationIds),
+        specializationIds: getIdsFromObject(values?.specializationIds),
+        symptomIds: getIdsFromObject(values?.symptomIds)
+      });
+      if (response?.statusCode === 201) {
+        toastAndNavigate(dispatch, true, "success", "Created Successfully", () => router.back());
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        "Error creating Doctor, please try again.";
+      toastAndNavigate(dispatch, true, "error", errorMessage, () => router.back());
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const populateData = useCallback(
-    async (doctorId: string | number) => {
+    async (doctorId: string | string[]) => {
       setLoading(true);
       try {
         const response = await fetcher(
-          `http://localhost:4004/api/v1/doctor-service/get-doctor-by-id/${doctorId}`
+          'doctor',
+          `get-doctor-by-id/${doctorId}`
         );
-
         if (response?.statusCode === 200) {
-          const doctorData = response.data;
-
-          const qualifications = await Promise.all(
-            doctorData.qualificationIds.map((id) => fetchQualificationById(id))
-          );
-
-          const specialities = await Promise.all(
-            doctorData.specializationIds.map((id) => fetchSpecialityById(id))
-          );
-
-          setFormValues({
-            ...doctorData,
-            languageSpoken: doctorData.languagesSpoken || [],
-            qualification: qualifications,
-            speciality: specialities,
-          });
-          console.log("Populated Form Values:", {
-            ...doctorData,
-            qualification: qualifications,
-            speciality: specialities,
-          });
+          setFormValues(response.data);
+          console.log(response.data, 'this is response')
         } else {
           console.log("Doctor not found or server error");
         }
@@ -211,473 +225,720 @@ const DoctorForm = () => {
     [doctorId]
   );
 
-  const handleSubmit = async (values, { setSubmitting }) => {
-    setLoading(true);
-    try {
-      const mappedSpecialities = values.speciality.map((name) => {
-        const match = specialities.results.find((item) => item.name === name);
-        return match ? match._id : name;
-      });
+  const update = useCallback(
+    async (values: any) => {
+      setLoading(true);
+      try {
+        const payload = {
+          ...values,
+          gender: values.gender || null,
+          role: values.role || null,
+          status: values.status || null,
+          profilePicture: values?.profilePicture?.file || null,
+          qualificationIds: getIdsFromObject(values?.qualificationIds),
+          specializationIds: getIdsFromObject(values?.specializationIds),
+          symptomIds: getIdsFromObject(values?.symptomIds),
+        };
+        if (!updatePassword) {
+          delete payload.password;
+        }
 
-      const mappedQualifications = values.qualification.map((name) => {
-        const match = qualifications.results.find((item) => item.name === name);
-        return match ? match._id : name;
-      });
-
-      const updatedValues = {
-        ...values,
-        speciality: mappedSpecialities,
-        qualification: mappedQualifications,
-      };
-
-      console.log("Updated Values for Submission: ", updatedValues);
-
-      if (title === "Create") {
-        await createDoctor(updatedValues);
-        toastAndNavigate(
-          dispatch,
-          true,
-          "success",
-          "Doctor created successfully!"
-        );
-      } else {
-        await modifyDoctor({ ...updatedValues, id: doctorId });
-        toastAndNavigate(
-          dispatch,
-          true,
-          "info",
-          "Doctor updated successfully!"
-        );
+        const response = await modifyDoctor(payload);
+        if (response?.statusCode === 200) {
+          toastAndNavigate(dispatch, true, "info", "Updated Successfully", () => router.back());
+        }
+      } catch (err: any) {
+        const errorMessage =
+          err?.response?.data?.message || "Error Occurred. Please Try Again";
+        toastAndNavigate(dispatch, true, "error", errorMessage, () => router.back());
+      } finally {
+        setLoading(false);
       }
-
-      router.push("/dashboard/doctor");
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
-    }
-  };
+    },
+    [updatePassword, formValues]
+  );
 
   return (
-    <Box
-      sx={{
-        maxWidth: 800,
-        mx: "auto",
-        mt: 5,
-        p: 4,
-        borderRadius: 2,
-        boxShadow: 4,
-        backgroundColor: "white",
-        border: "1px solid #e0e0e0",
-        position: "relative",
-      }}
-    >
-      {showUpdatePasswordButton && (
+    <Box margin='0 10px 10px 10px'>
+      {doctorId && (
         <Button
-          variant="outlined"
+          type="button"
+          color={updatePassword ? "error" : "info"}
+          variant="contained"
           sx={{
-            position: "absolute",
-            top: 16,
-            right: 16,
+            position: 'absolute',
+            right: 30
           }}
-          onClick={() => {
-            setShowPasswordField((prev) => !prev);
-            setUpdatePasswordButtonText((prev) =>
-              prev === "Update Password" ? "Hide Password" : "Update Password"
-            );
-          }}
+          onClick={handleUpdatePassword}
         >
-          {updatePasswordButtonText}
+          {updatePassword ? "Cancel Update Password" : "Update Password"}
         </Button>
       )}
-
       <Typography
         variant="h4"
         gutterBottom
-        sx={{ textAlign: "center", color: "#1976d2", fontWeight: "bold" }}
+        sx={{ color: "rgb(7, 135, 179)", fontWeight: "bold", mb: '20px' }}
       >
-        {title} Doctor
+        {title}
       </Typography>
 
       <Formik
-        initialValues={formValues}
-        validationSchema={validationSchema(isEditMode)}
-        onSubmit={handleSubmit}
         enableReinitialize
+        initialValues={formValues}
+        validationSchema={validationSchema}
+        onSubmit={(values) => {
+          values._id ? update(values) : create(values);
+        }}
       >
-        {({ values, errors, touched, setFieldValue, isSubmitting }) => (
-          <Form>
-            <Grid container spacing={3}>
-              {/* Username Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  type="text"
-                  label="Username *"
-                  name="username"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  error={touched.username && Boolean(errors.username)}
-                  helperText={touched.username && errors.username}
-                />
-              </Grid>
-              {/* Email Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  label="Email *"
-                  name="email"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={touched.email && Boolean(errors.email)}
-                  helperText={touched.email && errors.email}
-                />
-              </Grid>
-
+        {({
+          dirty,
+          errors,
+          values,
+          touched,
+          handleChange,
+          resetForm,
+          setFieldValue,
+          isSubmitting
+        }) => (
+          <Form encType="multipart/form-data">
+            <Box
+              display="grid"
+              gap="30px"
+              gridTemplateColumns="repeat(4, minmax(0, 1fr))"
+            >
+              <Field
+                as={MuiTextField}
+                type="text"
+                label="Username *"
+                name="username"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PersonIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                error={touched.username && Boolean(errors.username)}
+                helperText={touched.username && errors.username}
+              />
+              <Field
+                as={MuiTextField}
+                label="Email *"
+                name="email"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.email && Boolean(errors.email)}
+                helperText={touched.email && errors.email}
+              />
               {/* password */}
-              {showPasswordField && (
-                <Grid item xs={12} sm={6}>
+              {(title === "Create" || updatePassword) && (
+                <Field
+                  fullWidth
+                  as={MuiTextField}
+                  label="Password *"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  inputRef={pwFieldRef}
+                  value={values.password}
+                  onChange={handleChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PasswordIcon color="primary" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={togglePasswordVisibility}>
+                          {showPassword ?
+                            <VisibilityIcon color="primary" />
+                            :
+                            <VisibilityOffIcon color="primary" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  error={touched.password && Boolean(errors.password)}
+                  helperText={touched.password && errors.password}
+                />
+              )}
+              <Field
+                as={MuiTextField}
+                label="Contact *"
+                name="contact"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CallIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.contact && Boolean(errors.contact)}
+                helperText={touched.contact && errors.contact}
+              />
+              <Field
+                as={MuiTextField}
+                label="Date of Birth *"
+                name="dob"
+                fullWidth
+                type="date"
+                value={
+                  values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""
+                }
+                onChange={(e) => {
+                  const formattedDate = dayjs(e.target.value).format(
+                    "YYYY-MM-DD"
+                  );
+                  setFieldValue("dob", formattedDate);
+                }}
+                InputLabelProps={{ shrink: true }}
+                error={touched.dob && Boolean(errors.dob)}
+                helperText={touched.dob && errors.dob}
+              />
+              <FormControl
+                fullWidth
+                error={touched.gender && Boolean(errors.gender)}
+              >
+                <InputLabel>Gender </InputLabel>
+                <Select
+                  label="Gender "
+                  name="gender"
+                  value={values.gender}
+                  onChange={(e) => setFieldValue("gender", e.target.value)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <WcIcon color="primary" />{" "}
+                    </InputAdornment>
+                  }
+                >
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </Select>
+                {touched.gender && errors.gender && (
+                  <Typography color="error" variant="body2">
+                    {errors.gender}
+                  </Typography>
+                )}
+              </FormControl>
+              <Field
+                as={MuiTextField}
+                label="Experience (in years)"
+                name="experience"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <WorkIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.experience && Boolean(errors.experience)}
+                helperText={touched.experience && errors.experience}
+              />
+              <Field
+                as={MuiTextField}
+                type="text"
+                label="Languages Spoken"
+                name="languagesSpoken"
+                fullWidth
+                value={values.languagesSpoken.join(", ")}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setFieldValue(
+                    "languagesSpoken",
+                    e.target.value.split(",").map((val: string) => val.trim())
+                  )
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LanguageIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={
+                  touched.languagesSpoken && Boolean(errors.languagesSpoken)
+                }
+                helperText={touched.languagesSpoken && errors.languagesSpoken}
+              />
+              <Field
+                as={MuiTextField}
+                label="Consultation Fee "
+                name="consultationFee"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CurrencyRupeeIcon
+                        color="primary"
+                        sx={{ fontSize: "1.5rem" }}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
+                error={
+                  touched.consultationFee && Boolean(errors.consultationFee)
+                }
+                helperText={touched.consultationFee && errors.consultationFee}
+              />
+              <FormControl
+                fullWidth
+                error={touched.status && Boolean(errors.status)}
+              >
+                <InputLabel> Status </InputLabel>
+                <Select
+                  label="Status "
+                  name="status"
+                  value={values.status}
+                  onChange={(e) => setFieldValue("status", e.target.value)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <InfoIcon color="primary" />
+                    </InputAdornment>
+                  }
+                >
+                  <MenuItem value="active">Active</MenuItem>
+                  <MenuItem value="inactive">Inactive</MenuItem>
+                  <MenuItem value="On Leave">On Leave</MenuItem>
+                </Select>
+                {touched.status && errors.status && (
+                  <Typography color="error" variant="body2">
+                    {errors.status}
+                  </Typography>
+                )}
+              </FormControl>
+              <Field
+                as={MuiTextField}
+                label="Role"
+                name="role"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <WorkIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.role && Boolean(errors.role)}
+                helperText={touched.role && errors.role}
+              />
+              <Field
+                as={MuiTextField}
+                label="Address"
+                name="address"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PinDrop color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.address && Boolean(errors.address)}
+                helperText={touched.address && errors.address}
+              />
+              <Field
+                as={MuiTextField}
+                label="Pincode"
+                name="pincode"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PlaceIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.pincode && Boolean(errors.pincode)}
+                helperText={touched.pincode && errors.pincode}
+              />
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={specialities?.results || []}
+                getOptionLabel={option => option.name}
+                isOptionEqualToValue={(option, value) => option._id === value._id}    // populate ke time mismatch error na aye islye
+                value={values.specializationIds || undefined}
+                onChange={(event, value) => {
+                  console.log(value, 'on change')
+                  setFieldValue("specializationIds", value)
+                }}
+                sx={{ gridColumn: "span 2" }}
+                renderInput={(params) => (
                   <MuiTextField
-                    label="Password *"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    fullWidth
-                    value={values.password}
-                    onChange={(e) => setFieldValue("password", e.target.value)}
+                    {...params}
+                    label="Specialization *"
+                    name="specializationIds"
+                    type="text"
+                    error={!!touched.specializationIds && !!errors.specializationIds}
+                    helperText={touched.specializationIds && errors.specializationIds}
                     InputProps={{
+                      ...params.InputProps,
                       startAdornment: (
-                        <InputAdornment position="start">
-                          <PasswordIcon color="primary" />
-                        </InputAdornment>
-                      ),
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton onClick={togglePasswordVisibility}>
-                            {showPassword ? (
-                              <VisibilityIcon color="primary" />
-                            ) : (
-                              <VisibilityOffIcon color="primary" />
-                            )}
-                          </IconButton>
-                        </InputAdornment>
+                        <>
+                          <InputAdornment position="start">
+                            <AssignmentIcon color="primary" />
+                          </InputAdornment>
+                          {params.InputProps.startAdornment}
+                        </>
                       ),
                     }}
-                    error={touched.password && Boolean(errors.password)}
-                    helperText={touched.password && errors.password}
                   />
-                </Grid>
-              )}
+                )}
+              />
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={symptoms?.results || []}
+                getOptionLabel={option => option.name}
+                isOptionEqualToValue={(option, value) => option._id === value._id}
+                value={values.symptomIds || undefined}
+                onChange={(event, value) => setFieldValue("symptomIds", value)}
+                sx={{ gridColumn: "span 2" }}
+                renderInput={(params) => (
+                  <MuiTextField
+                    {...params}
+                    label="Symptom *"
+                    name="symptomIds"
+                    type="text"
+                    error={!!touched.symptomIds && !!errors.symptomIds}
+                    helperText={touched.symptomIds && errors.symptomIds}
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <AssignmentIcon color="primary" />
+                          </InputAdornment>
+                          {params.InputProps.startAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={qualifications?.results || []}
+                getOptionLabel={option => option.name}
+                isOptionEqualToValue={(option, value) => option._id === value._id}
+                value={values.qualificationIds || undefined}
+                onChange={(event, value) => setFieldValue("qualificationIds", value)}
+                sx={{ gridColumn: "span 2" }}
+                renderInput={(params) => (
+                  <MuiTextField
+                    {...params}
+                    label="Qualification *"
+                    name="qualificationIds"
+                    type="text"
+                    error={!!touched.qualificationIds && !!errors.qualificationIds}
+                    helperText={touched.qualificationIds && errors.qualificationIds}
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <AssignmentIcon color="primary" />
+                          </InputAdornment>
+                          {params.InputProps.startAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+              <Field
+                as={MuiTextField}
+                label="Bio "
+                name="bio"
+                fullWidth
+                multiline
+                minRows={3}
+                sx={{ gridColumn: "span 2" }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <AssignmentIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.bio && Boolean(errors.bio)}
+                helperText={touched.bio && errors.bio}
+              />
+              <Field
+                as={MuiTextField}
+                label="Tags "
+                name="tags"
+                fullWidth
+                multiline
+                minRows={3}
+                value={values.tags.join(", ")}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setFieldValue(
+                    "tags",
+                    e.target.value.split(",").map((val: string) => val.trim())
+                  )
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <TagIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.tags && Boolean(errors.tags)}
+                helperText={touched.tags && errors.tags}
+              />
 
-              {/* Contact Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  label="Contact *"
-                  name="contact"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <CallIcon color="primary" />
-                      </InputAdornment>
-                    ),
+              {/* File input and display */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  gap: "16px",
+                  alignItems: "center",
+                }}
+              >
+                {/* Upload Icon with Label */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid #ccc",
+                    borderRadius: "8%",
+                    width: "146px",
+                    height: "104px",
+                    cursor: "pointer",
+                    textAlign: "center",
+                    transition: "border-color 0.3s ease, color 0.3s ease",
+                    "&:hover": {
+                      borderColor: 'rgb(33, 38, 54)',
+                      "& svg": {
+                        color: 'rgb(33, 38, 54)', // Darker icon color on hover
+                      },
+                    },
                   }}
-                  error={touched.contact && Boolean(errors.contact)}
-                  helperText={touched.contact && errors.contact}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <MuiTextField
-                  label="Date of Birth *"
-                  name="dob"
-                  fullWidth
-                  type="date"
-                  value={
-                    values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""
-                  }
-                  onChange={(e) => {
-                    const formattedDate = dayjs(e.target.value).format(
-                      "YYYY-MM-DD"
-                    );
-                    setFieldValue("dob", formattedDate);
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                  error={touched.dob && Boolean(errors.dob)}
-                  helperText={touched.dob && errors.dob}
-                />
-              </Grid>
-
-              {/* Gender Field */}
-              <Grid item xs={12} sm={6}>
-                <FormControl
-                  fullWidth
-                  error={touched.gender && Boolean(errors.gender)}
+                  component="label"
                 >
-                  <InputLabel>Gender </InputLabel>
-                  <Select
-                    label="Gender "
-                    name="gender"
-                    value={values.gender}
-                    onChange={(e) => setFieldValue("gender", e.target.value)}
-                    startAdornment={
-                      <InputAdornment position="start">
-                        <WcIcon color="primary" />{" "}
-                      </InputAdornment>
-                    }
+                  <AddPhotoAlternateIcon
+                    sx={{
+                      fontSize: "32px",
+                      color: '#aaa',
+                      mb: 1,
+                      transition: "color 0.3s ease"
+                    }} />
+                  <Typography variant="body2">Upload Photo</Typography>
+                  <input
+                    ref={fileInputRef}
+                    hidden
+                    type="file"
+                    accept=".jpg, .gif, .png, .jpeg, .svg, .webp"
+                    onChange={(event) => {
+                      const file = event.target.files[0];
+                      if (file) {
+                        // Check file size (1MB = 1,048,576 bytes)
+                        if (file.size > 1048576) {
+                          toastAndNavigate(
+                            dispatch,
+                            true,
+                            "error",
+                            `${file.name} exceeds 1MB limit`
+                          );
+                          return;
+                        }
+
+                        // Set file to Formik field and create a preview
+                        const fileUrl = URL.createObjectURL(file);
+                        setFieldValue("profilePicture", { file, preview: fileUrl });
+                      }
+                    }}
+                  />
+                </Box>
+
+                {/* Display Selected File Preview */}
+                {(values.profilePicture?.file || values.profilePicture) && (
+                  <Box
+                    sx={{
+                      position: "relative",
+                      width: "150px",
+                      height: "106px",
+                    }}
                   >
-                    <MenuItem value="male">Male</MenuItem>
-                    <MenuItem value="female">Female</MenuItem>
-                    <MenuItem value="transgender">Transgender</MenuItem>
-                  </Select>
-                  {touched.gender && errors.gender && (
-                    <Typography color="error" variant="body2">
-                      {errors.gender}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
-              {/* Experience Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  label="Experience "
-                  name="experience"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <WorkIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={touched.experience && Boolean(errors.experience)}
-                  helperText={touched.experience && errors.experience}
-                />
-              </Grid>
+                    {/* Delete Icon */}
+                    <IconButton
+                      onClick={() => {
+                        // Clean up preview URL and remove the file
+                        URL.revokeObjectURL(values.profilePicture?.preview);
+                        setFieldValue("profilePicture", null);
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: "-6px",
+                        right: "-6px",
+                        backgroundColor: "white",
+                        zIndex: 1,
+                        p: "4px",
+                        "&:hover": {
+                          color: "rgb(255, 102, 94)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: "18px" }} />
+                    </IconButton>
 
-              {/* Languages Spoken Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  type="text"
-                  label="Languages Spoken"
-                  name="languageSpoken"
-                  fullWidth
-                  value={values.languageSpoken.join(", ")}
-                  onChange={(e) =>
-                    setFieldValue(
-                      "languageSpoken",
-                      e.target.value.split(",").map((item) => item.trim())
-                    )
-                  }
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LanguageIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={
-                    touched.languageSpoken && Boolean(errors.languageSpoken)
-                  }
-                  helperText={touched.languageSpoken && errors.languageSpoken}
-                />
-              </Grid>
+                    {/* Image Preview */}
+                    {(values.profilePicture?.preview || values.profilePicture) && (
+                      <Box
+                        component="img"
+                        src={values.profilePicture?.preview || values.profilePicture}
+                        alt="Profile Preview"
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #aaa",
+                        }}
+                      />
+                    )}
+                  </Box>
+                )}
+              </Box>
+            </Box>
 
-              {/* Address Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  label="Address "
-                  name="address"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PlaceIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={touched.address && Boolean(errors.address)}
-                  helperText={touched.address && errors.address}
-                />
-              </Grid>
-              {/* Consultation Fee Field with Rupee Icon */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  label="Consultation Fee "
-                  name="consultationFee"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <CurrencyRupeeIcon
-                          color="primary"
-                          sx={{ fontSize: "1.5rem" }}
+            <Box
+              component="fieldset"
+              sx={{
+                border: '2px solid #BADFE7',
+                borderRadius: '12px',
+                p: 2,
+                m: '40px 10px',
+              }}
+            >
+              <Typography
+                component="legend"
+                sx={{ color: 'rgb(102, 112, 133)', fontSize: '1rem', mb: 1 }}
+              > Availability
+              </Typography>
+              {values.availability.map((slot, index) => (
+                <Grid
+                  container
+                  spacing={2}
+                  key={index}
+                  alignItems="center"
+                  sx={{ mb: 2 }}
+                >
+                  <Grid item xs={4}>
+                    <Autocomplete
+                      options={[
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                        "Sunday",
+                      ]}
+                      getOptionLabel={(option) => option}
+                      value={slot.day}
+                      onChange={(event, newValue) => {
+                        const updatedAvailability = [...values.availability];
+                        updatedAvailability[index].day = newValue;
+                        setFieldValue("availability", updatedAvailability);
+                      }}
+                      renderInput={(params) => (
+                        <MuiTextField
+                          {...params}
+                          label="Day"
+                          type="text"
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                {/* The icon at the start */}
+                                <InputAdornment position="start">
+                                  <CalendarMonthIcon />
+                                </InputAdornment>
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
                         />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={
-                    touched.consultationFee && Boolean(errors.consultationFee)
-                  }
-                  helperText={touched.consultationFee && errors.consultationFee}
-                />
-              </Grid>
-              {/* Status Field */}
-              <Grid item xs={12} sm={6}>
-                <FormControl
-                  fullWidth
-                  error={touched.status && Boolean(errors.status)}
-                >
-                  <InputLabel>Status </InputLabel>
-                  <Select
-                    label="Status "
-                    name="status"
-                    value={values.status}
-                    onChange={(e) => setFieldValue("status", e.target.value)}
-                    startAdornment={
-                      <InputAdornment position="start">
-                        <InfoIcon color="primary" />{" "}
-                      </InputAdornment>
-                    }
-                  >
-                    <MenuItem value="active">Active</MenuItem>
-                    <MenuItem value="inactive">Inactive</MenuItem>
-                    <MenuItem value="On Leave">On Leave</MenuItem>
-                  </Select>
-                  {touched.status && errors.status && (
-                    <Typography color="error" variant="body2">
-                      {errors.status}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
-              {/* Role Field */}
-              <Grid item xs={12} sm={6}>
-                <Field
-                  as={MuiTextField}
-                  label="Role *"
-                  name="role"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <WorkIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={touched.role && Boolean(errors.role)}
-                  helperText={touched.role && errors.role}
-                />
-              </Grid>
-
-              {/* Availability Field */}
-              <Grid item xs={12} sm={12}>
-                <Typography variant="h6" gutterBottom>
-                  Availability
-                </Typography>
-                {values.availability.map((slot, index) => (
-                  <Grid
-                    container
-                    spacing={2}
-                    key={index}
-                    alignItems="center"
-                    sx={{ mb: 2 }}
-                  >
-                    <Grid item xs={4}>
-                      <Autocomplete
-                        options={[
-                          "Monday",
-                          "Tuesday",
-                          "Wednesday",
-                          "Thursday",
-                          "Friday",
-                          "Saturday",
-                          "Sunday",
-                        ]}
-                        getOptionLabel={(option) => option}
-                        value={slot.day || ""}
-                        onChange={(event, newValue) => {
-                          const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].day = newValue || "";
-                          setFieldValue("availability", updatedAvailability);
-                        }}
-                        renderInput={(params) => (
-                          <MuiTextField
-                            {...params}
-                            label="Day"
-                            fullWidth
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Field
-                        as={MuiTextField}
-                        label="Start Time"
-                        name={`availability[${index}].startTime`}
-                        type="time"
-                        value={slot.startTime || ""}
-                        onChange={(e) => {
-                          const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].startTime = e.target.value;
-                          setFieldValue("availability", updatedAvailability);
-                        }}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Field
-                        as={MuiTextField}
-                        label="End Time"
-                        name={`availability[${index}].endTime`}
-                        type="time"
-                        value={slot.endTime || ""}
-                        onChange={(e) => {
-                          const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].endTime = e.target.value;
-                          setFieldValue("availability", updatedAvailability);
-                        }}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={() => {
-                          const updatedAvailability =
-                            values.availability.filter(
-                              (_, idx) => idx !== index
-                            );
-                          setFieldValue("availability", updatedAvailability);
-                        }}
-                        fullWidth
-                      >
-                        Remove
-                      </Button>
-                    </Grid>
+                      )}
+                    />
                   </Grid>
-                ))}
+                  <Grid item xs={3}>
+                    <Field
+                      as={MuiTextField}
+                      label="Start Time"
+                      name={`availability[${index}].startTime`}
+                      type="time"
+                      variant="outlined"
+                      fullWidth
+                      InputLabelProps={{
+                        shrink: true, // ensures the label stays on top
+                      }}
+                      value={slot.startTime || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const updatedAvailability = [...values.availability];
+                        updatedAvailability[index].startTime = e.target.value;
+                        setFieldValue("availability", updatedAvailability);
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Field
+                      as={MuiTextField}
+                      label="End Time"
+                      name={`availability[${index}].endTime`}
+                      type="time"
+                      variant="outlined"
+                      fullWidth
+                      InputLabelProps={{
+                        shrink: true
+                      }}
+                      value={slot.endTime || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const updatedAvailability = [...values.availability];
+                        updatedAvailability[index].endTime = e.target.value;
+                        setFieldValue("availability", updatedAvailability);
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => {
+                        const updatedAvailability =
+                          values.availability.filter(
+                            (_, idx) => idx !== index
+                          );
+                        setFieldValue("availability", updatedAvailability);
+                      }}
+                      fullWidth
+                    >
+                      Remove
+                    </Button>
+                  </Grid>
+                </Grid>
+              ))}
+              <Box mt={2}>
                 <Button
                   variant="outlined"
                   onClick={() =>
@@ -690,279 +951,46 @@ const DoctorForm = () => {
                 >
                   Add Slot
                 </Button>
-              </Grid>
+              </Box>
+            </Box>
 
-              {/* Speciality Autocomplete */}
-              <Grid item xs={12} sm={12}>
-                <Autocomplete
-                  multiple
-                  freeSolo
-                  options={specialities?.results || []}
-                  getOptionLabel={(option) =>
-                    typeof option === "string" ? option : option.name || ""
-                  }
-                  value={
-                    values.speciality && specialities?.results
-                      ? values.speciality.map(
-                        (name) =>
-                          specialities.results.find(
-                            (item) => item.name === name
-                          ) || { name }
-                      )
-                      : []
-                  }
-                  onChange={(event, newValue) => {
-                    setFieldValue(
-                      "speciality",
-                      newValue.map((item) =>
-                        typeof item === "string" ? item : item.name
-                      )
-                    );
-                  }}
-                  inputValue={specialityInput}
-                  onInputChange={(event, newInputValue) => {
-                    setSpecialityInput(newInputValue);
-                  }}
-                  loading={specialityLoading}
-                  renderInput={(params) => (
-                    <MuiTextField
-                      {...params}
-                      label="Speciality *"
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <>
-                            <InputAdornment position="start">
-                              <AssignmentIcon color="primary" />
-                            </InputAdornment>
-                            {params.InputProps.startAdornment}
-                          </>
-                        ),
-                        endAdornment: (
-                          <>
-                            {specialityLoading ? (
-                              <CircularProgress color="inherit" size={20} />
-                            ) : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-                {touched.speciality && errors.speciality && (
-                  <Typography color="error" variant="body2">
-                    {errors.speciality}
-                  </Typography>
-                )}
-              </Grid>
-
-              {/* Qualification Autocomplete */}
-              <Grid item xs={12}>
-                <Autocomplete
-                  multiple
-                  freeSolo
-                  options={qualifications?.results || []}
-                  getOptionLabel={(option) =>
-                    typeof option === "string" ? option : option.name || ""
-                  }
-                  value={
-                    values.qualification && qualifications?.results
-                      ? values.qualification.map(
-                        (name) =>
-                          qualifications.results.find(
-                            (item) => item.name === name
-                          ) || {
-                            name,
-                          }
-                      )
-                      : []
-                  }
-                  onChange={(event, newValue) => {
-                    setFieldValue(
-                      "qualification",
-                      newValue.map((item) =>
-                        typeof item === "string" ? item : item.name
-                      )
-                    );
-                  }}
-                  inputValue={qualificationInput}
-                  onInputChange={(event, newInputValue) => {
-                    setQualificationInput(newInputValue);
-                  }}
-                  loading={qualificationLoading}
-                  renderInput={(params) => (
-                    <MuiTextField
-                      {...params}
-                      label="Qualification"
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <>
-                            <InputAdornment position="start">
-                              <AssignmentIcon color="primary" />
-                            </InputAdornment>
-                            {params.InputProps.startAdornment}
-                          </>
-                        ),
-                        endAdornment: (
-                          <>
-                            {qualificationLoading ? (
-                              <CircularProgress color="inherit" size={20} />
-                            ) : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-                {touched.qualification && errors.qualification && (
-                  <Typography color="error" variant="body2">
-                    {errors.qualification}
-                  </Typography>
-                )}
-              </Grid>
-
-              {/* Bio Field */}
-              <Grid item xs={12} sm={12}>
-                <Field
-                  as={MuiTextField}
-                  label="Bio "
-                  name="bio"
-                  fullWidth
-                  multiline
-                  minRows={3}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <AssignmentIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  error={touched.bio && Boolean(errors.bio)}
-                  helperText={touched.bio && errors.bio}
-                />
-              </Grid>
-              {/* Image Upload and Bio Order: Updated */}
-              <Grid item xs={12} sm={6}>
-                <input
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  id="profilePicture"
-                  type="file"
-                  onChange={(e) => {
-                    const file = e.currentTarget.files[0];
-                    if (file) {
-                      setFieldValue("profilePicture", file);
-                      const previewURL = URL.createObjectURL(file);
-                      setFieldValue("previewURL", previewURL);
-                    }
-                  }}
-                />
-                <label htmlFor="profilePicture">
-                  <Button
-                    variant="contained"
-                    component="span"
-                    startIcon={<UploadIcon />}
-                    fullWidth
-                    sx={{
-                      height: "56px",
-                      fontSize: "1rem",
-                      justifyContent: "center",
-                      paddingLeft: "16px",
-                      backgroundColor: "white",
-                      color: "black",
-                      border: "1px solid #ccc",
-                      "&:hover": {
-                        backgroundColor: "#f0f0f0",
-                      },
+            <Box display="flex" justifyContent="end" m="20px">
+              {   //hide reset button on edit
+                title === "Edit" ? null :
+                  <Button type="reset" color="warning" variant="contained" sx={{ mr: 3 }}
+                    disabled={!dirty || isSubmitting}
+                    onClick={() => {
+                      if (window.confirm("Do You Really Want To Reset?")) {
+                        resetForm();
+                      }
                     }}
                   >
-                    Upload Profile Picture
+                    Reset
                   </Button>
-                </label>
-                {touched.profilePicture && errors.profilePicture && (
-                  <Typography color="error" variant="body2">
-                    {errors.profilePicture}
-                  </Typography>
-                )}
-              </Grid>
-
-              {/* Image Preview */}
-              {values.previewURL && (
-                <Grid item xs={12}>
-                  <Box
-                    mt={2}
-                    sx={{
-                      position: "relative",
-                      display: "inline-block",
-                      textAlign: "center",
-                    }}
-                  >
-                    {/* Cross Icon Button */}
-                    <Button
-                      sx={{
-                        position: "absolute",
-                        top: 8,
-                        right: 8,
-                        backgroundColor: "white",
-                        zIndex: 10,
-                        minWidth: 0,
-                        padding: "4px",
-                        borderRadius: "50%",
-                        boxShadow: 1,
-                        "&:hover": { backgroundColor: "#f0f0f0" },
-                      }}
-                      onClick={() => {
-                        setFieldValue("profilePicture", null);
-                        setFieldValue("previewURL", null);
-                      }}
-                    >
-                      <CloseIcon color="error" fontSize="small" />
-                    </Button>
-
-                    {/* Image Preview */}
-                    <img
-                      src={values.previewURL}
-                      alt="Profile Preview"
-                      style={{
-                        maxWidth: "200px",
-                        borderRadius: "8px",
-                        objectFit: "cover",
-                      }}
-                    />
-                  </Box>
-                </Grid>
-              )}
-
-              {/* Submit Button */}
-              <Grid item xs={12}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  fullWidth
-                  sx={{
-                    justifyContent: "center",
-                    backgroundColor: "#1976d2",
-                    color: "#fff",
-                  }}
-                  disabled={isSubmitting || loading}
-                >
-                  {isSubmitting || loading ? "Saving..." : `${title} Doctor`}
-                </Button>
-              </Grid>
-            </Grid>
+              }
+              <Button color="error" variant="contained" sx={{ mr: 3 }}
+                onClick={() => router.back()}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant='contained'
+                disabled={!dirty || isSubmitting}
+                color={title === "Edit" ? "info" : "success"}
+              >
+                Submit
+              </Button>
+            </Box>
+            {loading === true ? <Loader /> : null}
           </Form>
         )}
       </Formik>
-
       <Toast
         alerting={toast.toastAlert}
         severity={toast.toastSeverity}
         message={toast.toastMessage}
       />
-    </Box>
+    </Box >
   );
 };
 

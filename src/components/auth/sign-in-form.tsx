@@ -18,7 +18,7 @@ import { z as zod } from "zod";
 
 import Toast from "@/components/common/Toast";
 import { AppDispatch, RootState } from "@/redux/store";
-import { useCreateDoctor } from "@/hooks/doctor";
+import { creator } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 
 interface DoctorResponse {
@@ -58,16 +58,17 @@ export function SignInForm(): React.JSX.Element {
     mode: 'onChange',  // Trigger validation on change to enable/disable submit button
   });
 
-  const { createDoctor } = useCreateDoctor("/login");
-
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
       setLoading(true);
       try {
-        const response: DoctorResponse | undefined = await createDoctor({
-          email: values.email,
-          password: values.password,
-        });
+        const response: DoctorResponse | undefined = await creator(
+          'doctor',
+          "/login",
+          {
+            email: values.email,
+            password: values.password,
+          });
         console.log(response, 'this is response from login');
         if (response?.statusCode === 200) {
           document.cookie = `token=${response.token}; path=/; max-age=${1 * 24 * 60 * 60}; secure; samesite=strict`;

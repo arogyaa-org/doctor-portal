@@ -34,17 +34,19 @@ export const fetcher = async <T>(
  * @param {string} serviceName - The key representing the microservice.
  * @param {string} endpoint - The API endpoint to send data to.
  * @param {D} data - The data to be sent.
+ * @param {D} headers - The optional headers to be sent.
  * @returns {Promise<T>} - A promise that resolves to the created data.
  * @throws {Error} - If the response does not contain data.
  */
 export const creator = async <T, D>(
     serviceName: string,
     endpoint: string,
-    data: D
+    data: D,
+    headers?: Record<string, string>
 ): Promise<T> => {
     const baseURL = getServiceUrl(serviceName);
     const axiosInstance = createAxiosInstance(baseURL);
-    const res = await axiosInstance.post<T>(endpoint, data);
+    const res = await axiosInstance.post<T>(endpoint, data, { headers });
 
     if (!res.data) {
         throw new Error("Failed to create data");
@@ -60,17 +62,19 @@ export const creator = async <T, D>(
  * @param {string} serviceName - The key representing the microservice.
  * @param {string} endpoint - The API endpoint to send data to.
  * @param {D} data - The data to be updated.
+ * @param {D} headers - The optional headers to be sent.
  * @returns {Promise<T>} - A promise that resolves to the updated data.
  * @throws {Error} - If the response does not contain data.
  */
 export const modifier = async <T, D>(
     serviceName: string,
     endpoint: string,
-    data: D
+    data: D,
+    headers?: Record<string, string>
 ): Promise<T> => {
     const baseURL = getServiceUrl(serviceName);
     const axiosInstance = createAxiosInstance(baseURL);
-    const res = await axiosInstance.patch<T>(endpoint, data);
+    const res = await axiosInstance.patch<T>(endpoint, data, { headers });
 
     if (!res.data) {
         throw new Error("Failed to modify data");
