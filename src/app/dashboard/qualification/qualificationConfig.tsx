@@ -2,8 +2,9 @@ import { EditRounded } from "@mui/icons-material";
 import { Box, Button, Typography } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
 
-export const qualificationDatagridColumns = (handleOpenDialog): GridColDef[] => {
-  
+export const qualificationDatagridColumns = (
+  handleOpenDialog
+): GridColDef[] => {
   const handleActionEdit = (_id: string | number) => {
     handleOpenDialog(_id);
   };
@@ -36,12 +37,21 @@ export const qualificationDatagridColumns = (handleOpenDialog): GridColDef[] => 
       flex: 1,
       minWidth: 100,
       renderCell: ({ row: { _id } }) => (
-        <Box width="85%" m="0 auto" p="5px" display="flex" justifyContent="center">
+        <Box
+          width="85%"
+          m="0 auto"
+          p="5px"
+          display="flex"
+          justifyContent="center"
+        >
           <Button
             color="info"
             variant="contained"
             onClick={() => handleActionEdit(_id)}
-            sx={{ minWidth: "50px" }}
+            sx={{
+              minWidth: "50px",
+              background: " linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+            }}
           >
             <EditRounded />
           </Button>
@@ -50,5 +60,5 @@ export const qualificationDatagridColumns = (handleOpenDialog): GridColDef[] => 
     },
   ];
 
-  return columns; 
+  return columns;
 };

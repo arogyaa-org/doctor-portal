@@ -56,6 +56,7 @@ const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
           zIndex: 1,
           "&:hover": {
             background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
+            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
           },
         }}
       >

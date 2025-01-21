@@ -82,6 +82,7 @@ const Page: React.FC = () => {
           rows={patient?.results || []}
           loading={reduxLoading}
           pageSizeOptions={[5, 10, 20]}
+          noRowsMessage="No Patient Available"
         />
       </Card>
     </Stack>

@@ -47,7 +47,7 @@ export const SpecialityDatagridColumns = (handleOpenDialog): GridColDef[] => {
             color="info"
             variant="contained"
             onClick={() => handleActionEdit(_id)}
-            sx={{ minWidth: "50px" }}
+            sx={{ minWidth: "50px",background:" linear-gradient(45deg, #2196F3 30%, #1976D2 90%)"}}
           >
             <EditRounded />
           </Button>

@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Card, Stack, Typography, Box } from "@mui/material";
+import { Card, Stack, Typography, Button } from "@mui/material";
+import CreateIcon from "@mui/icons-material/Create";
 
 import Search from "@/components/common/Search";
 import ServerPaginationGrid from "@/components/common/Datagrid";
+import AppointmentModal from "@/app/dashboard/appointment/AppointmentModal";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { Appointment } from "@/types/appointment";
 import { datagridColumns } from "./appointmentConfig";
@@ -15,6 +17,10 @@ import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [limit, setLimit] = React.useState(10);
+  const [openModal, setOpenModal] = React.useState(false);
+  const [selectedAppointment, setSelectedAppointment] =
+    React.useState<Appointment | null>(null);
+
   const dispatch: AppDispatch = useDispatch();
   const { appointment, reduxLoading } = useSelector(
     (state: RootState) => state.appointment
@@ -42,8 +48,24 @@ const Page: React.FC = () => {
     handleDispatch();
   }, [handleDispatch]);
 
-  console.log("appointment data:", appointment);
-  console.log("total items:", data);
+  const handleOpenModal = (appointment: Appointment | null) => {
+    setSelectedAppointment(appointment || null);
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setSelectedAppointment(null);
+  };
+
+  const handleSaveAppointment = (formData: any) => {
+    if (selectedAppointment) {
+      console.log("Edit Appointment:", formData);
+    } else {
+      console.log("Create Appointment:", formData);
+    }
+    refetch();
+  };
 
   return (
     <Stack spacing={3}>
@@ -58,26 +80,57 @@ const Page: React.FC = () => {
           sx={{
             flex: 1,
             fontWeight: 600,
-            marginLeft: "25px", 
+            marginLeft: "25px",
           }}
         >
           Appointment
         </Typography>
 
-        <Box sx={{ maxWidth: "350px", width: "100%", marginRight: "25px" }}>
-          <Search refetchAPI={refetch} holderText="Appointment" />
-        </Box>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Search refetchAPI={refetch} holderText="Specialization" />
+
+          <Button
+            variant="contained"
+            startIcon={<CreateIcon />}
+            onClick={() => handleOpenModal(null)}
+            sx={{
+              borderRadius: "100px",
+              background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+              px: 3,
+              textTransform: "none",
+              fontWeight: 600,
+              boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+              minHeight: "45px",
+              "&:hover": {
+                background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
+                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+              },
+            }}
+          >
+            Create
+          </Button>
+        </Stack>
       </Stack>
 
       <Card>
         <ServerPaginationGrid
-          columns={datagridColumns()}
+          columns={datagridColumns((appointment: Appointment) =>
+            handleOpenModal(appointment)
+          )}
           count={appointment?.count}
           rows={appointment?.results || []}
           loading={reduxLoading}
           pageSizeOptions={[5, 10, 20]}
+          noRowsMessage="No Appointment Available"
         />
       </Card>
+
+      <AppointmentModal
+        open={openModal}
+        handleClose={handleCloseModal}
+        handleSave={handleSaveAppointment}
+        initialData={selectedAppointment}
+      />
     </Stack>
   );
 };

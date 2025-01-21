@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Dialog,
   Button,
@@ -8,21 +8,21 @@ import {
   Box,
   useMediaQuery,
   InputAdornment,
-} from '@mui/material';
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
-import DescriptionIcon from '@mui/icons-material/Description';
+import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
+import DescriptionIcon from "@mui/icons-material/Description";
 import { Formik, Field } from "formik";
-import * as Yup from 'yup';
+import * as Yup from "yup";
 
-import Loader from '@/components/common/Loader';
-import Toast from '@/components/common/Toast';
-import type { AppDispatch, RootState } from '@/redux/store';
-import { useCreateSymptom, useModifySymptom } from '@/hooks/symptoms';
-import { fetcher } from '@/apis/apiClient';
-import { setSymptom } from '@/redux/features/symptomsSlice';
-import { Utility } from '@/utils';
-import { Symptom } from '@/types/symptom';
+import Loader from "@/components/common/Loader";
+import Toast from "@/components/common/Toast";
+import type { AppDispatch, RootState } from "@/redux/store";
+import { useCreateSymptom, useModifySymptom } from "@/hooks/symptoms";
+import { fetcher } from "@/apis/apiClient";
+import { setSymptom } from "@/redux/features/symptomsSlice";
+import { Utility } from "@/utils";
+import { Symptom } from "@/types/symptom";
 
 interface PopulateDataResponse {
   statusCode: string | number;
@@ -52,11 +52,12 @@ const FormInModal: React.FC<FormInModalProps> = ({
   openDialog,
   setOpenDialog,
   symptomId,
-  refetch
+  refetch,
 }) => {
   const [title, setTitle] = useState<"Create" | "Edit">("Create");
   const [loading, setLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState<SymptomFormValues>(initialValues);
+  const [formValues, setFormValues] =
+    useState<SymptomFormValues>(initialValues);
 
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
@@ -95,7 +96,9 @@ const FormInModal: React.FC<FormInModalProps> = ({
         }
       }, 2200);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || "Error creating symptom, please try again.";
+      const errorMessage =
+        error?.response?.data?.message ||
+        "Error creating symptom, please try again.";
       toastAndNavigate(dispatch, true, "error", errorMessage);
       setTimeout(() => {
         handleDialogClose();
@@ -108,7 +111,10 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const populateData = useCallback(async (id: string | number) => {
     setLoading(true);
     try {
-      const response: PopulateDataResponse = await fetcher<Symptom>('symptom', `get-symptom-by-id/${id}`);
+      const response: PopulateDataResponse = await fetcher<Symptom>(
+        "symptom",
+        `get-symptom-by-id/${id}`
+      );
       if (response?.statusCode === 200) {
         setFormValues(response.data);
       }
@@ -123,30 +129,34 @@ const FormInModal: React.FC<FormInModalProps> = ({
     }
   }, []);
 
-  const update = useCallback(async (values: any) => {
-    setLoading(true);
-    try {
-      await modifySymptom(values);
-      setLoading(false);
-      toastAndNavigate(dispatch, true, "info", "Successfully Updated");
-      setTimeout(async () => {
-        handleDialogClose();
-        const updatedUsers = await refetch();
-        if (updatedUsers) {
-          dispatch(setSymptom(updatedUsers));
-        }
-      }, 2200);
-    } catch (err: any) {
-      setLoading(false);
-      const errorMessage = err?.response?.data?.message || "Error Occurred. Please Try Again";
-      toastAndNavigate(dispatch, true, "error", errorMessage);
-      setTimeout(() => {
-        handleDialogClose();
-      }, 2200);
-    } finally {
-      setLoading(false);
-    }
-  }, [formValues]);
+  const update = useCallback(
+    async (values: any) => {
+      setLoading(true);
+      try {
+        await modifySymptom(values);
+        setLoading(false);
+        toastAndNavigate(dispatch, true, "info", "Successfully Updated");
+        setTimeout(async () => {
+          handleDialogClose();
+          const updatedUsers = await refetch();
+          if (updatedUsers) {
+            dispatch(setSymptom(updatedUsers));
+          }
+        }, 2200);
+      } catch (err: any) {
+        setLoading(false);
+        const errorMessage =
+          err?.response?.data?.message || "Error Occurred. Please Try Again";
+        toastAndNavigate(dispatch, true, "error", errorMessage);
+        setTimeout(() => {
+          handleDialogClose();
+        }, 2200);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [formValues]
+  );
 
   // Validation Schema with Yup
   const validationSchema = Yup.object({
@@ -155,8 +165,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
       .max(40, "Name is too long!")
       .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
       .required("This field is required"),
-    description: Yup.string()
-      .min(5, "Description is too short!")
+    description: Yup.string().min(5, "Description is too short!"),
   });
 
   return (
@@ -168,9 +177,9 @@ const FormInModal: React.FC<FormInModalProps> = ({
     >
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          p: 2
+          display: "flex",
+          flexDirection: "column",
+          p: 2,
         }}
       >
         <Box
@@ -181,11 +190,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
             p: 2,
           }}
         >
-          <Typography
-            variant="h4"
-            gutterBottom
-          >
-            {title} 
+          <Typography variant="h4" gutterBottom>
+            {title}
           </Typography>
         </Box>
         <Formik
@@ -254,14 +260,14 @@ const FormInModal: React.FC<FormInModalProps> = ({
                 <Button
                   color="error"
                   variant="contained"
-                  sx={{ mr: 3, width: '20%' }}
+                  sx={{ mr: 3, width: "20%" }}
                   onClick={handleDialogClose}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  sx={{ width: '20%' }}
+                  sx={{ width: "20%" }}
                   disabled={!dirty || isSubmitting}
                   color={title === "Edit" ? "info" : "success"}
                   variant="contained"

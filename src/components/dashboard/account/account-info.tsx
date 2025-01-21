@@ -78,7 +78,7 @@ const DoctorProfile = () => {
         p: 4,
         maxWidth: "1000px",
         margin: "auto",
-        mt: 4,
+        mt: "80px",
         boxShadow: "0px 6px 15px rgba(0, 0, 0, 0.15)",
         position: "relative",
       }}
