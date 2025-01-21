@@ -1,32 +1,28 @@
-/**
- * Copyright © 2023, F2Fintech Inc. ALL RIGHTS RESERVED.
- *
- * This software is the confidential information of F2Fintech Inc., and is licensed as
- * restricted rights software. The use, reproduction, or disclosure of this software is subject to
- * restrictions set forth in your license agreement with F2Fintech.
- */
+import * as React from "react";
+import { Box } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-import * as React from 'react';
-import { Box } from '@mui/material';
-import { styled } from '@mui/material/styles';
-
-const StyledGridOverlay = styled('div')(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '100%',
-  '& .no-rows-primary': {
-    fill: '#3D4751',
-    [theme.palette.mode === 'light' ? 'fill' : '']: '#AEB8C2',
+const StyledGridOverlay = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  height: "100%",
+  "& .no-rows-primary": {
+    fill: "#3D4751",
+    [theme.palette.mode === "light" ? "fill" : ""]: "#AEB8C2",
   },
-  '& .no-rows-secondary': {
-    fill: '#1D2126',
-    [theme.palette.mode === 'light' ? 'fill' : '']: '#E8EAED',
+  "& .no-rows-secondary": {
+    fill: "#1D2126",
+    [theme.palette.mode === "light" ? "fill" : ""]: "#E8EAED",
   },
 }));
 
-const NoRowsOverlay: React.FC = () => {
+interface NoRowsOverlayProps {
+  message: string;
+}
+
+const NoRowsOverlay: React.FC<NoRowsOverlayProps> = ({ message }) => {
   return (
     <StyledGridOverlay>
       <svg
@@ -54,7 +50,7 @@ const NoRowsOverlay: React.FC = () => {
           d="M0 10C0 4.477 4.477 0 10 0h380c5.523 0 10 4.477 10 10s-4.477 10-10 10H10C4.477 20 0 15.523 0 10ZM0 59c0-5.523 4.477-10 10-10h231c5.523 0 10 4.477 10 10s-4.477 10-10 10H10C4.477 69 0 64.523 0 59ZM0 106c0-5.523 4.477-10 10-10h203c5.523 0 10 4.477 10 10s-4.477 10-10 10H10c-5.523 0-10-4.477-10-10ZM0 153c0-5.523 4.477-10 10-10h195.5c5.523 0 10 4.477 10 10s-4.477 10-10 10H10c-5.523 0-10-4.477-10-10ZM0 200c0-5.523 4.477-10 10-10h203c5.523 0 10 4.477 10 10s-4.477 10-10 10H10c-5.523 0-10-4.477-10-10ZM0 247c0-5.523 4.477-10 10-10h231c5.523 0 10 4.477 10 10s-4.477 10-10 10H10c-5.523 0-10-4.477-10-10Z"
         />
       </svg>
-      <Box sx={{ mt: 2 }}>No rows</Box>
+      <Box sx={{ mt: 2 }}>{message}</Box>
     </StyledGridOverlay>
   );
 };

@@ -3,11 +3,10 @@ import { GridColDef } from "@mui/x-data-grid";
 import { EditRounded } from "@mui/icons-material";
 
 export const symptomDatagridColumns = (handleOpenDialog): GridColDef[] => {
-
   const handleActionEdit = (_id: string | number) => {
-    console.log('edit cliekded', _id);
+    console.log("edit cliekded", _id);
     handleOpenDialog(_id);
-  }
+  };
 
   const columns: GridColDef[] = [
     {
@@ -37,12 +36,21 @@ export const symptomDatagridColumns = (handleOpenDialog): GridColDef[] => {
       flex: 1,
       minWidth: 100,
       renderCell: ({ row: { _id } }) => (
-        <Box width="85%" m="0 auto" p="5px" display="flex" justifyContent="center">
+        <Box
+          width="85%"
+          m="0 auto"
+          p="5px"
+          display="flex"
+          justifyContent="center"
+        >
           <Button
             color="info"
             variant="contained"
             onClick={() => handleActionEdit(_id)}
-            sx={{ minWidth: "50px" }}
+            sx={{
+              minWidth: "50px",
+              background: " linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+            }}
           >
             <EditRounded />
           </Button>

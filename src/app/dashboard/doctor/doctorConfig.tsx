@@ -44,7 +44,9 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerAlign: "center",
       align: "center",
       flex: 2,
-      renderCell: (params) => <Typography>{params.row.bio || "N/A"}</Typography>,
+      renderCell: (params) => (
+        <Typography>{params.row.bio || "N/A"}</Typography>
+      ),
     },
     {
       field: "action",
@@ -56,16 +58,18 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       renderCell: ({ row: { _id } }) => (
         <Box display="flex" justifyContent="center">
           <Button
+            color="info"
             variant="contained"
-            color="primary"
             onClick={() => handleActionEdit(_id)}
-            startIcon={<EditRounded />}
+            sx={{
+              minWidth: "50px",
+              background: " linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+            }}
           >
-            Edit
+            <EditRounded />
           </Button>
         </Box>
       ),
-    }
-
+    },
   ];
 };

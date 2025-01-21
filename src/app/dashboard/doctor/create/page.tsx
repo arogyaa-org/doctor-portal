@@ -47,7 +47,7 @@ import validationSchema from "./ValidationSchema";
 import { AppDispatch, RootState } from "@/redux/store";
 import { fetcher } from "@/apis/apiClient";
 import { useCreateDoctor, useModifyDoctor } from "@/hooks/doctor";
-import { useGetSpeciality } from "@/hooks/speciality";
+import { useGetSpeciality } from "@/hooks/Speciality";
 import { useGetQualification } from "@/hooks/qualification";
 import { useGetSymptom } from "@/hooks/symptoms";
 import { Utility } from "@/utils";
@@ -686,7 +686,7 @@ const DoctorForm = () => {
                 fullWidth
                 multiline
                 minRows={3}
-                value={values.tags.join(", ")}
+                value={values.tags?.join(", ")}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFieldValue(
                     "tags",

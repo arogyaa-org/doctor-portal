@@ -63,14 +63,14 @@ const Page: React.FC = () => {
           sx={{
             flex: 1,
             fontWeight: 600,
-            marginLeft: "25px", 
+            marginLeft: "25px",
           }}
         >
           Symptom
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={refetch} holderText="Symtom"/>
+          <Search refetchAPI={refetch} holderText="Symtom" />
 
           <Button
             variant="contained"
@@ -83,10 +83,14 @@ const Page: React.FC = () => {
               textTransform: "none",
               fontWeight: 600,
               boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-              minHeight:"45px",
+              minHeight: "45px",
+              "&:hover": {
+                background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
+                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+              },
             }}
           >
-            Create 
+            Create
           </Button>
         </Stack>
       </Stack>
@@ -102,6 +106,7 @@ const Page: React.FC = () => {
           pageSize={ITEMS_PER_PAGE}
           pageSizeOptions={[10, 15, 20]}
           onPageChange={(params: any) => handlePageChange(params + 1)}
+          noRowsMessage="No Symtom Available"
         />
       </Card>
 
