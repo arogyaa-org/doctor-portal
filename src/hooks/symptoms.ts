@@ -57,7 +57,10 @@ export const useCreateSymptom = (pathKey: string) => {
     setLoading(true);
     setError(null);
     try {
-      const symptom = await creator('symptom', pathKey, dataObj);
+      const headers = {
+        "Content-Type": "multipart/form-data"
+      };
+      const symptom = await creator<Symptom, Partial<SymptomData>>('symptom', pathKey, dataObj, headers);
       return symptom;
     } catch (err) {
       setError(err as Error);
@@ -86,7 +89,10 @@ export const useModifySymptom = (pathKey: string) => {
     setLoading(true);
     setError(null);
     try {
-      const symptom = await modifier<SymptomData, Partial<SymptomData>>('symptom', pathKey, updatedSymptomData);
+      const headers = {
+        "Content-Type": "multipart/form-data"
+      };
+      const symptom = await modifier<Symptom, Partial<SymptomData>>('symptom', pathKey, updatedSymptomData, headers);
       return symptom;
     } catch (err) {
       setError(err as Error);

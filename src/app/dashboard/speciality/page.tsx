@@ -11,7 +11,7 @@ import ServerPaginationGrid from "@/components/common/Datagrid";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setSpeciality } from "@/redux/features/specialitySlice";
-import { useGetSpeciality } from "@/hooks/Speciality";
+import { useGetSpeciality } from "@/hooks/speciality";
 import { SpecialityDatagridColumns } from "./specialityConfig";
 
 const ITEMS_PER_PAGE = 10;

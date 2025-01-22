@@ -19,11 +19,13 @@ import { PatientData, Patient } from '@/types/patient';
 export const useGetPatient = (
     initialData: Patient | null,
     pathKey: string,
-    patientId: string,
     page: number = 1,
     limit: number = 5
 ) => {
-    const url = `${pathKey}/${patientId}?page=${page}&limit=${limit}`;
+
+    const url = pathKey.includes('?')
+        ? `${pathKey}&page=${page}&limit=${limit}`
+        : `${pathKey}?page=${page}&limit=${limit}`;
 
     const { data: swrData, error, isValidating } = useSWR<Patient | null>(
         url,

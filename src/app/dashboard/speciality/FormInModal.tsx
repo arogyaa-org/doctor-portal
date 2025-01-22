@@ -18,7 +18,7 @@ import * as Yup from "yup";
 import Loader from "@/components/common/Loader";
 import Toast from "@/components/common/Toast";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { useCreateSpeciality, useModifySpeciality } from "@/hooks/Speciality";
+import { useCreateSpeciality, useModifySpeciality } from "@/hooks/speciality";
 import { setSpeciality } from "@/redux/features/specialitySlice";
 import { Utility } from "@/utils";
 import { SpecialityData } from "@/types/speciality";

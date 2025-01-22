@@ -9,7 +9,6 @@ import Search from "@/components/common/Search";
 import ServerPaginationGrid from "@/components/common/Datagrid";
 import AppointmentModal from "@/app/dashboard/appointment/AppointmentModal";
 import type { AppDispatch, RootState } from "@/redux/store";
-import type { Appointment } from "@/types/appointment";
 import { datagridColumns } from "./appointmentConfig";
 import { useGetAppointment } from "@/hooks/appointment";
 import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
@@ -27,9 +26,9 @@ const Page: React.FC = () => {
   );
 
   const { value: data, refetch } = useGetAppointment(
-    {} as Appointment,
-    "get-doctors-appointment",
-    "674eedea9275f96f06a60c95",
+    null,
+    "get-appointments",
+    undefined,
     currentPage,
     limit
   );

@@ -19,11 +19,14 @@ import { AppointmentData, Appointment } from '@/types/appointment';
 export const useGetAppointment = (
     initialData: Appointment | null,
     pathKey: string,
-    appointmentId: string,
+    appointmentId?: string,
     page: number = 1,
     limit: number = 5
 ) => {
-    const url = `${pathKey}/${appointmentId}?page=${page}&limit=${limit}`;
+    const url = appointmentId
+        ? `${pathKey}/${appointmentId}?page=${page}&limit=${limit}`
+        : `${pathKey}?page=${page}&limit=${limit}`;
+
     const { data: swrData, error, isValidating } = useSWR<Appointment | null>(
         url,
         () => fetcher('appointment', url),

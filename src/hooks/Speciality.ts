@@ -57,7 +57,10 @@ export const useCreateSpeciality = (pathKey: string) => {
         setLoading(true);
         setError(null);
         try {
-            const speciality = await creator<SpecialityData, SpecialityData>('speciality', pathKey, dataObj);
+            const headers = {
+                "Content-Type": "multipart/form-data"
+            };
+            const speciality = await creator<Speciality, Partial<SpecialityData>>('speciality', pathKey, dataObj, headers);
             return speciality;
         } catch (err) {
             setError(err as Error);
@@ -82,7 +85,10 @@ export const useModifySpeciality = (pathKey: string) => {
         setLoading(true);
         setError(null);
         try {
-            const speciality = await modifier<SpecialityData, Partial<SpecialityData>>('speciality', pathKey, updatedSpecialityData);
+            const headers = {
+                "Content-Type": "multipart/form-data"
+            };
+            const speciality = await modifier<Speciality, Partial<SpecialityData>>('speciality', pathKey, updatedSpecialityData, headers);
             return speciality;
         } catch (err) {
             setError(err as Error);

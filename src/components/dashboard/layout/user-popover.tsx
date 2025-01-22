@@ -13,30 +13,28 @@ import { SignOut as SignOutIcon } from "@phosphor-icons/react/dist/ssr/SignOut";
 import { User as UserIcon } from "@phosphor-icons/react/dist/ssr/User";
 
 import { paths } from "@/paths";
+import { Utility } from "@/utils";
 
-export interface UserPopoverProps {
+interface UserPopoverProps {
   anchorEl: Element | null;
   onClose: () => void;
   open: boolean;
-  user: {
-    name: string;
-    email: string;
-    avatar: string | null;
-  };
 }
 
 export function UserPopover({
   anchorEl,
   onClose,
   open,
-  user,
 }: UserPopoverProps): React.JSX.Element {
   const popoverRef = React.useRef<HTMLDivElement | null>(null);
+  const { decodedToken } = Utility();
+  const { doctorName, email } = decodedToken();
+  console.log(doctorName, email, decodedToken(), decodedToken()?.email, decodedToken()?.doctorName)
 
   React.useEffect(() => {
     if (popoverRef.current) {
-      const nameLength = user?.name?.length || 0;
-      const emailLength = user?.email?.length || 0;
+      const nameLength = doctorName?.length || 0;
+      const emailLength = email?.length || 0;
       const longestTextLength = Math.max(nameLength, emailLength);
 
       // Calculate the required width dynamically based on text length
@@ -46,7 +44,7 @@ export function UserPopover({
       );
       popoverRef.current.style.width = `${requiredWidth}px`;
     }
-  }, [user?.name, user?.email]);
+  }, [doctorName, email]);
 
   const handleSignOut = React.useCallback(async (): Promise<void> => {
     try {
@@ -94,8 +92,8 @@ export function UserPopover({
       >
         {/* User Avatar */}
         <Avatar
-          src={user?.avatar || "/assets/avatar-1.png"}
-          alt={user?.name || "Test User"}
+          src={doctorName}
+          alt={doctorName}
           sx={{
             width: 40,
             height: 40,
@@ -117,7 +115,7 @@ export function UserPopover({
               width: "100%",
             }}
           >
-            {user?.name || "Test User"}
+            {doctorName}
           </Typography>
 
           {/* User Email */}
@@ -132,7 +130,7 @@ export function UserPopover({
               width: "100%",
             }}
           >
-            {user?.email || "Test.user@f2fintech.in"}
+            {email}
           </Typography>
         </Box>
       </Box>

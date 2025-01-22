@@ -63,7 +63,10 @@ export const useCreateQualification = (pathKey: string) => {
     setLoading(true);
     setError(null);
     try {
-      const qualification = await creator('qualification', pathKey, dataObj);
+      const headers = {
+        "Content-Type": "multipart/form-data"
+      };
+      const qualification = await creator<Qualification, Partial<QualificationData>>('qualification', pathKey, dataObj, headers);
       return qualification;
     } catch (err) {
       setError(err as Error);
@@ -90,10 +93,14 @@ export const useModifyQualification = (pathKey: string) => {
     setLoading(true);
     setError(null);
     try {
-      const qualification = await modifier<QualificationData, Partial<QualificationData>>(
+      const headers = {
+        "Content-Type": "multipart/form-data"
+      };
+      const qualification = await modifier<Qualification, Partial<QualificationData>>(
         'qualification',
         pathKey,
-        updatedQualificationData
+        updatedQualificationData,
+        headers
       );
       return qualification;
     } catch (err) {

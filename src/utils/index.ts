@@ -10,8 +10,10 @@ export const Utility = () => {
  * @param str - The string whose 1st letter is to be capitalized
  * @returns 
  */
-  const capitalizeFirstLetter = (str: string) => {
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  const capitalizeFirstLetter = (str: string | undefined) => {
+    if (str) {
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
   };
 
   /**

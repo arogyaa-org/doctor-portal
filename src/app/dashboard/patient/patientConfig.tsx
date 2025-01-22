@@ -1,16 +1,24 @@
+import { Utility } from '@/utils';
 import { Typography } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import { format } from 'date-fns';
 
 export const patientDatagridColumns = (): GridColDef[] => {
+    const { capitalizeFirstLetter } = Utility();
+
     const columns: GridColDef[] = [
         {
-            field: 'patientId',
+            field: 'username',
             headerName: 'Name',
             headerClassName: 'super-app-theme--header',
             headerAlign: 'center',
             align: 'center',
             flex: 1,
+            renderCell: ({ row: { username } }) => (
+                <Typography>
+                    {capitalizeFirstLetter(username) || 'N/A'}
+                </Typography>
+            ),
         },
         {
             field: 'email',
@@ -21,34 +29,34 @@ export const patientDatagridColumns = (): GridColDef[] => {
             flex: 1.5,
         },
         {
-            field: 'phone',
+            field: 'contact',
             headerName: 'Phone',
             headerClassName: 'super-app-theme--header',
             headerAlign: 'center',
             align: 'center',
             flex: 1,
         },
-        {
-            field: 'city',
-            headerName: 'City',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 1,
-        },
-        {
-            field: 'medical_history',
-            headerName: 'Medical History',
-            headerClassName: 'super-app-theme--header',
-            headerAlign: 'center',
-            align: 'center',
-            flex: 2,
-            renderCell: (params) => (
-                <Typography>
-                    {params.row.medical_history ? params.row.medical_history.join(', ') : 'N/A'}
-                </Typography>
-            ),
-        },
+        // {
+        //     field: 'city',
+        //     headerName: 'City',
+        //     headerClassName: 'super-app-theme--header',
+        //     headerAlign: 'center',
+        //     align: 'center',
+        //     flex: 1,
+        // },
+        // {
+        //     field: 'medical_history',
+        //     headerName: 'Medical History',
+        //     headerClassName: 'super-app-theme--header',
+        //     headerAlign: 'center',
+        //     align: 'center',
+        //     flex: 2,
+        //     renderCell: (params) => (
+        //         <Typography>
+        //             {params.row.medical_history ? params.row.medical_history.join(', ') : 'N/A'}
+        //         </Typography>
+        //     ),
+        // },
         {
             field: 'createdAt',
             headerName: 'Created At',

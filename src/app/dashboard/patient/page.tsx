@@ -21,9 +21,8 @@ const Page: React.FC = () => {
   );
 
   const { value: data, refetch } = useGetPatient(
-    {} as Patient,
-    "get-patient-by-id",
-    "672c681f76ab84e9f25f0539",
+    null,
+    "get-patients",
     currentPage,
     limit
   );

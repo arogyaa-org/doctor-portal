@@ -38,7 +38,6 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import PinDrop from '@mui/icons-material/PinDrop';
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
-import TagIcon from "@mui/icons-material/Tag";
 import dayjs from "dayjs";
 
 import Loader from "@/components/common/Loader";
@@ -47,10 +46,16 @@ import validationSchema from "./ValidationSchema";
 import { AppDispatch, RootState } from "@/redux/store";
 import { fetcher } from "@/apis/apiClient";
 import { useCreateDoctor, useModifyDoctor } from "@/hooks/doctor";
-import { useGetSpeciality } from "@/hooks/Speciality";
+import { useGetSpeciality } from "@/hooks/speciality";
 import { useGetQualification } from "@/hooks/qualification";
 import { useGetSymptom } from "@/hooks/symptoms";
 import { Utility } from "@/utils";
+
+interface DoctorResponse {
+  statusCode: string | number;
+  message: string;
+  data: DoctorFormValues;
+}
 
 interface DoctorFormValues {
   _id?: string | number;
@@ -66,14 +71,14 @@ interface DoctorFormValues {
   languagesSpoken: string[];
   address: string;
   pincode: string | number;
-  profilePicture: any;
+  profilePicture: { file: File; preview: string } | null;
   consultationFee: string | number;
   status: string;
   role: string;
   qualificationIds: any[];
   specializationIds: any[];
   symptomIds: any[];
-  availability: any[];
+  availability: { day: string; startTime: string; endTime: string }[];
 }
 
 const initialValues: DoctorFormValues = {
@@ -100,11 +105,11 @@ const initialValues: DoctorFormValues = {
 };
 let editFormValues: DoctorFormValues;
 
-const DoctorForm = () => {
+const DoctorForm: React.FC = () => {
   const [title, setTitle] = useState<"Create" | "Edit">("Create");
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<DoctorFormValues>(initialValues);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [updatePassword, setUpdatePassword] = useState<boolean>(false);
   const pwFieldRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -113,11 +118,10 @@ const DoctorForm = () => {
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
   const { toast } = useSelector((state: RootState) => state.toast);
-  const { getIdsFromObject, toastAndNavigate } = Utility();
-  const doctorId = params?.id;
-
   const { createDoctor } = useCreateDoctor("create-doctor");
   const { modifyDoctor } = useModifyDoctor("update-doctor");
+  const { getIdsFromObject, toastAndNavigate } = Utility();
+  const doctorId = params?.id;
 
   const { value: specialities, swrLoading: specialityLoading } =
     useGetSpeciality(
@@ -140,7 +144,6 @@ const DoctorForm = () => {
       1,
       200
     );
-  console.log("doctorId", doctorId);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -206,15 +209,12 @@ const DoctorForm = () => {
     async (doctorId: string | string[]) => {
       setLoading(true);
       try {
-        const response = await fetcher(
+        const response: DoctorResponse = await fetcher(
           'doctor',
           `get-doctor-by-id/${doctorId}`
         );
         if (response?.statusCode === 200) {
           setFormValues(response.data);
-          console.log(response.data, 'this is response')
-        } else {
-          console.log("Doctor not found or server error");
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -390,15 +390,15 @@ const DoctorForm = () => {
                 helperText={touched.contact && errors.contact}
               />
               <Field
+                fullWidth
                 as={MuiTextField}
                 label="Date of Birth *"
                 name="dob"
-                fullWidth
                 type="date"
                 value={
                   values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""
                 }
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const formattedDate = dayjs(e.target.value).format(
                     "YYYY-MM-DD"
                   );
@@ -512,7 +512,7 @@ const DoctorForm = () => {
                 >
                   <MenuItem value="active">Active</MenuItem>
                   <MenuItem value="inactive">Inactive</MenuItem>
-                  <MenuItem value="On Leave">On Leave</MenuItem>
+                  <MenuItem value="on leave">On Leave</MenuItem>
                 </Select>
                 {touched.status && errors.status && (
                   <Typography color="error" variant="body2">
@@ -520,21 +520,31 @@ const DoctorForm = () => {
                   </Typography>
                 )}
               </FormControl>
-              <Field
-                as={MuiTextField}
-                label="Role"
-                name="role"
+              <FormControl
                 fullWidth
-                InputProps={{
-                  startAdornment: (
+                error={touched.role && Boolean(errors.role)}
+              >
+                <InputLabel>Role</InputLabel>
+                <Select
+                  label="Role "
+                  name="role"
+                  value={values.role}
+                  onChange={(e) => setFieldValue("role", e.target.value)}
+                  startAdornment={
                     <InputAdornment position="start">
                       <WorkIcon color="primary" />
                     </InputAdornment>
-                  ),
-                }}
-                error={touched.role && Boolean(errors.role)}
-                helperText={touched.role && errors.role}
-              />
+                  }
+                >
+                  <MenuItem value="admin">Admin</MenuItem>
+                  <MenuItem value="doctor">Doctor</MenuItem>
+                </Select>
+                {touched.role && errors.role && (
+                  <Typography color="error" variant="body2">
+                    {errors.role}
+                  </Typography>
+                )}
+              </FormControl>
               <Field
                 as={MuiTextField}
                 label="Address"
@@ -584,7 +594,11 @@ const DoctorForm = () => {
                     name="specializationIds"
                     type="text"
                     error={!!touched.specializationIds && !!errors.specializationIds}
-                    helperText={touched.specializationIds && errors.specializationIds}
+                    helperText={
+                      touched.specializationIds && typeof errors.specializationIds === "string"
+                        ? errors.specializationIds
+                        : ""
+                    }
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
@@ -615,7 +629,11 @@ const DoctorForm = () => {
                     name="symptomIds"
                     type="text"
                     error={!!touched.symptomIds && !!errors.symptomIds}
-                    helperText={touched.symptomIds && errors.symptomIds}
+                    helperText={
+                      touched.symptomIds && typeof errors.symptomIds === "string"
+                        ? errors.symptomIds
+                        : ""
+                    }
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
@@ -646,7 +664,11 @@ const DoctorForm = () => {
                     name="qualificationIds"
                     type="text"
                     error={!!touched.qualificationIds && !!errors.qualificationIds}
-                    helperText={touched.qualificationIds && errors.qualificationIds}
+                    helperText={
+                      touched.qualificationIds && typeof errors.qualificationIds === "string"
+                        ? errors.qualificationIds
+                        : ""
+                    }
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
@@ -696,7 +718,7 @@ const DoctorForm = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <TagIcon color="primary" />
+                      <AssignmentIcon color="primary" />
                     </InputAdornment>
                   ),
                 }}
@@ -750,10 +772,10 @@ const DoctorForm = () => {
                     type="file"
                     accept=".jpg, .gif, .png, .jpeg, .svg, .webp"
                     onChange={(event) => {
-                      const file = event.target.files[0];
-                      if (file) {
-                        // Check file size (1MB = 1,048,576 bytes)
-                        if (file.size > 1048576) {
+                      const imgfiles = event.target.files;
+                      if (imgfiles && imgfiles[0]) {
+                        const file = imgfiles[0];
+                        if (file.size > 1048576) {   // Check file size (1MB = 1,048,576 bytes)
                           toastAndNavigate(
                             dispatch,
                             true,
@@ -762,7 +784,6 @@ const DoctorForm = () => {
                           );
                           return;
                         }
-
                         // Set file to Formik field and create a preview
                         const fileUrl = URL.createObjectURL(file);
                         setFieldValue("profilePicture", { file, preview: fileUrl });
@@ -783,8 +804,10 @@ const DoctorForm = () => {
                     {/* Delete Icon */}
                     <IconButton
                       onClick={() => {
-                        // Clean up preview URL and remove the file
-                        URL.revokeObjectURL(values.profilePicture?.preview);
+                        // Clean up preview URL only if it exists
+                        if (values.profilePicture?.preview) {
+                          URL.revokeObjectURL(values.profilePicture.preview);
+                        }
                         setFieldValue("profilePicture", null);
                       }}
                       sx={{
@@ -803,10 +826,14 @@ const DoctorForm = () => {
                     </IconButton>
 
                     {/* Image Preview */}
-                    {(values.profilePicture?.preview || values.profilePicture) && (
+                    {(values.profilePicture?.preview || typeof values.profilePicture === "string") && (
                       <Box
                         component="img"
-                        src={values.profilePicture?.preview || values.profilePicture}
+                        src={
+                          typeof values.profilePicture === "string"
+                            ? values.profilePicture // value From database
+                            : values.profilePicture.preview // From file upload
+                        }
                         alt="Profile Preview"
                         sx={{
                           width: "100%",
@@ -855,10 +882,10 @@ const DoctorForm = () => {
                         "Sunday",
                       ]}
                       getOptionLabel={(option) => option}
-                      value={slot.day}
+                      value={slot.day || ''}
                       onChange={(event, newValue) => {
                         const updatedAvailability = [...values.availability];
-                        updatedAvailability[index].day = newValue;
+                        updatedAvailability[index].day = newValue || '';
                         setFieldValue("availability", updatedAvailability);
                       }}
                       renderInput={(params) => (

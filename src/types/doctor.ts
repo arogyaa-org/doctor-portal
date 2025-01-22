@@ -12,22 +12,26 @@ export interface DoctorData {
     languageSpoken: string[];
     address: string;
     pincode: string | number;
-    profilePicture: string;
+    profilePicture: { file: File; preview: string } | null;
     consultationFee: string | number;
     status: string | null;
     role: string | null;
     specializationIds: string[];
     symptomIds: string[];
     qualificationIds: string[];
-    availability: string[];
+    availability: { day: string; startTime: string; endTime: string }[];
     createdAt: string;
     updatedAt: string;
     __v: number;
 }
 
 export interface Doctor {
-    results: DoctorData[];
-    count: number;
-    pages: number;
-    errorMessage?: string | null;
+    statusCode: number;
+    message: string;
+    data: {
+        results: DoctorData[];
+        count: number;
+        pages: number;
+    };
+    errorMessage?: string;
 }

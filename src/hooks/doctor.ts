@@ -67,7 +67,7 @@ export const useCreateDoctor = (pathKey: string) => {
             const headers = {
                 "Content-Type": "multipart/form-data"
             };
-            const doctor = await creator<DoctorData, Partial<DoctorData>>('doctor', pathKey, newDoctorData, headers);
+            const doctor = await creator<Doctor, Partial<DoctorData>>('doctor', pathKey, newDoctorData, headers);
             return doctor;
         } catch (err) {
             setError(err as Error);
@@ -95,7 +95,7 @@ export const useModifyDoctor = (pathKey: string) => {
             const headers = {
                 "Content-Type": "multipart/form-data"
             };
-            const doctor = await modifier<DoctorData, Partial<DoctorData>>('doctor', pathKey, updatedDoctorData, headers);
+            const doctor = await modifier<Doctor, Partial<DoctorData>>('doctor', pathKey, updatedDoctorData, headers);
             return doctor;
         } catch (err) {
             setError(err as Error);
