@@ -76,15 +76,15 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
         transition: "all 0.3s ease",
       },
       "& .MuiDataGrid-row": {
-        backgroundColor: "#ffffff", 
+        backgroundColor: "#ffffff",
         fontWeight: 600,
         fontSize: "14px",
         boxSizing: "border-box",
-        transition: "background-color 0.3s ease, transform 0.2s ease", 
+        transition: "background-color 0.3s ease, transform 0.2s ease",
         "&:hover": {
-          backgroundColor: "#e3f2fd", 
-          transform: "scale(1.001)", 
-          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)", 
+          backgroundColor: "#e3f2fd",
+          transform: "scale(1.001)",
+          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
         },
       },
     }),
@@ -126,6 +126,7 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
         onPaginationModelChange={handlePaginationModelChange}
         disableRowSelectionOnClick
         keepNonExistentRowsSelected
+        getRowHeight={() => "auto"} 
       />
     </div>
   );

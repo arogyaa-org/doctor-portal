@@ -4,6 +4,9 @@ export const paths = {
   dashboard: {
     overview: '/dashboard',
     account: '/dashboard/account',
+    appointment: '/dashboard/appointment',
+    appointmentDetails: '/dashboard/appointment/details',
+    appointmentDetails_id: (id: string | number) => `/dashboard/appointment/details/${id}`,
     doctor: '/dashboard/doctor',
     doctorCreate: '/dashboard/doctor/create',
     doctorUpdate: (id: string | number) => `/dashboard/doctor/update/${id}`,
@@ -11,7 +14,6 @@ export const paths = {
     specialization: '/dashboard/speciality',
     qualification: '/dashboard/qualification',
     symptom: '/dashboard/symptoms',
-    customers: '/dashboard/appointment',
     integrations: '/dashboard/integrations',
     settings: '/dashboard/settings',
   },
