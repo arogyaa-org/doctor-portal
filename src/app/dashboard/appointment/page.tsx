@@ -12,6 +12,7 @@ import type { AppDispatch, RootState } from "@/redux/store";
 import { datagridColumns } from "./appointmentConfig";
 import { useGetAppointment } from "@/hooks/appointment";
 import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
+import { Appointment } from "@/types/appointment";
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -86,7 +87,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={refetch} holderText="Specialization" />
+          <Search refetchAPI={refetch} holderText="Appointment" />
 
           <Button
             variant="contained"
@@ -129,6 +130,7 @@ const Page: React.FC = () => {
         handleClose={handleCloseModal}
         handleSave={handleSaveAppointment}
         initialData={selectedAppointment}
+        refetch={refetch}
       />
     </Stack>
   );
