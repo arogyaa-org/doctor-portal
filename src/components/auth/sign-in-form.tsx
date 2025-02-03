@@ -39,14 +39,19 @@ const defaultValues = {
   password: "John@123",
 } satisfies Values;
 
-export function SignInForm(): React.JSX.Element {
+interface SignInFormProps {
+  clientRole: string | null;
+  setClientRole: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+export function SignInForm({ clientRole, setClientRole }: SignInFormProps): React.JSX.Element {
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [loading, setLoading] = React.useState<boolean>(false);
   const { toast } = useSelector((state: RootState) => state.toast);
 
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
-  const { decodedToken, toastAndNavigate } = Utility();
+  const { capitalizeFirstLetter, decodedToken, toastAndNavigate } = Utility();
 
   const {
     control,
@@ -60,10 +65,12 @@ export function SignInForm(): React.JSX.Element {
 
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
+      console.log(clientRole, 'clientrole')
       setLoading(true);
+
       try {
-        const response: DoctorResponse | undefined = await creator(
-          'doctor',
+        const response: DoctorResponse = await creator(
+          clientRole === 'admin' ? 'user' : clientRole,
           "/login",
           {
             email: values.email,
@@ -103,7 +110,7 @@ export function SignInForm(): React.JSX.Element {
         }, 12000);
       }
     },
-    [decodedToken]
+    [decodedToken, clientRole]
   );
 
   return (
@@ -120,90 +127,110 @@ export function SignInForm(): React.JSX.Element {
       }}
     >
       <Stack spacing={2}>
-        <Typography variant="h4" align="center" sx={{ fontWeight: "bold" }}>
-          Sign In
-        </Typography>
-        <Typography
-          variant="h5"
-          align="center"
-          sx={{ fontWeight: "medium", color: "gray" }}
-        >
-          Welcome Back
-        </Typography>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Stack spacing={2}>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field }) => (
-                <FormControl error={Boolean(errors.email)}>
-                  <InputLabel>*Email Address</InputLabel>
-                  <OutlinedInput
-                    {...field}
-                    label="*Email address"
-                    type="email"
-                  />
-                  {errors.email ? (
-                    <FormHelperText>{errors.email.message}</FormHelperText>
-                  ) : null}
-                </FormControl>
-              )}
-            />
-            <Controller
-              control={control}
-              name="password"
-              render={({ field }) => (
-                <FormControl error={Boolean(errors.password)}>
-                  <InputLabel>*Password</InputLabel>
-                  <OutlinedInput
-                    {...field}
-                    endAdornment={
-                      showPassword ? (
-                        <EyeIcon
-                          cursor="pointer"
-                          fontSize="var(--icon-fontSize-md)"
-                          onClick={(): void => {
-                            setShowPassword(false);
-                          }}
-                        />
-                      ) : (
-                        <EyeSlashIcon
-                          cursor="pointer"
-                          fontSize="var(--icon-fontSize-md)"
-                          onClick={(): void => {
-                            setShowPassword(true);
-                          }}
-                        />
-                      )
-                    }
-                    label="Password"
-                    type={showPassword ? "text" : "password"}
-                  />
-                  {errors.password ? (
-                    <FormHelperText>{errors.password.message}</FormHelperText>
-                  ) : null}
-                </FormControl>
-              )}
-            />
-            {/* <Typography align="right">
-                <Link
-                  href="/reset-password"
-                  variant="body2"
-                  sx={{
-                    textDecoration: "none",
-                    color: "primary.main",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Forgot password?
-                </Link>
-              </Typography> */}
-            <Button disabled={loading} type="submit" variant="contained">
-              {loading ? <CircularProgress size={22} /> : 'Sign in'}
+        {!clientRole ? (
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h5" sx={{ mb: 4 }}>
+              Choose your role
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              sx={{ px: 4, mx: 3 }}
+              onClick={() => setClientRole("doctor")}
+            >
+              Login as Doctor
             </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              sx={{ px: 4 }}
+              onClick={() => setClientRole("admin")}
+            >
+              Login as Admin
+            </Button>
+          </Box>
+        ) : (
+          <Stack spacing={2}>
+            <Typography variant="h4" align="center" sx={{ fontWeight: "bold" }}>
+              Sign In As {capitalizeFirstLetter(clientRole)}
+            </Typography>
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <Stack spacing={2}>
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormControl error={Boolean(errors.email)}>
+                      <InputLabel>*Email Address</InputLabel>
+                      <OutlinedInput
+                        {...field}
+                        label="*Email address"
+                        type="email"
+                      />
+                      {errors.email ? (
+                        <FormHelperText>{errors.email.message}</FormHelperText>
+                      ) : null}
+                    </FormControl>
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormControl error={Boolean(errors.password)}>
+                      <InputLabel>*Password</InputLabel>
+                      <OutlinedInput
+                        {...field}
+                        endAdornment={
+                          showPassword ? (
+                            <EyeIcon
+                              cursor="pointer"
+                              fontSize="var(--icon-fontSize-md)"
+                              onClick={(): void => {
+                                setShowPassword(false);
+                              }}
+                            />
+                          ) : (
+                            <EyeSlashIcon
+                              cursor="pointer"
+                              fontSize="var(--icon-fontSize-md)"
+                              onClick={(): void => {
+                                setShowPassword(true);
+                              }}
+                            />
+                          )
+                        }
+                        label="Password"
+                        type={showPassword ? "text" : "password"}
+                      />
+                      {errors.password ? (
+                        <FormHelperText>{errors.password.message}</FormHelperText>
+                      ) : null}
+                    </FormControl>
+                  )}
+                />
+                {/* <Typography align="right">
+                  <Link
+                    href="/reset-password"
+                    variant="body2"
+                    sx={{
+                      textDecoration: "none",
+                      color: "primary.main",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Forgot password?
+                  </Link>
+                </Typography> */}
+                <Button disabled={loading} type="submit" variant="contained">
+                  {loading ? <CircularProgress size={22} /> : 'Sign in'}
+                </Button>
+              </Stack>
+            </form>
           </Stack>
-        </form>
+        )}
       </Stack>
+
       <Toast
         alerting={toast.toastAlert}
         severity={toast.toastSeverity}

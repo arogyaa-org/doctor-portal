@@ -15,11 +15,15 @@ import { usePopover } from '@/hooks/use-popover';
 
 import { MobileNav } from './mobile-nav';
 import { UserPopover } from './user-popover';
+import { Utility } from '@/utils';
 
 export function MainNav(): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState<boolean>(false);
+  const { decodedToken } = Utility();
 
   const userPopover = usePopover<HTMLDivElement>();
+  const { role, userName, doctorName } = decodedToken() || {};
+  const displayName = role === "admin" ? userName : doctorName;
 
   return (
     <React.Fragment>
@@ -66,7 +70,8 @@ export function MainNav(): React.JSX.Element {
               ref={userPopover.anchorRef}
               sx={{ cursor: 'pointer' }}
             >
-              T</Avatar>
+              {displayName?.[0]?.toUpperCase()}
+            </Avatar>
           </Stack>
         </Stack>
       </Box>

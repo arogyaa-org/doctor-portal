@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Formik, Field } from "formik";
 import {
   Dialog,
   Button,
@@ -8,11 +9,13 @@ import {
   Box,
   useMediaQuery,
   InputAdornment,
+  IconButton,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 import DescriptionIcon from "@mui/icons-material/Description";
-import { Formik, Field } from "formik";
+import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+import DeleteIcon from "@mui/icons-material/Delete";
 import * as Yup from "yup";
 
 import Loader from "@/components/common/Loader";
@@ -34,11 +37,13 @@ interface SymptomFormValues {
   _id?: string | number;
   name: string;
   description: string;
+  icon: { file: File; preview: string } | null;
 }
 
 const initialValues: SymptomFormValues = {
   name: "",
   description: "",
+  icon: null
 };
 
 interface FormInModalProps {
@@ -47,6 +52,15 @@ interface FormInModalProps {
   symptomId: string | null;
   refetch: () => Promise<any>;
 }
+
+const validationSchema = Yup.object({
+  name: Yup.string()
+    .min(3, "Name is too short!")
+    .max(40, "Name is too long!")
+    .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
+    .required("This field is required"),
+  description: Yup.string().min(5, "Description is too short!"),
+});
 
 const FormInModal: React.FC<FormInModalProps> = ({
   openDialog,
@@ -58,6 +72,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] =
     useState<SymptomFormValues>(initialValues);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
@@ -86,7 +101,10 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const create = useCallback(async (values: SymptomFormValues) => {
     setLoading(true);
     try {
-      await createSymptom(values);
+      await createSymptom({
+        ...values,
+        icon: values?.icon?.file || null
+      });
       toastAndNavigate(dispatch, true, "success", "Created Successfully");
       setTimeout(async () => {
         handleDialogClose();
@@ -133,7 +151,10 @@ const FormInModal: React.FC<FormInModalProps> = ({
     async (values: any) => {
       setLoading(true);
       try {
-        await modifySymptom(values);
+        await modifySymptom({
+          ...values,
+          icon: values?.icon?.file || null
+        });
         setLoading(false);
         toastAndNavigate(dispatch, true, "info", "Successfully Updated");
         setTimeout(async () => {
@@ -157,16 +178,6 @@ const FormInModal: React.FC<FormInModalProps> = ({
     },
     [formValues]
   );
-
-  // Validation Schema with Yup
-  const validationSchema = Yup.object({
-    name: Yup.string()
-      .min(3, "Name is too short!")
-      .max(40, "Name is too long!")
-      .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
-      .required("This field is required"),
-    description: Yup.string().min(5, "Description is too short!"),
-  });
 
   return (
     <Dialog
@@ -203,13 +214,14 @@ const FormInModal: React.FC<FormInModalProps> = ({
           }}
         >
           {({
-            values,
+            dirty,
             errors,
+            values,
             touched,
+            isSubmitting,
             handleChange,
             handleSubmit,
-            isSubmitting,
-            dirty,
+            setFieldValue
           }) => (
             <form onSubmit={handleSubmit}>
               <Box
@@ -255,6 +267,126 @@ const FormInModal: React.FC<FormInModalProps> = ({
                   error={touched.description && Boolean(errors.description)}
                   helperText={touched.description && errors.description}
                 />
+              </Box>
+              {/* File input and display */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  gap: "16px",
+                  alignItems: "center",
+                }}
+              >
+                {/* Upload Icon with Label */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid #ccc",
+                    borderRadius: "8%",
+                    width: "146px",
+                    height: "104px",
+                    cursor: "pointer",
+                    textAlign: "center",
+                    transition: "border-color 0.3s ease, color 0.3s ease",
+                    "&:hover": {
+                      borderColor: 'rgb(33, 38, 54)',
+                      "& svg": {
+                        color: 'rgb(33, 38, 54)', // Darker icon color on hover
+                      },
+                    },
+                  }}
+                  component="label"
+                >
+                  <AddPhotoAlternateIcon
+                    sx={{
+                      fontSize: "32px",
+                      color: '#aaa',
+                      mb: 1,
+                      transition: "color 0.3s ease"
+                    }} />
+                  <Typography variant="body2">Upload Icon</Typography>
+                  <input
+                    ref={fileInputRef}
+                    hidden
+                    type="file"
+                    accept=".jpg, .gif, .png, .jpeg, .svg, .webp"
+                    onChange={(event) => {
+                      const imgfiles = event.target.files;
+                      if (imgfiles && imgfiles[0]) {
+                        const file = imgfiles[0];
+                        if (file.size > 1048576) {   // Check file size (1MB = 1,048,576 bytes)
+                          toastAndNavigate(
+                            dispatch,
+                            true,
+                            "error",
+                            `${file.name} exceeds 1MB limit`
+                          );
+                          return;
+                        }
+                        // Set file to Formik field and create a preview
+                        const fileUrl = URL.createObjectURL(file);
+                        setFieldValue("icon", { file, preview: fileUrl });
+                      }
+                    }}
+                  />
+                </Box>
+
+                {/* Display Selected File Preview */}
+                {(values.icon?.file || values.icon) && (
+                  <Box
+                    sx={{
+                      position: "relative",
+                      width: "150px",
+                      height: "106px",
+                    }}
+                  >
+                    {/* Delete Icon */}
+                    <IconButton
+                      onClick={() => {
+                        // Clean up preview URL only if it exists
+                        if (values.icon?.preview) {
+                          URL.revokeObjectURL(values.icon.preview);
+                        }
+                        setFieldValue("icon", null);
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: "-6px",
+                        right: "-6px",
+                        backgroundColor: "white",
+                        zIndex: 1,
+                        p: "4px",
+                        "&:hover": {
+                          color: "rgb(255, 102, 94)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: "18px" }} />
+                    </IconButton>
+
+                    {/* Image Preview */}
+                    {(values.icon?.preview || typeof values.icon === "string") && (
+                      <Box
+                        component="img"
+                        src={
+                          typeof values.icon === "string"
+                            ? values.icon // value From database
+                            : values.icon.preview // From file upload
+                        }
+                        alt="Profile Preview"
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #aaa",
+                        }}
+                      />
+                    )}
+                  </Box>
+                )}
               </Box>
               <Box display="flex" justifyContent="center" p="20px">
                 <Button

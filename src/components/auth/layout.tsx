@@ -9,9 +9,10 @@ import { DynamicLogo } from '@/components/core/logo';
 
 export interface LayoutProps {
   children: React.ReactNode;
+  clientRole: string | null;
 }
 
-export function Layout({ children }: LayoutProps): React.JSX.Element {
+export function Layout({ children, clientRole }: LayoutProps): React.JSX.Element {
   return (
     <Box
       sx={{
@@ -43,14 +44,19 @@ export function Layout({ children }: LayoutProps): React.JSX.Element {
       >
         <Stack spacing={3}>
           <Stack spacing={1}>
-            <Typography color="inherit" sx={{ fontSize: '24px', lineHeight: '32px', textAlign: 'center', paddingBottom: '20px' }}
-              variant="h1"
-            >
-              Welcome to{' '}
-              <Box component="span" sx={{ color: '#15b79e' }}>
-                Doctor Portal
-              </Box>
-            </Typography>
+            {clientRole === 'admin' ?
+              <Typography color="inherit" sx={{ fontSize: '24px', lineHeight: '18px', textAlign: 'center', paddingBottom: '10px' }}
+                variant="h1"
+              > Hello Admin
+              </Typography> :
+              <Typography color="inherit" sx={{ fontSize: '24px', lineHeight: '32px', textAlign: 'center', paddingBottom: '20px' }}
+                variant="h1"
+              >
+                Welcome to{' '}
+                <Box component="span" sx={{ color: '#15b79e' }}>
+                  Doctor Portal
+                </Box>
+              </Typography>}
             <Typography align="center" variant="subtitle1">
               Empowering Healthcare, One Click at a Time
             </Typography>

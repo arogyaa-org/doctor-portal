@@ -67,6 +67,8 @@ export const Utility = () => {
       qualification: process.env.NEXT_PUBLIC_QUALIFICATION_URL as string,
       doctor: process.env.NEXT_PUBLIC_DOCTOR_URL as string,
       patient: process.env.NEXT_PUBLIC_PATIENT_URL as string,
+      payment: process.env.NEXT_PUBLIC_PAYMENT_URL as string,
+      user: process.env.NEXT_PUBLIC_USER_URL as string,
     };
 
     return urls[serviceName] || "";

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { Formik, Field } from "formik";
 import {
   Dialog,
   Button,
@@ -8,11 +9,13 @@ import {
   Box,
   useMediaQuery,
   InputAdornment,
+  IconButton,
 } from '@mui/material';
 import { useTheme } from "@mui/material/styles";
 import SchoolIcon from '@mui/icons-material/School';
 import DescriptionIcon from '@mui/icons-material/Description';
-import { Formik, Field } from "formik";
+import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+import DeleteIcon from "@mui/icons-material/Delete";
 import * as Yup from 'yup';
 
 import Loader from '@/components/common/Loader';
@@ -28,11 +31,13 @@ interface QualificationFormValues {
   _id?: string | number;
   name: string;
   description: string;
+  icon: { file: File; preview: string } | null;
 }
 
 const initialValues: QualificationFormValues = {
   name: "",
   description: "",
+  icon: null
 };
 
 interface FormInModalProps {
@@ -41,6 +46,13 @@ interface FormInModalProps {
   qualificationId: string | null;
   refetch: () => Promise<any>;
 }
+
+const validationSchema = Yup.object({
+  name: Yup.string()
+    .min(2, "Name is too short!")
+    .max(50, "Name is too long!")
+    .required("This field is required"),
+});
 
 const FormInModal: React.FC<FormInModalProps> = ({
   openDialog,
@@ -51,6 +63,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const [title, setTitle] = useState<"Create" | "Edit">("Create");
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<QualificationFormValues>(initialValues);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
@@ -67,7 +80,6 @@ const FormInModal: React.FC<FormInModalProps> = ({
 
   useEffect(() => {
     if (qualificationId) {
-      console.log("qualificationId:", qualificationId);
       setTitle("Edit");
       populateData(qualificationId);
     } else {
@@ -79,7 +91,10 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const create = useCallback(async (values: QualificationFormValues) => {
     setLoading(true);
     try {
-      await createQualification(values);
+      await createQualification({
+        ...values,
+        icon: values?.icon?.file || null
+      });
       toastAndNavigate(dispatch, true, "success", "Created Successfully");
       setTimeout(async () => {
         handleDialogClose();
@@ -98,6 +113,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
       setLoading(false);
     }
   }, []);
+
   const populateData = useCallback(async (id: string | number) => {
     setLoading(true);
     try {
@@ -116,18 +132,19 @@ const FormInModal: React.FC<FormInModalProps> = ({
     }
   }, []);
 
-
   const update = useCallback(async (values: any) => {
     setLoading(true);
     try {
-      await modifyQualification(values);
+      await modifyQualification({
+        ...values,
+        icon: values?.icon?.file || null
+      });
       setLoading(false);
       toastAndNavigate(dispatch, true, "info", "Successfully Updated");
       setTimeout(async () => {
         handleDialogClose();
         const updatedQualifications = await refetch();
         if (updatedQualifications) {
-          console.log('Updated qualifications:', updatedQualifications);
           dispatch(setQualification(updatedQualifications));
         }
       }, 2200);
@@ -143,14 +160,6 @@ const FormInModal: React.FC<FormInModalProps> = ({
     }
   }, [formValues]);
 
-
-  const validationSchema = Yup.object({
-    name: Yup.string()
-      .min(2, "Name is too short!")
-      .max(50, "Name is too long!")
-      .required("This field is required"),
-  });
-
   return (
     <Dialog
       fullScreen={fullScreen}
@@ -161,7 +170,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
       <Box sx={{ display: 'flex', flexDirection: 'column', p: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2 }}>
           <Typography variant="h4" gutterBottom>
-            {title} 
+            {title}
           </Typography>
         </Box>
 
@@ -174,13 +183,14 @@ const FormInModal: React.FC<FormInModalProps> = ({
           }}
         >
           {({
-            values,
+            dirty,
             errors,
+            values,
             touched,
+            isSubmitting,
             handleChange,
             handleSubmit,
-            isSubmitting,
-            dirty,
+            setFieldValue
           }) => (
             <form onSubmit={handleSubmit}>
               <Box display="grid" gap="30px" gridTemplateColumns="repeat(2, minmax(0, 1fr))">
@@ -224,6 +234,127 @@ const FormInModal: React.FC<FormInModalProps> = ({
                 />
               </Box>
 
+              {/* File input and display */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  gap: "16px",
+                  alignItems: "center",
+                }}
+              >
+                {/* Upload Icon with Label */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid #ccc",
+                    borderRadius: "8%",
+                    width: "146px",
+                    height: "104px",
+                    cursor: "pointer",
+                    textAlign: "center",
+                    transition: "border-color 0.3s ease, color 0.3s ease",
+                    "&:hover": {
+                      borderColor: 'rgb(33, 38, 54)',
+                      "& svg": {
+                        color: 'rgb(33, 38, 54)', // Darker icon color on hover
+                      },
+                    },
+                  }}
+                  component="label"
+                >
+                  <AddPhotoAlternateIcon
+                    sx={{
+                      fontSize: "32px",
+                      color: '#aaa',
+                      mb: 1,
+                      transition: "color 0.3s ease"
+                    }} />
+                  <Typography variant="body2">Upload Icon</Typography>
+                  <input
+                    ref={fileInputRef}
+                    hidden
+                    type="file"
+                    accept=".jpg, .gif, .png, .jpeg, .svg, .webp"
+                    onChange={(event) => {
+                      const imgfiles = event.target.files;
+                      if (imgfiles && imgfiles[0]) {
+                        const file = imgfiles[0];
+                        if (file.size > 1048576) {   // Check file size (1MB = 1,048,576 bytes)
+                          toastAndNavigate(
+                            dispatch,
+                            true,
+                            "error",
+                            `${file.name} exceeds 1MB limit`
+                          );
+                          return;
+                        }
+                        // Set file to Formik field and create a preview
+                        const fileUrl = URL.createObjectURL(file);
+                        setFieldValue("icon", { file, preview: fileUrl });
+                      }
+                    }}
+                  />
+                </Box>
+
+                {/* Display Selected File Preview */}
+                {(values.icon?.file || values.icon) && (
+                  <Box
+                    sx={{
+                      position: "relative",
+                      width: "150px",
+                      height: "106px",
+                    }}
+                  >
+                    {/* Delete Icon */}
+                    <IconButton
+                      onClick={() => {
+                        // Clean up preview URL only if it exists
+                        if (values.icon?.preview) {
+                          URL.revokeObjectURL(values.icon.preview);
+                        }
+                        setFieldValue("icon", null);
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: "-6px",
+                        right: "-6px",
+                        backgroundColor: "white",
+                        zIndex: 1,
+                        p: "4px",
+                        "&:hover": {
+                          color: "rgb(255, 102, 94)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: "18px" }} />
+                    </IconButton>
+
+                    {/* Image Preview */}
+                    {(values.icon?.preview || typeof values.icon === "string") && (
+                      <Box
+                        component="img"
+                        src={
+                          typeof values.icon === "string"
+                            ? values.icon // value From database
+                            : values.icon.preview // From file upload
+                        }
+                        alt="Profile Preview"
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #aaa",
+                        }}
+                      />
+                    )}
+                  </Box>
+                )}
+              </Box>
+
               <Box display="flex" justifyContent="center" p="20px">
                 <Button color="error" variant="contained" sx={{ mr: 3, width: '20%' }} onClick={handleDialogClose}>
                   Cancel
@@ -243,7 +374,11 @@ const FormInModal: React.FC<FormInModalProps> = ({
         </Formik>
 
         {loading ? <Loader /> : null}
-        <Toast alerting={toast.toastAlert} severity={toast.toastSeverity} message={toast.toastMessage} />
+        <Toast
+          alerting={toast.toastAlert}
+          severity={toast.toastSeverity}
+          message={toast.toastMessage}
+        />
       </Box>
     </Dialog>
   );

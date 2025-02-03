@@ -27,13 +27,13 @@ export function UserPopover({
   open,
 }: UserPopoverProps): React.JSX.Element {
   const popoverRef = React.useRef<HTMLDivElement | null>(null);
-  const { decodedToken } = Utility();
-  const { doctorName, email } = decodedToken();
-  console.log(doctorName, email, decodedToken(), decodedToken()?.email, decodedToken()?.doctorName)
+  const { capitalizeFirstLetter, decodedToken } = Utility();
+  const { role, email, userName, doctorName } = decodedToken() || {};
+  const displayName = role === "admin" ? userName : doctorName;
 
   React.useEffect(() => {
     if (popoverRef.current) {
-      const nameLength = doctorName?.length || 0;
+      const nameLength = displayName?.length || 0;
       const emailLength = email?.length || 0;
       const longestTextLength = Math.max(nameLength, emailLength);
 
@@ -44,7 +44,7 @@ export function UserPopover({
       );
       popoverRef.current.style.width = `${requiredWidth}px`;
     }
-  }, [doctorName, email]);
+  }, [displayName, email]);
 
   const handleSignOut = React.useCallback(async (): Promise<void> => {
     try {
@@ -92,15 +92,16 @@ export function UserPopover({
       >
         {/* User Avatar */}
         <Avatar
-          src={doctorName}
-          alt={doctorName}
+          alt={displayName || "User"}
           sx={{
             width: 40,
             height: 40,
             borderRadius: "50%",
             backgroundColor: "gray",
           }}
-        />
+        >
+          {displayName ? displayName[0].toUpperCase() : "U"}
+        </Avatar>
 
         {/* User Info */}
         <Box>
@@ -115,7 +116,7 @@ export function UserPopover({
               width: "100%",
             }}
           >
-            {doctorName}
+            {capitalizeFirstLetter(displayName)}
           </Typography>
 
           {/* User Email */}
