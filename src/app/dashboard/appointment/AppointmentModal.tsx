@@ -51,11 +51,11 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const { role, userName, doctorName, id: doctorId } = decodedToken() || {};
   const displayName = role === "admin" ? userName : doctorName;
 
-  const [toast, setToast] = useState({
-    toastAlert: false,
-    toastMessage: "",
-    toastSeverity: "success" as AlertColor,
-  });
+  // const [toast, setToast] = useState({
+  //   toastAlert: false,
+  //   toastMessage: "",
+  //   toastSeverity: "success" as AlertColor,
+  // }); -- bad me krna hai
 
   const { value: patientData } = useGetPatient(null, "get-patients");
 
