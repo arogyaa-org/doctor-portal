@@ -10,6 +10,8 @@ import {
   IconButton,
   Modal,
   Tooltip,
+  Button,
+  InputAdornment,
 } from "@mui/material";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
@@ -36,6 +38,8 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ManIcon from "@mui/icons-material/Man";
 import WomanIcon from "@mui/icons-material/Woman";
 import SickIcon from "@mui/icons-material/Sick";
+import { Autocomplete } from "@mui/material";
+import MuiTextField from "@mui/material/TextField";
 
 import { useModifyDoctor } from "@/hooks/doctor";
 import DoctorAppointmentHistory from "./appointment-history";
@@ -45,6 +49,10 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { fetcher } from "@/apis/apiClient";
 import { DoctorData } from "@/types/doctor";
+import { useGetSpeciality } from "@/hooks/speciality";
+import { useGetQualification } from "@/hooks/qualification";
+import { useGetSymptom } from "@/hooks/symptoms";
+import { Form, Formik } from "formik";
 
 const StyledTab = styled(Tab)({
   textTransform: "none",
@@ -105,6 +113,22 @@ const DoctorProfile = () => {
     getDoctorProfile();
   }, [doctorId]);
 
+  const { value: specialities } = useGetSpeciality(
+    null,
+    "get-specialities",
+    1,
+    200
+  );
+  console.log(specialities, "speciality");
+  const { value: qualifications } = useGetQualification(
+    null,
+    "get-qualifications",
+    1,
+    200
+  );
+
+  const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200);
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -140,6 +164,7 @@ const DoctorProfile = () => {
     availability: [],
     createdAt: "",
     updatedAt: "",
+    hospitalAffiliations: [],
     __v: 0,
   });
 
@@ -153,11 +178,27 @@ const DoctorProfile = () => {
   }, [doctorProfileData]);
 
   // Handle input field changes
-  const handleFieldChange = (field: keyof DoctorData, value: any) => {
-    setEditFields((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  const handleFieldChange = (
+    field: keyof DoctorData,
+    value: any,
+    index?: number
+  ) => {
+    if (field === "hospitalAffiliations" && index !== undefined) {
+      // Handle updates to individual hospital affiliations when editing
+      const updatedHospitalAffiliations = [...editFields.hospitalAffiliations];
+      updatedHospitalAffiliations[index] = value;
+      setEditFields({
+        ...editFields,
+        hospitalAffiliations: updatedHospitalAffiliations,
+      });
+    } else {
+      setEditFields({ ...editFields, [field]: value });
+    }
+  };
+
+  const handleCancelChanges = () => {
+    setIsEditOpen(false); // Close the edit mode without saving
+    setEditFields(doctorProfileData || { ...editFields }); // Revert to original values
   };
 
   // Save changes to API
@@ -170,7 +211,6 @@ const DoctorProfile = () => {
       console.error("Error updating doctor profile:", error);
     }
   };
-  
 
   return (
     <Box
@@ -185,21 +225,65 @@ const DoctorProfile = () => {
         position: "relative",
       }}
     >
+      {/* Edit Button */}
       <Tooltip title="Edit Profile">
         <IconButton
           onClick={handleEditOpen}
           sx={{
+            display: "flex",
+            flexDirection: "column", // Change to column to align the buttons vertically
             position: "absolute",
             top: 16,
-            right: 16,
+            right: 2,
             bgcolor: "white",
             boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
             "&:hover": { bgcolor: "grey.100" },
+            transition: "all 0.3s ease", // Smooth transition when Edit icon is clicked
           }}
         >
           <EditIcon />
         </IconButton>
       </Tooltip>
+
+      {/* Save and Cancel buttons, shown when Edit mode is active */}
+      {isEditOpen && (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column", // Change to column to align the buttons vertically
+            position: "absolute",
+            top: 70, // Keep this to align the buttons below the Edit icon
+            right: -3,
+            opacity: isEditOpen ? 1 : 0,
+            transform: isEditOpen ? "translateY(0)" : "translateY(-20px)",
+            transition: "opacity 0.3s ease, transform 0.3s ease",
+            width: "auto", // Adjust the width to auto so buttons stay in the same space
+            mr: 1,
+          }}
+        >
+          <Button
+            type="button"
+            variant="contained"
+            color="success"
+            onClick={handleSaveChanges}
+            sx={{ mb: 1, width: "15" }} // Adjusted width to fill the container width
+            disabled={
+              JSON.stringify(editFields) === JSON.stringify(doctorProfileData)
+            }
+          >
+            Save
+          </Button>
+
+          <Button
+            color="error"
+            variant="contained"
+            sx={{ mb: 1, width: "20" }} // Adjusted width to fill the container width
+            onClick={handleCancelChanges}
+          >
+            Cancel
+          </Button>
+        </Box>
+      )}
 
       <Box
         sx={{
@@ -256,7 +340,7 @@ const DoctorProfile = () => {
               textAlign: "center",
               mt: 2,
               px: 2,
-              maxWidth: "80%",
+              Width: "80%",
             }}
           >
             <input
@@ -269,11 +353,12 @@ const DoctorProfile = () => {
                 fontSize: "32px",
                 color: "#333",
                 textAlign: "center",
-                border: "none", 
-                outline: "none", 
-                background: "transparent", 
+                border: "none",
+                outline: "none",
+                background: "transparent",
                 padding: "4px",
-                width: "100%",
+                width: "auto",
+                minWidth: "200px",
                 cursor: "text",
               }}
             />
@@ -321,13 +406,12 @@ const DoctorProfile = () => {
             </span>
 
             <input
-              ref={bioInputRef}
               type="text"
               value={editFields.bio}
               onChange={(e) => {
                 handleFieldChange("bio", e.target.value);
 
-                // Ensure dynamic width adjustment
+                // Ensure dynamic width adjustment for bio
                 const textMeasureSpan = bioInputRef.current;
                 if (textMeasureSpan) {
                   textMeasureSpan.innerText = e.target.value || " ";
@@ -340,14 +424,14 @@ const DoctorProfile = () => {
                 border: "none",
                 fontSize: "16px",
                 textAlign: "center",
-                width: "auto", 
-                minWidth: "50px", 
-                maxWidth: "100%", 
+                width: "auto", // Bio should adjust dynamically
+                minWidth: "50px",
+                maxWidth: "100%", // Max width to ensure it doesn’t overflow
                 overflow: "hidden",
                 background: "transparent",
                 outline: "none",
                 cursor: "text",
-                transition: "width 0.2s ease-in-out", 
+                transition: "width 0.2s ease-in-out",
               }}
             />
           </Box>
@@ -431,7 +515,7 @@ const DoctorProfile = () => {
                     style={{
                       fontSize: "16px",
                       color: "#555",
-                      border: "2px solid #8F44FD", 
+                      border: "2px solid #8F44FD",
                       borderRadius: "6px",
                       padding: "6px 10px",
                       width: "150px",
@@ -462,10 +546,10 @@ const DoctorProfile = () => {
                     style={{
                       fontSize: "16px",
                       color: "#555",
-                      border: "2px solid #8F44FD", 
+                      border: "2px solid #8F44FD",
                       borderRadius: "6px",
                       padding: "6px 10px",
-                      width: "200px", 
+                      width: "200px",
                       outline: "none",
                       background: "transparent",
                       transition: "border 0.2s ease-in-out",
@@ -539,12 +623,12 @@ const DoctorProfile = () => {
                     style={{
                       fontSize: "16px",
                       color: "#555",
-                      border: "2px solid #8F44FD", 
+                      border: "2px solid #8F44FD",
                       borderRadius: "6px",
                       padding: "6px 10px",
                       background: "transparent",
                       cursor: "pointer",
-                      width: "200px", 
+                      width: "200px",
                       outline: "none",
                     }}
                   />
@@ -574,7 +658,7 @@ const DoctorProfile = () => {
                     style={{
                       fontSize: "16px",
                       color: "#555",
-                      border: "2px solid #8F44FD", 
+                      border: "2px solid #8F44FD",
                       borderRadius: "6px",
                       padding: "6px 10px",
                       background: "transparent",
@@ -599,7 +683,7 @@ const DoctorProfile = () => {
                 <CurrencyRupeeIcon sx={{ color: "#8F44FD" }} />
                 {isEditOpen ? (
                   <input
-                    type="text" 
+                    type="text"
                     value={editFields.consultationFee || ""}
                     onChange={(e) =>
                       handleFieldChange("consultationFee", e.target.value)
@@ -607,12 +691,12 @@ const DoctorProfile = () => {
                     style={{
                       fontSize: "16px",
                       color: "#555",
-                      border: "2px solid #8F44FD", 
+                      border: "2px solid #8F44FD",
                       borderRadius: "6px",
                       padding: "6px 10px",
                       background: "transparent",
                       cursor: "text",
-                      width: "100px", 
+                      width: "100px",
                       outline: "none",
                     }}
                   />
@@ -633,20 +717,20 @@ const DoctorProfile = () => {
                 {isEditOpen ? (
                   <input
                     type="text"
-                    value={editFields.languagesSpoken.join(", ")} 
+                    value={editFields.languagesSpoken?.join(", ")}
                     onChange={(e) => {
                       const updatedLanguages = e.target.value
-                        .split(",") 
+                        .split(",")
                         .map((lang) => lang.trim())
-                        .filter((lang) => lang.length > 0); 
+                        .filter((lang) => lang.length > 0);
                       handleFieldChange("languagesSpoken", updatedLanguages);
                     }}
                     onKeyDown={(e) => {
                       // Prevent spaces from being added at the start or end of the languages
                       if (e.key === "Backspace") {
-                        const currentValue = e.target.value.trim(); 
+                        const currentValue = e.target.value.trim();
                         if (currentValue.endsWith(",")) {
-                          e.target.value = currentValue.slice(0, -1); 
+                          e.target.value = currentValue.slice(0, -1);
                         }
                       }
                     }}
@@ -658,14 +742,14 @@ const DoctorProfile = () => {
                       padding: "6px 10px",
                       background: "transparent",
                       cursor: "text",
-                      width: "100%", 
+                      width: "100%",
                       outline: "none",
                     }}
                   />
                 ) : (
                   <Typography variant="body2" sx={{ color: "#555" }}>
                     {doctorProfileData?.languagesSpoken.length > 0
-                      ? doctorProfileData.languagesSpoken.join(", ") 
+                      ? doctorProfileData.languagesSpoken.join(", ")
                       : "English, Hindi"}
                   </Typography>
                 )}
@@ -677,6 +761,28 @@ const DoctorProfile = () => {
                 Status
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {/* Show icon based on status when edit mode is not active */}
+                {!isEditOpen && doctorProfileData?.status === "active" && (
+                  <CheckCircleOutlineIcon sx={{ color: "success.main" }} />
+                )}
+                {!isEditOpen && doctorProfileData?.status === "inactive" && (
+                  <HighlightOffIcon sx={{ color: "red" }} />
+                )}
+                {!isEditOpen && doctorProfileData?.status === "on leave" && (
+                  <HighlightOffIcon sx={{ color: "yellow" }} />
+                )}
+
+                {/* Show icon corresponding to the selected status when in edit mode */}
+                {isEditOpen && editFields.status === "active" && (
+                  <CheckCircleOutlineIcon sx={{ color: "success.main" }} />
+                )}
+                {isEditOpen && editFields.status === "inactive" && (
+                  <HighlightOffIcon sx={{ color: "red" }} />
+                )}
+                {isEditOpen && editFields.status === "on leave" && (
+                  <HighlightOffIcon sx={{ color: "yellow" }} />
+                )}
+
                 {isEditOpen ? (
                   <select
                     value={editFields.status}
@@ -686,12 +792,12 @@ const DoctorProfile = () => {
                     style={{
                       fontSize: "16px",
                       color: "#555",
-                      border: "2px solid #8F44FD", 
+                      border: "2px solid #8F44FD",
                       borderRadius: "6px",
                       padding: "6px 10px",
                       background: "transparent",
                       cursor: "pointer",
-                      width: "200px", 
+                      width: "200px",
                       outline: "none",
                     }}
                   >
@@ -700,18 +806,9 @@ const DoctorProfile = () => {
                     <option value="on leave">On Leave</option>
                   </select>
                 ) : (
-                  <>
-                    {doctorProfileData?.status === "active" ? (
-                      <CheckCircleOutlineIcon sx={{ color: "success.main" }} />
-                    ) : doctorProfileData?.status === "inactive" ? (
-                      <HighlightOffIcon sx={{ color: "yellow" }} />
-                    ) : (
-                      <HighlightOffIcon sx={{ color: "red" }} />
-                    )}
-                    <Typography variant="body2" sx={{ color: "#555" }}>
-                      {doctorProfileData?.status || "On leave"}
-                    </Typography>
-                  </>
+                  <Typography variant="body2" sx={{ color: "#555" }}>
+                    {doctorProfileData?.status || "On leave"}
+                  </Typography>
                 )}
               </Box>
             </Box>
@@ -729,7 +826,7 @@ const DoctorProfile = () => {
                     style={{
                       fontSize: "16px",
                       color: "#555",
-                      border: "2px solid #8F44FD", 
+                      border: "2px solid #8F44FD",
                       borderRadius: "6px",
                       padding: "6px 10px",
                       background: "transparent",
@@ -753,96 +850,166 @@ const DoctorProfile = () => {
               <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
                 Qualification
               </Typography>
+
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <SchoolIcon sx={{ color: "#8F44FD" }} />
-                <Typography variant="body2" sx={{ color: "#555" }}>
-                  {Array.isArray(doctorProfileData?.qualificationIds) &&
-                  doctorProfileData.qualificationIds.length > 0
-                    ? doctorProfileData.qualificationIds
-                        .map((qual) =>
-                          typeof qual === "object"
-                            ? qual.name
-                            : "Unknown Qualification"
-                        )
-                        .join(", ")
-                    : "MBBS, MD"}
-                </Typography>
+
+                {isEditOpen ? (
+                  <Autocomplete
+                    multiple
+                    options={qualifications?.results || []}
+                    getOptionLabel={(option) => option?.name} // Use the name from API response
+                    isOptionEqualToValue={(option, value) =>
+                      option._id === value?._id
+                    } // Match based on IDs
+                    value={editFields.qualificationIds.map((id) =>
+                      qualifications?.results.find(
+                        (qualification) => qualification._id === id
+                      )
+                    )}
+                    onChange={(event, newValue) => {
+                      const selectedQualificationIds = newValue.map(
+                        (qualification) => qualification?._id
+                      );
+                      handleFieldChange(
+                        "qualificationIds",
+                        selectedQualificationIds
+                      ); // Update qualificationIds
+                    }}
+                    renderInput={(params) => (
+                      <MuiTextField
+                        {...params}
+                        label="Select Qualifications"
+                        variant="outlined"
+                        sx={{ width: "220px" }}
+                      />
+                    )}
+                  />
+                ) : (
+                  // View mode: Display selected qualifications
+                  <Typography variant="body2" sx={{ color: "#555" }}>
+                    {Array.isArray(doctorProfileData?.qualificationIds) &&
+                    doctorProfileData.qualificationIds.length > 0
+                      ? doctorProfileData.qualificationIds
+                          .map((qualId) => {
+                            const qualification = qualifications?.results.find(
+                              (q) => q._id === qualId
+                            );
+                            return qualification
+                              ? qualification.name
+                              : "Unknown Qualification";
+                          })
+                          .join(", ")
+                      : "MBBS, MD"}
+                  </Typography>
+                )}
               </Box>
             </Box>
 
             <Box>
               <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                specialization
+                Specialization
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <WorkIcon sx={{ color: "#8F44FD" }} />
-                {Array.isArray(doctorProfileData?.specializationIds) &&
-                doctorProfileData.specializationIds.length > 0
-                  ? doctorProfileData.specializationIds
-                      .map((spec) =>
-                        typeof spec === "object"
-                          ? spec.name
-                          : "Unknown Specialization"
-                      )
-                      .join(", ")
-                  : "Not Specified"}
+                {isEditOpen ? (
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={specialities?.results || []}
+                    getOptionLabel={(option) => option?.name}
+                    isOptionEqualToValue={(option, value) =>
+                      option._id === value?._id
+                    }
+                    value={editFields.specializationIds || []}
+                    onChange={(event, value) => {
+                      setEditFields({
+                        ...editFields,
+                        specializationIds: value.map((v) => v._id),
+                      });
+                    }}
+                    renderInput={(params) => (
+                      <MuiTextField
+                        {...params}
+                        variant="outlined"
+                        sx={{ width: "220px" }}
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>{params.InputProps.startAdornment}</>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                ) : (
+                  <Typography variant="body2" sx={{ color: "#555" }}>
+                    {Array.isArray(doctorProfileData?.specializationIds) &&
+                    doctorProfileData.specializationIds.length > 0
+                      ? doctorProfileData.specializationIds
+                          .map((spec) =>
+                            typeof spec === "object"
+                              ? spec.name
+                              : "Unknown Specialization"
+                          )
+                          .join(", ")
+                      : "Not Specified"}
+                  </Typography>
+                )}
               </Box>
             </Box>
 
             <Box>
               <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                HospitalAffiliations
+                Symptoms
               </Typography>
-              {isEditOpen ? (
-                <input
-                  type="text"
-                  value={editFields.hospitalAffiliations.join(", ")}
-                  onChange={(e) =>
-                    handleFieldChange(
-                      "hospitalAffiliations",
-                      e.target.value
-                        .split(",")
-                        .map((hospital) => hospital.trim())
-                    )
-                  }
-                  style={{
-                    fontSize: "16px",
-                    color: "#555",
-                    border: "2px solid #8F44FD", 
-                    borderRadius: "6px",
-                    padding: "6px 10px",
-                    width: "300px", 
-                    outline: "none",
-                    background: "transparent",
-                    transition: "border 0.2s ease-in-out",
-                  }}
-                />
-              ) : Array.isArray(doctorProfileData?.hospitalAffiliations) &&
-                doctorProfileData.hospitalAffiliations.length > 0 ? (
-                doctorProfileData.hospitalAffiliations.map(
-                  (hospital, index) => (
-                    <Box
-                      key={index}
-                      sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                    >
-                      <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "#555", display: "block" }}
-                      >
-                        {hospital}
-                      </Typography>
-                    </Box>
-                  )
-                )
-              ) : (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <SickIcon sx={{ color: "#8F44FD" }} />
+                {isEditOpen ? (
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={symptoms?.results || []}
+                    getOptionLabel={(option) => option?.name}
+                    isOptionEqualToValue={(option, value) =>
+                      option._id === value?._id
+                    }
+                    value={editFields.symptomIds || []}
+                    onChange={(event, value) => {
+                      setEditFields({
+                        ...editFields,
+                        symptomIds: value.map((v) => v._id),
+                      });
+                    }}
+                    renderInput={(params) => (
+                      <MuiTextField
+                        {...params}
+                        variant="outlined"
+                        sx={{ width: "220px" }}
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>{params.InputProps.startAdornment}</>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                ) : (
                   <Typography variant="body2" sx={{ color: "#555" }}>
-                    Apollo Hospital
+                    {Array.isArray(doctorProfileData?.symptomIds) &&
+                    doctorProfileData.symptomIds.length > 0
+                      ? doctorProfileData.symptomIds
+                          .map((symptom) =>
+                            typeof symptom === "object"
+                              ? symptom.name
+                              : "Unknown Symptom"
+                          )
+                          .join(", ")
+                      : "Not Specified"}
                   </Typography>
-                </Box>
-              )}
+                )}
+              </Box>
             </Box>
 
             <Box>
@@ -893,7 +1060,7 @@ const DoctorProfile = () => {
                               padding: "6px 10px",
                               background: "transparent",
                               cursor: "pointer",
-                              width: "100%", 
+                              width: "100%",
                               outline: "none",
                             }}
                           />
@@ -918,7 +1085,7 @@ const DoctorProfile = () => {
                               padding: "6px 10px",
                               background: "transparent",
                               cursor: "pointer",
-                              width: "100%", 
+                              width: "100%",
                               outline: "none",
                             }}
                           />
@@ -943,7 +1110,7 @@ const DoctorProfile = () => {
                               padding: "6px 10px",
                               background: "transparent",
                               cursor: "pointer",
-                              width: "100%", 
+                              width: "100%",
                               outline: "none",
                             }}
                           />
@@ -963,7 +1130,7 @@ const DoctorProfile = () => {
                               border: "none",
                               cursor: "pointer",
                               color: "red",
-                              marginTop: "8px", 
+                              marginTop: "8px",
                             }}
                           >
                             Remove
@@ -976,25 +1143,19 @@ const DoctorProfile = () => {
                       Not Available
                     </Typography>
                   )}
-                  <button
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    sx={{ mt: -4 }}
                     onClick={() =>
                       handleFieldChange("availability", [
                         ...editFields.availability,
                         { day: "", startTime: "", endTime: "" },
                       ])
                     }
-                    style={{
-                      background: "transparent",
-                      border: "2px dashed #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 12px",
-                      cursor: "pointer",
-                      color: "#8F44FD",
-                      marginTop: "10px", 
-                    }}
                   >
-                    Add Slot
-                  </button>
+                    Add
+                  </Button>
                 </>
               ) : Array.isArray(doctorProfileData?.availability) &&
                 doctorProfileData.availability.length > 0 ? (
@@ -1021,21 +1182,123 @@ const DoctorProfile = () => {
 
             <Box>
               <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Symptoms
+                Hospital Affiliations
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <SickIcon sx={{ color: "#8F44FD" }} />
-                {Array.isArray(doctorProfileData?.symptomIds) &&
-                doctorProfileData.symptomIds.length > 0
-                  ? doctorProfileData.symptomIds
-                      .map((symptom) =>
-                        typeof symptom === "object"
-                          ? symptom.name
-                          : "Unknown Symptom"
+
+              {isEditOpen ? (
+                <>
+                  {editFields.hospitalAffiliations.length === 0 ? (
+                    <Typography variant="body2" sx={{ color: "#555" }}>
+                      No hospital affiliations added yet.
+                    </Typography>
+                  ) : (
+                    editFields.hospitalAffiliations.map((hospital, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center", // Align the icon and input horizontally
+                          gap: 1,
+                          mb: 1,
+                          flexDirection: "column", // Stack the input and remove button vertically
+                        }}
+                      >
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                          <input
+                            type="text"
+                            value={hospital}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                "hospitalAffiliations",
+                                e.target.value,
+                                index
+                              )
+                            }
+                            style={{
+                              fontSize: "16px",
+                              color: "#555",
+                              border: "2px solid #8F44FD",
+                              borderRadius: "6px",
+                              padding: "6px 10px",
+                              width: "300px",
+                              outline: "none",
+                              background: "transparent",
+                              transition: "border 0.2s ease-in-out",
+                            }}
+                          />
+                        </Box>
+                        {/* Remove button below the input field */}
+                        <button
+                          onClick={() => {
+                            const updatedAffiliations =
+                              editFields.hospitalAffiliations.filter(
+                                (_, idx) => idx !== index
+                              );
+                            handleFieldChange(
+                              "hospitalAffiliations",
+                              updatedAffiliations
+                            );
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "red",
+                            marginTop: "1px",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </Box>
+                    ))
+                  )}
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    sx={{ mt: -2 }}
+                    onClick={() =>
+                      setEditFields({
+                        ...editFields,
+                        hospitalAffiliations: [
+                          ...editFields.hospitalAffiliations,
+                          "",
+                        ],
+                      })
+                    }
+                  >
+                    Add
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {Array.isArray(doctorProfileData?.hospitalAffiliations) &&
+                  doctorProfileData.hospitalAffiliations.length > 0 ? (
+                    doctorProfileData.hospitalAffiliations.map(
+                      (hospital, index) => (
+                        <Box
+                          key={index}
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                          <Typography variant="body2" sx={{ color: "#555" }}>
+                            {hospital}
+                          </Typography>
+                        </Box>
                       )
-                      .join(", ")
-                  : "Not Specified"}
-              </Box>
+                    )
+                  ) : (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                      <Typography variant="body2" sx={{ color: "#555" }}>
+                        Apollo Hospital
+                      </Typography>
+                    </Box>
+                  )}
+                </>
+              )}
             </Box>
           </Box>
         </Box>
