@@ -74,7 +74,6 @@ interface DoctorFormValues {
   profilePicture: { file: File; preview: string } | null;
   consultationFee: string | number;
   status: string;
-  role: string;
   qualificationIds: any[];
   specializationIds: any[];
   symptomIds: any[];
@@ -97,7 +96,6 @@ const initialValues: DoctorFormValues = {
   profilePicture: null,
   consultationFee: "",
   status: "",
-  role: "",
   qualificationIds: [],
   specializationIds: [],
   symptomIds: [],
@@ -185,7 +183,6 @@ const DoctorForm: React.FC = () => {
       const response = await createDoctor({
         ...values,
         gender: values.gender || null,
-        role: values.role || null,
         status: values.status || null,
         profilePicture: values?.profilePicture?.file || null,
         qualificationIds: getIdsFromObject(values?.qualificationIds),
@@ -232,7 +229,6 @@ const DoctorForm: React.FC = () => {
         const payload = {
           ...values,
           gender: values.gender || null,
-          role: values.role || null,
           status: values.status || null,
           profilePicture: values?.profilePicture?.file || null,
           qualificationIds: getIdsFromObject(values?.qualificationIds),
@@ -520,31 +516,7 @@ const DoctorForm: React.FC = () => {
                   </Typography>
                 )}
               </FormControl>
-              <FormControl
-                fullWidth
-                error={touched.role && Boolean(errors.role)}
-              >
-                <InputLabel>Role</InputLabel>
-                <Select
-                  label="Role "
-                  name="role"
-                  value={values.role}
-                  onChange={(e) => setFieldValue("role", e.target.value)}
-                  startAdornment={
-                    <InputAdornment position="start">
-                      <WorkIcon color="primary" />
-                    </InputAdornment>
-                  }
-                >
-                  <MenuItem value="admin">Admin</MenuItem>
-                  <MenuItem value="doctor">Doctor</MenuItem>
-                </Select>
-                {touched.role && errors.role && (
-                  <Typography color="error" variant="body2">
-                    {errors.role}
-                  </Typography>
-                )}
-              </FormControl>
+
               <Field
                 as={MuiTextField}
                 label="Address"

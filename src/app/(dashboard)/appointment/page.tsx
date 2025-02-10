@@ -7,7 +7,7 @@ import CreateIcon from "@mui/icons-material/Create";
 
 import Search from "@/components/common/Search";
 import ServerPaginationGrid from "@/components/common/Datagrid";
-import AppointmentModal from "@/app/dashboard/appointment/AppointmentModal";
+import AppointmentModal from "@/app/(dashboard)/appointment/AppointmentModal";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { datagridColumns } from "./appointmentConfig";
 import { useGetAppointment } from "@/hooks/appointment";
@@ -89,7 +89,7 @@ const Page: React.FC = () => {
         <Stack direction="row" spacing={2} alignItems="center">
           <Search refetchAPI={refetch} holderText="Appointment" />
 
-          <Button
+          {/* <Button
             variant="contained"
             startIcon={<CreateIcon />}
             onClick={() => handleOpenModal(null)}
@@ -108,7 +108,7 @@ const Page: React.FC = () => {
             }}
           >
             Create
-          </Button>
+          </Button> */}
         </Stack>
       </Stack>
 

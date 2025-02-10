@@ -85,10 +85,10 @@ export function SignInForm({ clientRole, setClientRole }: SignInFormProps): Reac
           if (role === 'admin') {
             router.push('/dashboard');
           } else if (role === 'doctor') {
-            router.push('/dashboard/account');
+            router.push('/account');
           }
-        } else if (response?.statusCode === 409) {
-          toastAndNavigate(dispatch, true, "error", 'Doctor not found');
+        } else if (response?.statusCode === 409 || response?.statusCode === 404) {
+          toastAndNavigate(dispatch, true, "error", 'User not found');
           setTimeout(() => {
             setLoading(false);
           }, 2200);
