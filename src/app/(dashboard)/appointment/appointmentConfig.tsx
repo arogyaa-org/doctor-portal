@@ -119,8 +119,8 @@ export const datagridColumns = (): GridColDef[] => {
             color="info"
             variant="contained"
             onClick={() =>
-            //router.push(paths.dashboard.appointmentDetails_id(_id)) // for dynamic page 
-            router.push(paths.dashboard.appointmentDetails)           // for static page
+            router.push(paths.dashboard.appointmentDetails_id(_id)) // for dynamic page 
+            // router.push(paths.dashboard.appointmentDetails)           // for static page
             }
             sx={{
               minWidth: "50px",
