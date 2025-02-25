@@ -11,6 +11,7 @@ import type { Patient } from "@/types/patient";
 import { patientDatagridColumns as datagridColumns } from "./patientConfig";
 import { useGetPatient } from "@/hooks/patient";
 import { setPatient, setLoading } from "@/redux/features/patientSlice";
+import { Utility } from "@/utils";
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -20,9 +21,22 @@ const Page: React.FC = () => {
     (state: RootState) => state.patient
   );
 
+  const { decodedToken } = Utility();
+    const role = decodedToken()?.role;
+    const doctorId = decodedToken()?.id;
+  
+    const apiEndpoint =
+      role === "doctor" && doctorId
+        ? `get-patients-by-doctor-id/:doctorId`
+        : "get-patients";
+
+        console.log("lskdjlskdj",apiEndpoint);
+        
+  
+
   const { value: data, refetch } = useGetPatient(
     null,
-    "get-patients",
+    apiEndpoint,
     currentPage,
     limit
   );

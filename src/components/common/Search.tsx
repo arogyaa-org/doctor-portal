@@ -1,6 +1,17 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { InputAdornment, OutlinedInput, Box, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+
+// Simple debounce function
+const debounce = (func: (...args: any[]) => void, delay: number) => {
+  let timer: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 
 interface SearchProps {
   refetchAPI: (inputValue: string) => Promise<void>;
@@ -9,28 +20,36 @@ interface SearchProps {
 
 const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
   const [inputValue, setInputValue] = useState<string>("");
-  const inputRef = useRef<HTMLInputElement>(null);
+
+  const debouncedSearch = useCallback(
+    debounce(async (value: string) => {
+      if (value.trim() === "") {
+        // If input is empty, fetch all data
+        await refetchAPI(""); // This triggers full data fetch
+      } else {
+        // Otherwise, trigger search based on input
+        await refetchAPI(value);
+      }
+    }, 300),
+    []
+  );
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+    debouncedSearch(value); // Trigger the debounced function
+  };
 
   const handleSearchIconClick = () => {
     if (inputValue.trim() === "") {
       inputRef.current?.focus();
+      refetchAPI(""); // Trigger full data fetch when search icon is clicked with empty input
     } else {
-      handleSearch();
+      debouncedSearch(inputValue); // Trigger the debounced function
     }
   };
 
-  const handleSearch = async () => {
-    if (inputValue.trim()) {
-      console.log("Search Value:", inputValue);
-      await refetchAPI(inputValue);
-    }
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      handleSearch();
-    }
-  };
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <Box
@@ -68,8 +87,7 @@ const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
         inputRef={inputRef}
         placeholder={`Search ${holderText}`}
         value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
+        onChange={handleChange}
         sx={{
           borderRadius: "25px",
           paddingLeft: "0px",

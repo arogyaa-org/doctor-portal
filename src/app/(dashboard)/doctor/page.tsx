@@ -22,7 +22,7 @@ const Page: React.FC = () => {
   const { doctor, reduxLoading } = useSelector(
     (state: RootState) => state.doctor
   );
-
+  const [inputValue, setInputValue] = React.useState<string>("");
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
 
@@ -30,7 +30,8 @@ const Page: React.FC = () => {
     null,
     "get-doctors",
     currentPage,
-    ITEMS_PER_PAGE
+    ITEMS_PER_PAGE,
+    inputValue
   );
 
   useEffect(() => {
@@ -41,6 +42,11 @@ const Page: React.FC = () => {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+  };
+
+  const handleSearch = async (query: string): Promise<void> => {
+    setInputValue(query); // Set the search query
+    await refetch(query); // Refetch with the new query, make sure refetch is awaited
   };
 
   return (
@@ -63,7 +69,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={refetch} holderText="Doctor" />
+          <Search refetchAPI={handleSearch} holderText="Doctor" />
 
           <Button
             variant="contained"
