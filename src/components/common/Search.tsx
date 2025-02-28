@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { InputAdornment, OutlinedInput, Box, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 
 // Simple debounce function
 const debounce = (func: (...args: any[]) => void, delay: number) => {
@@ -20,33 +21,40 @@ interface SearchProps {
 
 const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
   const [inputValue, setInputValue] = useState<string>("");
+  const [isClearing, setIsClearing] = useState<boolean>(false); 
 
   const debouncedSearch = useCallback(
     debounce(async (value: string) => {
       if (value.trim() === "") {
-        // If input is empty, fetch all data
-        await refetchAPI(""); // This triggers full data fetch
+        await refetchAPI(""); 
       } else {
-        // Otherwise, trigger search based on input
-        await refetchAPI(value);
+        await refetchAPI(value); 
       }
-    }, 300),
+    }, 500),
     []
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    debouncedSearch(value); // Trigger the debounced function
+    if (!isClearing) {
+      debouncedSearch(value); 
+    }
   };
 
   const handleSearchIconClick = () => {
     if (inputValue.trim() === "") {
-      inputRef.current?.focus();
-      refetchAPI(""); // Trigger full data fetch when search icon is clicked with empty input
+      refetchAPI(""); 
     } else {
-      debouncedSearch(inputValue); // Trigger the debounced function
+      debouncedSearch(inputValue); 
     }
+  };
+
+  const handleClearIconClick = () => {
+    setInputValue(""); 
+    setIsClearing(true); 
+    debouncedSearch(""); 
+    setIsClearing(false); 
   };
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +118,18 @@ const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
           <InputAdornment position="start">
             <Box sx={{ width: "50px" }} />
           </InputAdornment>
+        }
+        endAdornment={
+          inputValue && (
+            <InputAdornment position="end">
+              <IconButton
+                onClick={handleClearIconClick}
+                sx={{ padding: "10px" }}
+              >
+                <ClearIcon sx={{ fontSize: "20px", color: "gray" }} />
+              </IconButton>
+            </InputAdornment>
+          )
         }
       />
     </Box>

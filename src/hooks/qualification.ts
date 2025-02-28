@@ -19,9 +19,10 @@ export const useGetQualification = (
   initialData: Qualification | null,
   pathKey: string,
   page: number = 1,
-  limit: number = 5
+  limit: number = 5,
+  keyword?: string
 ) => {
-  const url = `${pathKey}?page=${page}&limit=${limit}`;
+  const url = `${pathKey}?page=${page}&limit=${limit}&search=${keyword}`;
   const { data: swrData, error, isValidating } = useSWR<Qualification | null>(
     url,
     () => fetcher<Qualification>('qualification', url),

@@ -20,6 +20,7 @@ const Page: React.FC = () => {
   const { patient, reduxLoading } = useSelector(
     (state: RootState) => state.patient
   );
+  const [inputValue, setInputValue] = React.useState<string>("");
 
   const { decodedToken } = Utility();
     const role = decodedToken()?.role;
@@ -38,7 +39,8 @@ const Page: React.FC = () => {
     null,
     apiEndpoint,
     currentPage,
-    limit
+    limit,
+    inputValue
   );
 
   const handleDispatch = React.useCallback(() => {
@@ -57,6 +59,11 @@ const Page: React.FC = () => {
 
   console.log("patient data:", patient);
   console.log("total items:", data);
+
+  const handleSearch = async (query: string): Promise<void> => {
+    setInputValue(query); // Set the search query
+    await refetch(query); // Refetch with the new query, make sure refetch is awaited
+  };
 
   return (
     <Stack spacing={3}>
@@ -84,7 +91,7 @@ const Page: React.FC = () => {
             marginRight: "25px",
           }}
         >
-          <Search refetchAPI={refetch} holderText="Patient" />
+           <Search refetchAPI={handleSearch} holderText="Patient" />
         </Box>
       </Stack>
 
