@@ -19,9 +19,10 @@ export const useGetDoctor = (
     initialData: Doctor | null,
     pathKey: string,
     page: number = 1,
-    limit: number = 5
+    limit: number = 5,
+    keyword?: string
 ) => {
-    const url = `${pathKey}?page=${page}&limit=${limit}`;
+    const url = `${pathKey}?page=${page}&limit=${limit}&keyword=${keyword}`;
     const { data: swrData, error, isValidating } = useSWR<Doctor | null>(
         url,
         () => fetcher<Doctor>('doctor', url),

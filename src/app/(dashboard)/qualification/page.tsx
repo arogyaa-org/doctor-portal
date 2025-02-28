@@ -23,6 +23,7 @@ const Page: React.FC = () => {
   >(null);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [inputValue, setInputValue] = React.useState<string>("");
   const dispatch: AppDispatch = useDispatch();
   const { qualification, reduxLoading } = useSelector(
     (state: RootState) => state.qualification
@@ -32,7 +33,8 @@ const Page: React.FC = () => {
     null,
     "get-qualifications",
     currentPage,
-    ITEMS_PER_PAGE
+    ITEMS_PER_PAGE,
+    inputValue
   );
 
   useEffect(() => {
@@ -48,6 +50,11 @@ const Page: React.FC = () => {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+  };
+
+  const handleSearch = async (query: string): Promise<void> => {
+    setInputValue(query); 
+    await refetch(query); 
   };
 
   return (
@@ -70,7 +77,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={refetch} holderText="Qualification" />
+        <Search refetchAPI={handleSearch} holderText="Qualification" />
 
           <Button
             variant="contained"

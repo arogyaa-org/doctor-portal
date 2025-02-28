@@ -23,6 +23,7 @@ const Page: React.FC = () => {
   >(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
+  const [inputValue, setInputValue] = React.useState<string>("");
 
   const dispatch: AppDispatch = useDispatch();
   const { Speciality, reduxLoading } = useSelector(
@@ -33,7 +34,8 @@ const Page: React.FC = () => {
     null,
     "get-specialities",
     currentPage,
-    pageSize
+    pageSize,
+    inputValue
   );
 
   useEffect(() => {
@@ -56,6 +58,11 @@ const Page: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const handleSearch = async (query: string): Promise<void> => {
+    setInputValue(query); // Set the search query
+    await refetch(query); // Refetch with the new query, make sure refetch is awaited
+  };
+
   return (
     <Stack spacing={3}>
       <Stack
@@ -76,7 +83,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={refetch} holderText="Specialization" />
+          <Search refetchAPI={handleSearch} holderText="Specialization" />
 
           <Button
             variant="contained"

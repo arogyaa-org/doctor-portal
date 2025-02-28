@@ -20,12 +20,13 @@ export const useGetPatient = (
     initialData: Patient | null,
     pathKey: string,
     page: number = 1,
-    limit: number = 5
+    limit: number = 5,
+    keyword?: string
 ) => {
 
     const url = pathKey.includes('?')
-        ? `${pathKey}&page=${page}&limit=${limit}`
-        : `${pathKey}?page=${page}&limit=${limit}`;
+        ? `${pathKey}&page=${page}&limit=${limit}&search=${keyword}`
+        : `${pathKey}?page=${page}&limit=${limit}&search=${keyword}`;
 
     const { data: swrData, error, isValidating } = useSWR<Patient | null>(
         url,

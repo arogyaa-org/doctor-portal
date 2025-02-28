@@ -22,6 +22,7 @@ const Page: React.FC = () => {
     null
   );
   const [currentPage, setCurrentPage] = useState(1);
+  const [inputValue, setInputValue] = React.useState<string>("");
 
   const dispatch: AppDispatch = useDispatch();
   const { symptom, reduxLoading } = useSelector(
@@ -32,7 +33,8 @@ const Page: React.FC = () => {
     null,
     "get-symptoms",
     currentPage,
-    ITEMS_PER_PAGE
+    ITEMS_PER_PAGE,
+    inputValue
   );
 
   useEffect(() => {
@@ -49,6 +51,12 @@ const Page: React.FC = () => {
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
+
+  const handleSearch = async (query: string): Promise<void> => {
+    setInputValue(query); // Set the search query
+    await refetch(query); // Refetch with the new query, make sure refetch is awaited
+  };
+
 
   return (
     <Stack spacing={3}>
@@ -70,7 +78,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={refetch} holderText="Symtom" />
+        <Search refetchAPI={handleSearch} holderText="Symptom" />
 
           <Button
             variant="contained"

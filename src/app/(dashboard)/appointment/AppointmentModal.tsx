@@ -197,7 +197,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
                           ),
                         }}
                       />
-                    </Grid>
+                    </Grid> 
                     <Grid item xs={6}>
                       <Autocomplete
                         options={patientData?.results || []}
@@ -422,11 +422,11 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
           )}
         </Formik>
       </Dialog>
-      <Toast
+      {/* <Toast
         alerting={toast.toastAlert}
         severity={toast.toastSeverity}
         message={toast.toastMessage}
-      />
+      /> */}
     </>
   );
 };

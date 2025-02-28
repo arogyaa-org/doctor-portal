@@ -1,6 +1,18 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { InputAdornment, OutlinedInput, Box, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
+
+// Simple debounce function
+const debounce = (func: (...args: any[]) => void, delay: number) => {
+  let timer: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 
 interface SearchProps {
   refetchAPI: (inputValue: string) => Promise<void>;
@@ -9,28 +21,43 @@ interface SearchProps {
 
 const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
   const [inputValue, setInputValue] = useState<string>("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [isClearing, setIsClearing] = useState<boolean>(false); 
+
+  const debouncedSearch = useCallback(
+    debounce(async (value: string) => {
+      if (value.trim() === "") {
+        await refetchAPI(""); 
+      } else {
+        await refetchAPI(value); 
+      }
+    }, 500),
+    []
+  );
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+    if (!isClearing) {
+      debouncedSearch(value); 
+    }
+  };
 
   const handleSearchIconClick = () => {
     if (inputValue.trim() === "") {
-      inputRef.current?.focus();
+      refetchAPI(""); 
     } else {
-      handleSearch();
+      debouncedSearch(inputValue); 
     }
   };
 
-  const handleSearch = async () => {
-    if (inputValue.trim()) {
-      console.log("Search Value:", inputValue);
-      await refetchAPI(inputValue);
-    }
+  const handleClearIconClick = () => {
+    setInputValue(""); 
+    setIsClearing(true); 
+    debouncedSearch(""); 
+    setIsClearing(false); 
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      handleSearch();
-    }
-  };
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <Box
@@ -68,8 +95,7 @@ const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
         inputRef={inputRef}
         placeholder={`Search ${holderText}`}
         value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
+        onChange={handleChange}
         sx={{
           borderRadius: "25px",
           paddingLeft: "0px",
@@ -92,6 +118,18 @@ const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
           <InputAdornment position="start">
             <Box sx={{ width: "50px" }} />
           </InputAdornment>
+        }
+        endAdornment={
+          inputValue && (
+            <InputAdornment position="end">
+              <IconButton
+                onClick={handleClearIconClick}
+                sx={{ padding: "10px" }}
+              >
+                <ClearIcon sx={{ fontSize: "20px", color: "gray" }} />
+              </IconButton>
+            </InputAdornment>
+          )
         }
       />
     </Box>

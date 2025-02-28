@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   Box,
   Avatar,
@@ -12,6 +12,7 @@ import {
   Tooltip,
   Button,
   InputAdornment,
+  TextField,
 } from "@mui/material";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
@@ -45,7 +46,6 @@ import { useModifyDoctor } from "@/hooks/doctor";
 import DoctorAppointmentHistory from "./appointment-history";
 import DoctorRatingsAndReviews from "./d-rating-reviews";
 import { Utility } from "@/utils";
-import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { fetcher } from "@/apis/apiClient";
 import { DoctorData } from "@/types/doctor";
@@ -53,6 +53,7 @@ import { useGetSpeciality } from "@/hooks/speciality";
 import { useGetQualification } from "@/hooks/qualification";
 import { useGetSymptom } from "@/hooks/symptoms";
 import { Form, Formik } from "formik";
+import { setLoading } from "@/redux/features/doctorSlice";
 
 const StyledTab = styled(Tab)({
   textTransform: "none",
@@ -62,10 +63,61 @@ const StyledTab = styled(Tab)({
   },
 });
 
+interface DoctorResponse {
+  statusCode: string | number;
+  message: string;
+  data: DoctorFormValues;
+}
+
+interface DoctorFormValues {
+  _id?: string | number;
+  username: string;
+  email: string;
+  password: string;
+  contact: string;
+  experience: string | number;
+  bio: string;
+  tags: string[];
+  gender: string;
+  dob: string;
+  languagesSpoken: string[];
+  address: string;
+  pincode: string | number;
+  profilePicture: { file: File; preview: string } | null;
+  consultationFee: string | number;
+  status: string;
+  qualificationIds: any[];
+  specializationIds: any[];
+  symptomIds: any[];
+  availability: { day: string; startTime: string; endTime: string }[];
+}
+
+const initialValues: DoctorFormValues = {
+  username: "",
+  email: "",
+  password: "",
+  contact: "",
+  gender: "",
+  dob: "",
+  experience: "",
+  bio: "",
+  tags: [],
+  languagesSpoken: [],
+  address: "",
+  pincode: "",
+  profilePicture: null,
+  consultationFee: "",
+  status: "",
+  qualificationIds: [],
+  specializationIds: [],
+  symptomIds: [],
+  availability: [],
+};
+
 const DoctorProfile = () => {
   const doctorId = Utility().decodedToken()?.id || null;
   const { modifyDoctor } = useModifyDoctor("update-doctor");
-
+  const [formValues, setFormValues] = useState<DoctorFormValues>(initialValues);
   const [selectedTab, setSelectedTab] = useState<string | null>("info");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
@@ -99,7 +151,7 @@ const DoctorProfile = () => {
     const getDoctorProfile = async () => {
       if (!doctorId) return;
       try {
-        const response = await fetcher(
+        const response: DoctorResponse = await fetcher(
           "doctor",
           `get-doctor-by-id/${doctorId}`
         );
@@ -119,14 +171,12 @@ const DoctorProfile = () => {
     1,
     200
   );
-  console.log(specialities, "speciality");
   const { value: qualifications } = useGetQualification(
     null,
     "get-qualifications",
     1,
     200
   );
-
   const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,43 +189,25 @@ const DoctorProfile = () => {
     }));
   };
 
-  // Editable fields
-  const [editFields, setEditFields] = useState<DoctorData>({
-    _id: "",
-    username: "",
-    email: "",
-    password: "",
-    contact: "",
-    experience: "",
-    bio: "",
-    tags: [],
-    gender: null,
-    dob: "",
-    languageSpoken: [],
-    address: "",
-    pincode: "",
-    profilePicture: null,
-    consultationFee: "",
-    status: null,
-    role: null,
-    specializationIds: [],
-    symptomIds: [],
-    qualificationIds: [],
-    availability: [],
-    createdAt: "",
-    updatedAt: "",
-    hospitalAffiliations: [],
-    __v: 0,
-  });
+  const [editFields, setEditFields] = useState<DoctorFormValues>(initialValues);
 
   // Populate edit fields when doctorProfileData is loaded
   useEffect(() => {
-    if (doctorProfileData) {
+    if (doctorProfileData && specialities?.results) {
       setEditFields({
         ...doctorProfileData,
+        specializationIds: doctorProfileData.specializationIds.map((spec) =>
+          typeof spec === "object" ? spec._id : spec
+        ),
+        qualificationIds: doctorProfileData.qualificationIds.map((qual) =>
+          typeof qual === "object" ? qual._id : qual
+        ),
+        symptomIds: doctorProfileData.symptomIds.map((sym) =>
+          typeof sym === "object" ? sym._id : sym
+        ),
       });
     }
-  }, [doctorProfileData]);
+  }, [doctorProfileData, specialities]);
 
   // Handle input field changes
   const handleFieldChange = (
@@ -196,9 +228,10 @@ const DoctorProfile = () => {
     }
   };
 
+  // Handle cancel changes (reset to original values)
   const handleCancelChanges = () => {
-    setIsEditOpen(false); // Close the edit mode without saving
-    setEditFields(doctorProfileData || { ...editFields }); // Revert to original values
+    setIsEditOpen(false);
+    setEditFields(doctorProfileData ? { ...doctorProfileData } : initialValues);
   };
 
   // Save changes to API
@@ -858,23 +891,18 @@ const DoctorProfile = () => {
                   <Autocomplete
                     multiple
                     options={qualifications?.results || []}
-                    getOptionLabel={(option) => option?.name} // Use the name from API response
-                    isOptionEqualToValue={(option, value) =>
-                      option._id === value?._id
-                    } // Match based on IDs
-                    value={editFields.qualificationIds.map((id) =>
-                      qualifications?.results.find(
-                        (qualification) => qualification._id === id
-                      )
+                    getOptionLabel={(option) => option?.name || ""} // Use the name from API response
+                    value={editFields.qualificationIds.map(
+                      (id) =>
+                        qualifications?.results.find(
+                          (qualification) => qualification._id === id
+                        ) || {}
                     )}
                     onChange={(event, newValue) => {
-                      const selectedQualificationIds = newValue.map(
-                        (qualification) => qualification?._id
-                      );
                       handleFieldChange(
                         "qualificationIds",
-                        selectedQualificationIds
-                      ); // Update qualificationIds
+                        newValue.map((qualification) => qualification._id)
+                      );
                     }}
                     renderInput={(params) => (
                       <MuiTextField
@@ -892,15 +920,20 @@ const DoctorProfile = () => {
                     doctorProfileData.qualificationIds.length > 0
                       ? doctorProfileData.qualificationIds
                           .map((qualId) => {
-                            const qualification = qualifications?.results.find(
-                              (q) => q._id === qualId
-                            );
-                            return qualification
-                              ? qualification.name
-                              : "Unknown Qualification";
+                            if (typeof qualId === "object" && qualId._id) {
+                              return qualId.name; // When API returns object format
+                            } else {
+                              const qualification =
+                                qualifications?.results.find(
+                                  (s) => s._id === qualId
+                                );
+                              return qualification
+                                ? qualification.name
+                                : "Unknown";
+                            }
                           })
                           .join(", ")
-                      : "MBBS, MD"}
+                      : "Not Specified"}
                   </Typography>
                 )}
               </Box>
@@ -915,30 +948,25 @@ const DoctorProfile = () => {
                 {isEditOpen ? (
                   <Autocomplete
                     multiple
-                    disableCloseOnSelect
                     options={specialities?.results || []}
-                    getOptionLabel={(option) => option?.name}
-                    isOptionEqualToValue={(option, value) =>
-                      option._id === value?._id
-                    }
-                    value={editFields.specializationIds || []}
-                    onChange={(event, value) => {
-                      setEditFields({
-                        ...editFields,
-                        specializationIds: value.map((v) => v._id),
-                      });
+                    getOptionLabel={(option) => option?.name || ""}
+                    value={editFields.specializationIds.map(
+                      (id) =>
+                        specialities?.results.find((spec) => spec._id === id) ||
+                        {}
+                    )}
+                    onChange={(event, newValue) => {
+                      handleFieldChange(
+                        "specializationIds",
+                        newValue.map((spec) => spec._id)
+                      );
                     }}
                     renderInput={(params) => (
-                      <MuiTextField
+                      <TextField
                         {...params}
+                        label="Specialization"
                         variant="outlined"
                         sx={{ width: "220px" }}
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <>{params.InputProps.startAdornment}</>
-                          ),
-                        }}
                       />
                     )}
                   />
@@ -947,11 +975,18 @@ const DoctorProfile = () => {
                     {Array.isArray(doctorProfileData?.specializationIds) &&
                     doctorProfileData.specializationIds.length > 0
                       ? doctorProfileData.specializationIds
-                          .map((spec) =>
-                            typeof spec === "object"
-                              ? spec.name
-                              : "Unknown Specialization"
-                          )
+                          .map((spec) => {
+                            if (typeof spec === "object" && spec._id) {
+                              return spec.name; // When API returns object format
+                            } else {
+                              const specialization = specialities?.results.find(
+                                (s) => s._id === spec
+                              );
+                              return specialization
+                                ? specialization.name
+                                : "Unknown";
+                            }
+                          })
                           .join(", ")
                       : "Not Specified"}
                   </Typography>
@@ -968,30 +1003,24 @@ const DoctorProfile = () => {
                 {isEditOpen ? (
                   <Autocomplete
                     multiple
-                    disableCloseOnSelect
                     options={symptoms?.results || []}
-                    getOptionLabel={(option) => option?.name}
-                    isOptionEqualToValue={(option, value) =>
-                      option._id === value?._id
-                    }
-                    value={editFields.symptomIds || []}
-                    onChange={(event, value) => {
-                      setEditFields({
-                        ...editFields,
-                        symptomIds: value.map((v) => v._id),
-                      });
+                    getOptionLabel={(option) => option?.name || ""}
+                    value={editFields.symptomIds.map(
+                      (id) =>
+                        symptoms?.results.find((sym) => sym._id === id) || {}
+                    )}
+                    onChange={(event, newValue) => {
+                      handleFieldChange(
+                        "symptomIds",
+                        newValue.map((sym) => sym._id)
+                      );
                     }}
                     renderInput={(params) => (
-                      <MuiTextField
+                      <TextField
                         {...params}
+                        label="Select Symptoms"
                         variant="outlined"
                         sx={{ width: "220px" }}
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <>{params.InputProps.startAdornment}</>
-                          ),
-                        }}
                       />
                     )}
                   />
@@ -1000,11 +1029,16 @@ const DoctorProfile = () => {
                     {Array.isArray(doctorProfileData?.symptomIds) &&
                     doctorProfileData.symptomIds.length > 0
                       ? doctorProfileData.symptomIds
-                          .map((symptom) =>
-                            typeof symptom === "object"
-                              ? symptom.name
-                              : "Unknown Symptom"
-                          )
+                          .map((sym) => {
+                            if (typeof sym === "object" && sym._id) {
+                              return sym.name; // When API returns object format
+                            } else {
+                              const symptom = specialities?.results.find(
+                                (s) => s._id === sym
+                              );
+                              return symptom ? symptom.name : "Unknown";
+                            }
+                          })
                           .join(", ")
                       : "Not Specified"}
                   </Typography>

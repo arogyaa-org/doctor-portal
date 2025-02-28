@@ -11,6 +11,7 @@ import type { Patient } from "@/types/patient";
 import { patientDatagridColumns as datagridColumns } from "./patientConfig";
 import { useGetPatient } from "@/hooks/patient";
 import { setPatient, setLoading } from "@/redux/features/patientSlice";
+import { Utility } from "@/utils";
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -19,12 +20,27 @@ const Page: React.FC = () => {
   const { patient, reduxLoading } = useSelector(
     (state: RootState) => state.patient
   );
+  const [inputValue, setInputValue] = React.useState<string>("");
+
+  const { decodedToken } = Utility();
+    const role = decodedToken()?.role;
+    const doctorId = decodedToken()?.id;
+  
+    const apiEndpoint =
+      role === "doctor" && doctorId
+        ? `get-patients-by-doctor-id/:doctorId`
+        : "get-patients";
+
+        console.log("lskdjlskdj",apiEndpoint);
+        
+  
 
   const { value: data, refetch } = useGetPatient(
     null,
-    "get-patients",
+    apiEndpoint,
     currentPage,
-    limit
+    limit,
+    inputValue
   );
 
   const handleDispatch = React.useCallback(() => {
@@ -43,6 +59,11 @@ const Page: React.FC = () => {
 
   console.log("patient data:", patient);
   console.log("total items:", data);
+
+  const handleSearch = async (query: string): Promise<void> => {
+    setInputValue(query); // Set the search query
+    await refetch(query); // Refetch with the new query, make sure refetch is awaited
+  };
 
   return (
     <Stack spacing={3}>
@@ -70,7 +91,7 @@ const Page: React.FC = () => {
             marginRight: "25px",
           }}
         >
-          <Search refetchAPI={refetch} holderText="Patient" />
+           <Search refetchAPI={handleSearch} holderText="Patient" />
         </Box>
       </Stack>
 

@@ -13,6 +13,7 @@ import { datagridColumns } from "./appointmentConfig";
 import { useGetAppointment } from "@/hooks/appointment";
 import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
 import { Appointment } from "@/types/appointment";
+import { Utility } from "@/utils";
 
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -21,17 +22,30 @@ const Page: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] =
     React.useState<Appointment | null>(null);
 
+  const [inputValue, setInputValue] = React.useState<string>("");
+
   const dispatch: AppDispatch = useDispatch();
   const { appointment, reduxLoading } = useSelector(
     (state: RootState) => state.appointment
   );
 
+  // **Extract role and doctorId from decoded token**
+  const { decodedToken } = Utility();
+  const role = decodedToken()?.role;
+  const doctorId = decodedToken()?.id;
+
+  const apiEndpoint =
+    role === "doctor" && doctorId
+      ? `get-doctors-appointment/${doctorId}`
+      : "get-appointments";
+
   const { value: data, refetch } = useGetAppointment(
     null,
-    "get-appointments",
+    apiEndpoint,
     undefined,
     currentPage,
-    limit
+    limit,
+    inputValue
   );
 
   const handleDispatch = React.useCallback(() => {
@@ -67,6 +81,11 @@ const Page: React.FC = () => {
     refetch();
   };
 
+  const handleSearch = async (query: string): Promise<void> => {
+    setInputValue(query); // Set the search query
+    await refetch(query); // Refetch with the new query, make sure refetch is awaited
+  };
+
   return (
     <Stack spacing={3}>
       <Stack
@@ -87,7 +106,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={refetch} holderText="Appointment" />
+          <Search refetchAPI={handleSearch} holderText="Appointment" />
 
           {/* <Button
             variant="contained"
