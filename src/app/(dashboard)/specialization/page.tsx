@@ -38,6 +38,8 @@ const Page: React.FC = () => {
     inputValue
   );
 
+  console.log("data",data);
+
   useEffect(() => {
     if (data?.results) {
       dispatch(setSpeciality(data));
