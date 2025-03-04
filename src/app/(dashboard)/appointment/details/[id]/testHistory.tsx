@@ -26,6 +26,7 @@ import {
   Modal,
 } from "@mui/material";
 
+import { CheckCircle, Event, Cancel } from "@mui/icons-material";
 import { fetcher, modifier } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 import { useDispatch, useSelector } from "react-redux";
@@ -115,17 +116,6 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
-
-  const getStatusColor = (category: string) => {
-    switch (category.toLowerCase()) {
-      case "completed":
-        return "success";
-      case "cancelled":
-        return "error";
-      default:
-        return "default";
-    }
   };
 
   const paginatedTests = useMemo(() => {
@@ -265,13 +255,16 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
         </Alert>
       )}
 
-      <TableContainer component={Paper}  sx={{
+      <TableContainer
+        component={Paper}
+        sx={{
           boxShadow: 3,
           borderRadius: 2,
-          width: "600px", 
+          width: "600px",
           margin: "0 auto",
           marginLeft: "-23px",
-        }}>
+        }}
+      >
         <Table>
           <TableHead
             sx={{
@@ -280,7 +273,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
             }}
           >
             <TableRow>
-              {["Name", "Description", "type", "Status", "Action"].map(
+              {["Name", "Description", "Status", "Type", "Action"].map(
                 (header) => (
                   <TableCell
                     key={header}
@@ -288,6 +281,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                       fontWeight: 600,
                       textTransform: "uppercase",
                       color: "text.secondary",
+                      textAlign: "center",
                     }}
                   >
                     {header}
@@ -306,19 +300,14 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                   transition: "background-color 0.2s",
                 }}
               >
-                <TableCell>{capitalizeFirstLetter(test.name)}</TableCell>
-                <TableCell>{capitalizeFirstLetter(test.description)}</TableCell>
-                <TableCell>
-                  {capitalizeFirstLetter(test.type || "N/A")}
+                <TableCell sx={{ textAlign: "center" }}>
+                  {capitalizeFirstLetter(test.name)}
                 </TableCell>
-
-                <TableCell
-                  sx={{
-                    width: 150,
-                    textAlign: "center",
-                    verticalAlign: "middle", // Ensures alignment within the row
-                  }}
-                >
+                <TableCell sx={{ textAlign: "center" }}>
+                  {capitalizeFirstLetter(test.description)}
+                </TableCell>
+                {/* Status Column (Moved before Type) */}
+                <TableCell sx={{ textAlign: "center" }}>
                   <Select
                     value={test.status}
                     onChange={(e) =>
@@ -329,15 +318,15 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                     displayEmpty
                     sx={{
                       borderRadius: "20px",
-                      width: "100%", // Match the parent TableCell width
-                      height: "36px", // Consistent height for all rows
+                      width: "100%",
+                      height: "36px",
                       textAlign: "center",
                       "& .MuiOutlinedInput-notchedOutline": {
                         border: "none",
                       },
                       "& .MuiSelect-select": {
                         borderRadius: "20px",
-                        padding: "6px 14px !important", // Consistent padding
+                        padding: "6px 40px 6px 14px !important",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -349,7 +338,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                       },
                       "& .MuiSelect-icon": {
                         fontSize: "1.2rem",
-                        right: 8,
+                        right: 12,
                       },
                       backgroundColor: () => {
                         switch (test.status.toLowerCase()) {
@@ -376,38 +365,53 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                         }
                       },
                     }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          width: 150, // Ensures dropdown menu matches Select width
-                          borderRadius: 2,
-                          boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.08)",
-                          mt: 1,
-                          "& .MuiMenuItem-root": {
-                            padding: "8px 14px",
-                            borderRadius: "8px",
-                            margin: "2px 4px",
-                            fontSize: "0.875rem",
-                            "&:hover": {
-                              backgroundColor: "#F5F5F5",
-                            },
-                          },
-                        },
-                      },
-                    }}
                   >
                     <MenuItem value="scheduled">
-                      <Box sx={{ color: "#B98900" }}>Scheduled</Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          color: "#B98900",
+                        }}
+                      >
+                        <Event fontSize="small" />
+                        Scheduled
+                      </Box>
                     </MenuItem>
                     <MenuItem value="completed">
-                      <Box sx={{ color: "#2D9735" }}>Completed</Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          color: "#2D9735",
+                        }}
+                      >
+                        <CheckCircle fontSize="small" />
+                        Completed
+                      </Box>
                     </MenuItem>
                     <MenuItem value="cancelled">
-                      <Box sx={{ color: "#C41E1D" }}>Cancelled</Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          color: "#C41E1D",
+                        }}
+                      >
+                        <Cancel fontSize="small" />
+                        Cancelled
+                      </Box>
                     </MenuItem>
                   </Select>
                 </TableCell>
-                <TableCell>
+                {/* Type Column (Moved after Status) */}
+                <TableCell sx={{ textAlign: "center" }}>
+                  {capitalizeFirstLetter(test.type || "N/A")}
+                </TableCell>
+                <TableCell sx={{ textAlign: "center" }}>
                   {test.photo ? (
                     <img
                       src={test.photo}
@@ -421,8 +425,8 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                     />
                   ) : (
                     <Button
-                      variant="contained"
                       onClick={() => handleOpenModal(test._id)}
+                      sx={{ display: "block", margin: "0 auto" }}
                     >
                       Upload
                     </Button>

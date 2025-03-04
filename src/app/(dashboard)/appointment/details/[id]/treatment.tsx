@@ -300,7 +300,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                     checked={formData.isEmptyStomach}
                     onChange={handleCheckboxChange}
                     sx={{
-                      color: formData.isEmptyStomach ? "#20ADA0" : "default",
+                      color: formData.isEmptyStomach ?  "#3f51b5" : "default",
                       "&.Mui-checked": {
                         color: "#3f51b5",
                       },

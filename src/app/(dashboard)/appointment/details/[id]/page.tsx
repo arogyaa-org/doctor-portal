@@ -53,10 +53,8 @@ const AppointmentDetails = () => {
     `get-appointment-by-id/${appointmentId}`
   );
 
-  const patientId = appointmentData?.data?.patientId || null;
-  const doctorId = appointmentData?.data?.doctorId || null;
+  const patientId = appointmentData?.data?.patientId._id || null;
   const symptomIds = appointmentData?.data?.symptomIds || [];
-  const [matchingSymptoms, setMatchingSymptoms] = useState([]);
 
   const { value: patientData, swrLoading: patientLoading } = useGetPatient(
     null,
@@ -64,40 +62,6 @@ const AppointmentDetails = () => {
     1,
     1
   );
-
-  const { value: doctorData, swrLoading: doctorLoading } = useGetDoctor(
-    null,
-    `get-doctor-by-id/${doctorId}`,
-    1,
-    1
-  );
-
-  const { value: allSymptoms, swrLoading: symptomsLoading } = useGetSymptom(
-    null,
-    "get-symptoms",
-    1,
-    100
-  );
-
-
-  useEffect(() => {
-    if (symptomIds.length > 0 && allSymptoms?.results?.length > 0) {
-      const filteredSymptoms = allSymptoms.results.filter((symptom) => {
-        const symptomId =
-          typeof symptom._id === "string"
-            ? symptom._id
-            : symptom._id?.["$oid"]?.toString().trim();
-
-        const isMatch = symptomIds.some(
-          (id) => id.toString().trim() === symptomId
-        );
-        return isMatch;
-      });
-
-      setMatchingSymptoms(filteredSymptoms);
-      dispatch(setSymptom(filteredSymptoms));
-    }
-  }, [symptomIds, allSymptoms, dispatch]);
 
   const tabs = [
     {
@@ -111,16 +75,6 @@ const AppointmentDetails = () => {
           </Typography>
         ) : (
           <>
-            <Typography
-              variant="h6"
-              color="primary"
-              gutterBottom
-              sx={{ marginTop: -2 }}
-              padding={"2px"}
-              marginLeft={"4px"}
-            >
-              Appointment
-            </Typography>
             <div
               style={{
                 display: "flex",
@@ -152,11 +106,6 @@ const AppointmentDetails = () => {
                       color="primary"
                       size="small"
                       variant="outlined"
-                    />
-                    <Chip
-                      label={appointmentData?.status || "Unknown"}
-                      color="success"
-                      size="small"
                     />
                   </div>
                 </div>
@@ -235,150 +184,6 @@ const AppointmentDetails = () => {
                 </div>
               </Grid>
             </Grid>
-            <hr
-              style={{ margin: "8px 0", borderColor: "rgba(0, 0, 0, 0.1)" }}
-            />
-            <Grid container spacing={0.5}>
-              {[
-                {
-                  icon: <SchoolIcon color="primary" />,
-                  label: "Doctor",
-                  value: doctorData?.data?.username || "Unknown Doctor",
-                },
-                {
-                  icon: <MedicalIcon color="primary" />,
-                  label: "Specialization",
-                  value: (
-                    <Typography
-                      variant="body2"
-                      fontWeight="medium"
-                      color="text.primary"
-                    >
-                      {Array.isArray(doctorData?.data?.specializationIds) &&
-                      doctorData.data.specializationIds.length > 0
-                        ? doctorData.data.specializationIds
-                            .map((spec) =>
-                              typeof spec === "object"
-                                ? spec.name
-                                : "Unknown Specialization"
-                            )
-                            .join(", ")
-                        : "Not Specified"}
-                    </Typography>
-                  ),
-                },
-                {
-                  icon: <CalendarMonthIcon color="primary" />,
-                  label: "Appointment Date",
-                  value:
-                    new Date(
-                      appointmentData?.data?.appointmentDate
-                    ).toLocaleDateString() || "N/A",
-                },
-              ].map((detail, index) => (
-                <Grid item xs={12} sm={4} key={index}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      paddingTop: 2,
-                      paddingBottom: 2,
-                    }}
-                  >
-                    {detail.icon}
-                    <div>
-                      <Typography variant="caption" color="text.secondary">
-                        {detail.label}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        fontWeight="medium"
-                        color="text.primary"
-                      >
-                        {detail.value}
-                      </Typography>
-                    </div>
-                  </div>
-                </Grid>
-              ))}
-            </Grid>
-            <Grid container spacing={0.5} style={{ marginTop: 1 }}>
-              {[
-                {
-                  icon: <ScheduleIcon color="primary" />,
-                  label: "Appointment Time",
-                  value: appointmentData?.data?.appointmentTime || "N/A",
-                },
-                {
-                  icon: <StatusIcon color="primary" />,
-                  label: "Appointment Status",
-                  value: appointmentData?.data?.status || "N/A",
-                },
-                {
-                  icon: <HospitalIcon color="success" />,
-                  label: "Appointment Type",
-                  value: appointmentData?.data?.appointmentType || "N/A",
-                },
-              ].map((detail, index) => (
-                <Grid item xs={12} sm={4} key={index}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      paddingTop: 2,
-                      paddingBottom: 2,
-                    }}
-                  >
-                    {detail.icon}
-                    <div>
-                      <Typography variant="caption" color="text.secondary">
-                        {detail.label}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        fontWeight="medium"
-                        color="text.primary"
-                      >
-                        {detail.value}
-                      </Typography>
-                    </div>
-                  </div>
-                </Grid>
-              ))}
-            </Grid>
-            <Grid container spacing={0.5} style={{ marginTop: 8 }}>
-              <Grid item xs={12}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    paddingTop: 2,
-                    paddingBottom: 2,
-                  }}
-                >
-                  <AirlineSeatFlatAngledIcon color="success" />
-                  <div>
-                    <Typography variant="caption" color="text.secondary">
-                      Symptoms
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      fontWeight="medium"
-                      color="text.primary"
-                    >
-                      {matchingSymptoms.length > 0
-                        ? matchingSymptoms
-                            .map((symptom) => symptom.name)
-                            .join(", ")
-                        : "N/A"}
-                    </Typography>
-                  </div>
-                </div>
-              </Grid>
-            </Grid>
           </>
         ),
     },
@@ -425,9 +230,6 @@ const AppointmentDetails = () => {
       name: "Tests",
       content: (
         <div>
-          <Typography variant="h6" color="primary" gutterBottom>
-            Test Plan
-          </Typography>
           <TestHistory patientId={patientId} />
         </div>
       ), 
@@ -438,9 +240,6 @@ const AppointmentDetails = () => {
       name: "Treatment",
       content: (
         <div>
-          <Typography variant="h6" color="primary" gutterBottom>
-            Treatment Plan
-          </Typography>
           <TreatmentHistory patientId={patientId} />
         </div>
       ),
