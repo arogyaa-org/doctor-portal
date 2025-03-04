@@ -254,8 +254,8 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
         sx={{
           boxShadow: 3,
           borderRadius: 2,
-          width: "600px", 
-          margin: "0 auto", 
+          width: "600px",
+          margin: "0 auto",
           marginLeft: "-23px",
         }}
       >

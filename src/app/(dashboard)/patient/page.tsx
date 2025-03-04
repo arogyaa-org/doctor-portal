@@ -28,7 +28,7 @@ const Page: React.FC = () => {
   
     const apiEndpoint =
       role === "doctor" && doctorId
-        ? `get-patients-by-doctor-id/:doctorId`
+        ? `get-patients-by-doctor-id/${doctorId}`
         : "get-patients";
 
         console.log("lskdjlskdj",apiEndpoint);

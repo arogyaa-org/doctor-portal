@@ -49,7 +49,7 @@ import { Utility } from "@/utils";
 import dayjs from "dayjs";
 import { fetcher } from "@/apis/apiClient";
 import { DoctorData } from "@/types/doctor";
-import { useGetSpeciality } from "@/hooks/speciality";
+import { useGetSpeciality } from "@/hooks/Speciality";
 import { useGetQualification } from "@/hooks/qualification";
 import { useGetSymptom } from "@/hooks/symptoms";
 import { Form, Formik } from "formik";
@@ -147,23 +147,31 @@ const DoctorProfile = () => {
   const handleImageClick = () => setIsImageOpen(true);
   const handleImageClose = () => setIsImageOpen(false);
 
+  // **Extract role and doctorId from decoded token**
+  const role = Utility().decodedToken()?.role;
+
   useEffect(() => {
-    const getDoctorProfile = async () => {
+    const fetchProfile = async () => {
       if (!doctorId) return;
+
       try {
-        const response: DoctorResponse = await fetcher(
-          "doctor",
-          `get-doctor-by-id/${doctorId}`
-        );
+        let response;
+        if (role === "doctor") {
+          response = await fetcher("doctor", `get-doctor-by-id/${doctorId}`);
+        } else {
+          response = await fetcher("user", `get-user-by-id/${doctorId}`);
+        }
+
         if (response?.data) {
           setDoctorProfileData(response.data);
         }
       } catch (error) {
-        console.error("Error fetching doctor profile:", error);
+        console.error("Error fetching profile:", error);
       }
     };
-    getDoctorProfile();
-  }, [doctorId]);
+
+    fetchProfile();
+  }, [doctorId, role]);
 
   const { value: specialities } = useGetSpeciality(
     null,
@@ -196,13 +204,13 @@ const DoctorProfile = () => {
     if (doctorProfileData && specialities?.results) {
       setEditFields({
         ...doctorProfileData,
-        specializationIds: doctorProfileData.specializationIds.map((spec) =>
+        specializationIds: doctorProfileData?.specializationIds?.map((spec) =>
           typeof spec === "object" ? spec._id : spec
         ),
-        qualificationIds: doctorProfileData.qualificationIds.map((qual) =>
+        qualificationIds: doctorProfileData?.qualificationIds?.map((qual) =>
           typeof qual === "object" ? qual._id : qual
         ),
-        symptomIds: doctorProfileData.symptomIds.map((sym) =>
+        symptomIds: doctorProfileData?.symptomIds?.map((sym) =>
           typeof sym === "object" ? sym._id : sym
         ),
       });
@@ -412,77 +420,78 @@ const DoctorProfile = () => {
           </Typography>
         )}
 
-        {isEditOpen ? (
-          <Box
-            sx={{
-              textAlign: "center",
-              mt: 1,
-              px: 2,
-              maxWidth: "80%",
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            {/* Hidden span to measure text width dynamically */}
-            <span
-              ref={bioInputRef}
-              style={{
-                visibility: "hidden",
-                whiteSpace: "nowrap",
-                fontSize: "16px",
-                fontFamily: "inherit",
-                position: "absolute",
-                padding: "8px",
+        {role === "doctor" &&
+          (isEditOpen ? (
+            <Box
+              sx={{
+                textAlign: "center",
+                mt: 1,
+                px: 2,
+                maxWidth: "80%",
+                display: "flex",
+                justifyContent: "center",
               }}
             >
-              {editFields.bio || " "}
-            </span>
+              {/* Hidden span to measure text width dynamically */}
+              <span
+                ref={bioInputRef}
+                style={{
+                  visibility: "hidden",
+                  whiteSpace: "nowrap",
+                  fontSize: "16px",
+                  fontFamily: "inherit",
+                  position: "absolute",
+                  padding: "8px",
+                }}
+              >
+                {editFields.bio || " "}
+              </span>
 
-            <input
-              type="text"
-              value={editFields.bio}
-              onChange={(e) => {
-                handleFieldChange("bio", e.target.value);
+              <input
+                type="text"
+                value={editFields.bio}
+                onChange={(e) => {
+                  handleFieldChange("bio", e.target.value);
 
-                // Ensure dynamic width adjustment for bio
-                const textMeasureSpan = bioInputRef.current;
-                if (textMeasureSpan) {
-                  textMeasureSpan.innerText = e.target.value || " ";
-                  e.target.style.width = `${textMeasureSpan.offsetWidth + 20}px`;
-                }
-              }}
-              style={{
-                padding: "8px",
-                borderRadius: "8px",
-                border: "none",
-                fontSize: "16px",
+                  // Ensure dynamic width adjustment for bio
+                  const textMeasureSpan = bioInputRef.current;
+                  if (textMeasureSpan) {
+                    textMeasureSpan.innerText = e.target.value || " ";
+                    e.target.style.width = `${textMeasureSpan.offsetWidth + 20}px`;
+                  }
+                }}
+                style={{
+                  padding: "8px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "16px",
+                  textAlign: "center",
+                  width: "auto",
+                  minWidth: "50px",
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  background: "transparent",
+                  outline: "none",
+                  cursor: "text",
+                  transition: "width 0.2s ease-in-out",
+                }}
+              />
+            </Box>
+          ) : (
+            <Typography
+              variant="body1"
+              sx={{
                 textAlign: "center",
-                width: "auto", // Bio should adjust dynamically
-                minWidth: "50px",
-                maxWidth: "100%", // Max width to ensure it doesn’t overflow
-                overflow: "hidden",
-                background: "transparent",
-                outline: "none",
-                cursor: "text",
-                transition: "width 0.2s ease-in-out",
+                color: "#555",
+                mt: 1,
+                px: 2,
+                maxWidth: "80%",
               }}
-            />
-          </Box>
-        ) : (
-          <Typography
-            variant="body1"
-            sx={{
-              textAlign: "center",
-              color: "#555",
-              mt: 1,
-              px: 2,
-              maxWidth: "80%",
-            }}
-          >
-            {doctorProfileData?.bio ||
-              "Experienced doctor specializing in healthcare and patient well-being."}
-          </Typography>
-        )}
+            >
+              {doctorProfileData?.bio ||
+                "Experienced doctor specializing in healthcare and patient well-being."}
+            </Typography>
+          ))}
       </Box>
 
       <Tabs
@@ -499,18 +508,22 @@ const DoctorProfile = () => {
           label="Profile Info"
           value="info"
         />
-        <StyledTab
-          icon={<HistoryIcon />}
-          iconPosition="start"
-          label="Appointment History"
-          value="history"
-        />
-        <StyledTab
-          icon={<ReviewsIcon />}
-          iconPosition="start"
-          label="Rating and Reviews"
-          value="reviews"
-        />
+        {role === "doctor" && (
+          <>
+            <StyledTab
+              icon={<HistoryIcon />}
+              iconPosition="start"
+              label="Appointment History"
+              value="history"
+            />
+            <StyledTab
+              icon={<ReviewsIcon />}
+              iconPosition="start"
+              label="Rating and Reviews"
+              value="reviews"
+            />
+          </>
+        )}
       </Tabs>
 
       {selectedTab === "info" && (
@@ -675,73 +688,83 @@ const DoctorProfile = () => {
               </Box>
             </Box>
 
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Experience
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <HistoryIcon sx={{ color: "#8F44FD" }} />
-                {isEditOpen ? (
-                  <input
-                    type="number"
-                    value={editFields.experience || ""}
-                    onChange={(e) =>
-                      handleFieldChange("experience", e.target.value)
-                    }
-                    style={{
-                      fontSize: "16px",
-                      color: "#555",
-                      border: "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      background: "transparent",
-                      cursor: "pointer",
-                      width: "100px",
-                      outline: "none",
-                    }}
-                  />
-                ) : (
-                  <Typography variant="body2" sx={{ color: "#555" }}>
-                    {doctorProfileData?.experience || "15 Years"} years
-                  </Typography>
-                )}
+            {role === "doctor" && (
+              <Box>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: "bold", mb: 0.5 }}
+                >
+                  Experience
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <HistoryIcon sx={{ color: "#8F44FD" }} />
+                  {isEditOpen ? (
+                    <input
+                      type="number"
+                      value={editFields.experience || ""}
+                      onChange={(e) =>
+                        handleFieldChange("experience", e.target.value)
+                      }
+                      style={{
+                        fontSize: "16px",
+                        color: "#555",
+                        border: "2px solid #8F44FD",
+                        borderRadius: "6px",
+                        padding: "6px 10px",
+                        background: "transparent",
+                        cursor: "pointer",
+                        width: "100px",
+                        outline: "none",
+                      }}
+                    />
+                  ) : (
+                    <Typography variant="body2" sx={{ color: "#555" }}>
+                      {doctorProfileData?.experience || "15"} years
+                    </Typography>
+                  )}
+                </Box>
               </Box>
-            </Box>
+            )}
 
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Consultation Fee
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <CurrencyRupeeIcon sx={{ color: "#8F44FD" }} />
-                {isEditOpen ? (
-                  <input
-                    type="text"
-                    value={editFields.consultationFee || ""}
-                    onChange={(e) =>
-                      handleFieldChange("consultationFee", e.target.value)
-                    }
-                    style={{
-                      fontSize: "16px",
-                      color: "#555",
-                      border: "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      background: "transparent",
-                      cursor: "text",
-                      width: "100px",
-                      outline: "none",
-                    }}
-                  />
-                ) : (
-                  <Typography variant="body2" sx={{ color: "#555" }}>
-                    {doctorProfileData?.consultationFee || "50"}
-                  </Typography>
-                )}
+            {role === "doctor" && (
+              <Box>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: "bold", mb: 0.5 }}
+                >
+                  Consultation Fee
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <CurrencyRupeeIcon sx={{ color: "#8F44FD" }} />
+                  {isEditOpen ? (
+                    <input
+                      type="text"
+                      value={editFields.consultationFee || ""}
+                      onChange={(e) =>
+                        handleFieldChange("consultationFee", e.target.value)
+                      }
+                      style={{
+                        fontSize: "16px",
+                        color: "#555",
+                        border: "2px solid #8F44FD",
+                        borderRadius: "6px",
+                        padding: "6px 10px",
+                        background: "transparent",
+                        cursor: "text",
+                        width: "100px",
+                        outline: "none",
+                      }}
+                    />
+                  ) : (
+                    <Typography variant="body2" sx={{ color: "#555" }}>
+                      {doctorProfileData?.consultationFee || "50"}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
-            </Box>
+            )}
 
-            <Box>
+            {/* <Box>
               <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
                 Languages Spoken
               </Typography>
@@ -763,7 +786,7 @@ const DoctorProfile = () => {
                       if (e.key === "Backspace") {
                         const currentValue = e.target.value.trim();
                         if (currentValue.endsWith(",")) {
-                          e.target.value = currentValue.slice(0, -1);
+                          e.target.value = currentValue?.slice(0, -1);
                         }
                       }
                     }}
@@ -787,7 +810,7 @@ const DoctorProfile = () => {
                   </Typography>
                 )}
               </Box>
-            </Box>
+            </Box> */}
 
             <Box>
               <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
@@ -879,461 +902,498 @@ const DoctorProfile = () => {
               </Box>
             </Box>
 
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Qualification
-              </Typography>
+            {role === "doctor" && (
+              <Box>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: "bold", mb: 0.5 }}
+                >
+                  Qualification
+                </Typography>
 
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <SchoolIcon sx={{ color: "#8F44FD" }} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <SchoolIcon sx={{ color: "#8F44FD" }} />
 
-                {isEditOpen ? (
-                  <Autocomplete
-                    multiple
-                    options={qualifications?.results || []}
-                    getOptionLabel={(option) => option?.name || ""} // Use the name from API response
-                    value={editFields.qualificationIds.map(
-                      (id) =>
-                        qualifications?.results.find(
-                          (qualification) => qualification._id === id
-                        ) || {}
-                    )}
-                    onChange={(event, newValue) => {
-                      handleFieldChange(
-                        "qualificationIds",
-                        newValue.map((qualification) => qualification._id)
-                      );
-                    }}
-                    renderInput={(params) => (
-                      <MuiTextField
-                        {...params}
-                        label="Select Qualifications"
-                        variant="outlined"
-                        sx={{ width: "220px" }}
-                      />
-                    )}
-                  />
-                ) : (
-                  // View mode: Display selected qualifications
-                  <Typography variant="body2" sx={{ color: "#555" }}>
-                    {Array.isArray(doctorProfileData?.qualificationIds) &&
-                    doctorProfileData.qualificationIds.length > 0
-                      ? doctorProfileData.qualificationIds
-                          .map((qualId) => {
-                            if (typeof qualId === "object" && qualId._id) {
-                              return qualId.name; // When API returns object format
-                            } else {
-                              const qualification =
-                                qualifications?.results.find(
-                                  (s) => s._id === qualId
+                  {isEditOpen ? (
+                    <Autocomplete
+                      multiple
+                      options={qualifications?.results || []}
+                      getOptionLabel={(option) => option?.name || ""}
+                      value={editFields?.qualificationIds?.map(
+                        (id) =>
+                          qualifications?.results.find(
+                            (qualification) => qualification._id === id
+                          ) || {}
+                      )}
+                      onChange={(event, newValue) => {
+                        handleFieldChange(
+                          "qualificationIds",
+                          newValue.map((qualification) => qualification._id)
+                        );
+                      }}
+                      renderInput={(params) => (
+                        <MuiTextField
+                          {...params}
+                          label="Select Qualifications"
+                          variant="outlined"
+                          sx={{ width: "220px" }}
+                        />
+                      )}
+                    />
+                  ) : (
+                    <Typography variant="body2" sx={{ color: "#555" }}>
+                      {Array.isArray(doctorProfileData?.qualificationIds) &&
+                      doctorProfileData.qualificationIds.length > 0
+                        ? doctorProfileData.qualificationIds
+                            .map((qualId) => {
+                              if (typeof qualId === "object" && qualId._id) {
+                                return qualId.name;
+                              } else {
+                                const qualification =
+                                  qualifications?.results.find(
+                                    (s) => s._id === qualId
+                                  );
+                                return qualification
+                                  ? qualification.name
+                                  : "Unknown";
+                              }
+                            })
+                            .join(", ")
+                        : "Not Specified"}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {role === "doctor" && (
+              <Box>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: "bold", mb: 0.5 }}
+                >
+                  Specialization
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <WorkIcon sx={{ color: "#8F44FD" }} />
+                  {isEditOpen ? (
+                    <Autocomplete
+                      multiple
+                      options={specialities?.results || []}
+                      getOptionLabel={(option) => option?.name || ""}
+                      value={editFields?.specializationIds?.map(
+                        (id) =>
+                          specialities?.results.find(
+                            (spec) => spec._id === id
+                          ) || {}
+                      )}
+                      onChange={(event, newValue) => {
+                        handleFieldChange(
+                          "specializationIds",
+                          newValue.map((spec) => spec._id)
+                        );
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Specialization"
+                          variant="outlined"
+                          sx={{ width: "220px" }}
+                        />
+                      )}
+                    />
+                  ) : (
+                    <Typography variant="body2" sx={{ color: "#555" }}>
+                      {Array.isArray(doctorProfileData?.specializationIds) &&
+                      doctorProfileData.specializationIds.length > 0
+                        ? doctorProfileData.specializationIds
+                            .map((spec) => {
+                              if (typeof spec === "object" && spec._id) {
+                                return spec.name;
+                              } else {
+                                const specialization =
+                                  specialities?.results.find(
+                                    (s) => s._id === spec
+                                  );
+                                return specialization
+                                  ? specialization.name
+                                  : "Unknown";
+                              }
+                            })
+                            .join(", ")
+                        : "Not Specified"}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {role === "doctor" && (
+              <Box>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: "bold", mb: 0.5 }}
+                >
+                  Symptoms
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <SickIcon sx={{ color: "#8F44FD" }} />
+                  {isEditOpen ? (
+                    <Autocomplete
+                      multiple
+                      options={symptoms?.results || []}
+                      getOptionLabel={(option) => option?.name || ""}
+                      value={editFields?.symptomIds?.map(
+                        (id) =>
+                          symptoms?.results.find((sym) => sym._id === id) || {}
+                      )}
+                      onChange={(event, newValue) => {
+                        handleFieldChange(
+                          "symptomIds",
+                          newValue.map((sym) => sym._id)
+                        );
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Symptoms"
+                          variant="outlined"
+                          sx={{ width: "220px" }}
+                        />
+                      )}
+                    />
+                  ) : (
+                    <Typography variant="body2" sx={{ color: "#555" }}>
+                      {Array.isArray(doctorProfileData?.symptomIds) &&
+                      doctorProfileData.symptomIds.length > 0
+                        ? doctorProfileData.symptomIds
+                            .map((sym) => {
+                              if (typeof sym === "object" && sym._id) {
+                                return sym.name;
+                              } else {
+                                const symptom = symptoms?.results.find(
+                                  (s) => s._id === sym
                                 );
-                              return qualification
-                                ? qualification.name
-                                : "Unknown";
-                            }
-                          })
-                          .join(", ")
-                      : "Not Specified"}
-                  </Typography>
-                )}
+                                return symptom ? symptom.name : "Unknown";
+                              }
+                            })
+                            .join(", ")
+                        : "Not Specified"}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
-            </Box>
+            )}
 
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Specialization
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <WorkIcon sx={{ color: "#8F44FD" }} />
+            {role === "doctor" && (
+              <Box>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: "bold", mb: 0.5 }}
+                >
+                  Availability
+                </Typography>
                 {isEditOpen ? (
-                  <Autocomplete
-                    multiple
-                    options={specialities?.results || []}
-                    getOptionLabel={(option) => option?.name || ""}
-                    value={editFields.specializationIds.map(
-                      (id) =>
-                        specialities?.results.find((spec) => spec._id === id) ||
-                        {}
-                    )}
-                    onChange={(event, newValue) => {
-                      handleFieldChange(
-                        "specializationIds",
-                        newValue.map((spec) => spec._id)
-                      );
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Specialization"
-                        variant="outlined"
-                        sx={{ width: "220px" }}
-                      />
-                    )}
-                  />
-                ) : (
-                  <Typography variant="body2" sx={{ color: "#555" }}>
-                    {Array.isArray(doctorProfileData?.specializationIds) &&
-                    doctorProfileData.specializationIds.length > 0
-                      ? doctorProfileData.specializationIds
-                          .map((spec) => {
-                            if (typeof spec === "object" && spec._id) {
-                              return spec.name; // When API returns object format
-                            } else {
-                              const specialization = specialities?.results.find(
-                                (s) => s._id === spec
-                              );
-                              return specialization
-                                ? specialization.name
-                                : "Unknown";
-                            }
-                          })
-                          .join(", ")
-                      : "Not Specified"}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Symptoms
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <SickIcon sx={{ color: "#8F44FD" }} />
-                {isEditOpen ? (
-                  <Autocomplete
-                    multiple
-                    options={symptoms?.results || []}
-                    getOptionLabel={(option) => option?.name || ""}
-                    value={editFields.symptomIds.map(
-                      (id) =>
-                        symptoms?.results.find((sym) => sym._id === id) || {}
-                    )}
-                    onChange={(event, newValue) => {
-                      handleFieldChange(
-                        "symptomIds",
-                        newValue.map((sym) => sym._id)
-                      );
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Select Symptoms"
-                        variant="outlined"
-                        sx={{ width: "220px" }}
-                      />
-                    )}
-                  />
-                ) : (
-                  <Typography variant="body2" sx={{ color: "#555" }}>
-                    {Array.isArray(doctorProfileData?.symptomIds) &&
-                    doctorProfileData.symptomIds.length > 0
-                      ? doctorProfileData.symptomIds
-                          .map((sym) => {
-                            if (typeof sym === "object" && sym._id) {
-                              return sym.name; // When API returns object format
-                            } else {
-                              const symptom = specialities?.results.find(
-                                (s) => s._id === sym
-                              );
-                              return symptom ? symptom.name : "Unknown";
-                            }
-                          })
-                          .join(", ")
-                      : "Not Specified"}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Availability
-              </Typography>
-              {isEditOpen ? (
-                <>
-                  {Array.isArray(editFields.availability) &&
-                  editFields.availability.length > 0 ? (
-                    editFields.availability.map((slot, index) => (
-                      <Box
-                        key={index}
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mb: 2,
-                        }}
-                      >
-                        <AccessTimeIcon sx={{ color: "#8F44FD" }} />
+                  <>
+                    {Array.isArray(editFields.availability) &&
+                    editFields.availability.length > 0 ? (
+                      editFields.availability.map((slot, index) => (
                         <Box
+                          key={index}
                           sx={{
                             display: "flex",
+                            alignItems: "center",
                             gap: 1,
-                            flexDirection: "column",
+                            mb: 2,
                           }}
                         >
-                          <input
-                            type="text"
-                            value={slot.day}
-                            onChange={(e) =>
-                              handleFieldChange("availability", [
-                                ...editFields.availability.slice(0, index),
-                                {
-                                  ...slot,
-                                  day: e.target.value,
-                                },
-                                ...editFields.availability.slice(index + 1),
-                              ])
-                            }
-                            placeholder="Day"
-                            style={{
-                              fontSize: "16px",
-                              color: "#555",
-                              border: "2px solid #8F44FD",
-                              borderRadius: "6px",
-                              padding: "6px 10px",
-                              background: "transparent",
-                              cursor: "pointer",
-                              width: "100%",
-                              outline: "none",
-                            }}
-                          />
-                          <input
-                            type="time"
-                            value={slot.startTime}
-                            onChange={(e) =>
-                              handleFieldChange("availability", [
-                                ...editFields.availability.slice(0, index),
-                                {
-                                  ...slot,
-                                  startTime: e.target.value,
-                                },
-                                ...editFields.availability.slice(index + 1),
-                              ])
-                            }
-                            style={{
-                              fontSize: "16px",
-                              color: "#555",
-                              border: "2px solid #8F44FD",
-                              borderRadius: "6px",
-                              padding: "6px 10px",
-                              background: "transparent",
-                              cursor: "pointer",
-                              width: "100%",
-                              outline: "none",
-                            }}
-                          />
-                          <input
-                            type="time"
-                            value={slot.endTime}
-                            onChange={(e) =>
-                              handleFieldChange("availability", [
-                                ...editFields.availability.slice(0, index),
-                                {
-                                  ...slot,
-                                  endTime: e.target.value,
-                                },
-                                ...editFields.availability.slice(index + 1),
-                              ])
-                            }
-                            style={{
-                              fontSize: "16px",
-                              color: "#555",
-                              border: "2px solid #8F44FD",
-                              borderRadius: "6px",
-                              padding: "6px 10px",
-                              background: "transparent",
-                              cursor: "pointer",
-                              width: "100%",
-                              outline: "none",
-                            }}
-                          />
-                          <button
-                            onClick={() => {
-                              const updatedAvailability =
-                                editFields.availability.filter(
-                                  (_, idx) => idx !== index
-                                );
-                              handleFieldChange(
-                                "availability",
-                                updatedAvailability
-                              );
-                            }}
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              color: "red",
-                              marginTop: "8px",
+                          <AccessTimeIcon sx={{ color: "#8F44FD" }} />
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              flexDirection: "column",
                             }}
                           >
-                            Remove
-                          </button>
+                            <input
+                              type="text"
+                              value={slot.day}
+                              onChange={(e) =>
+                                handleFieldChange("availability", [
+                                  ...editFields.availability.slice(0, index),
+                                  {
+                                    ...slot,
+                                    day: e.target.value,
+                                  },
+                                  ...editFields.availability.slice(index + 1),
+                                ])
+                              }
+                              placeholder="Day"
+                              style={{
+                                fontSize: "16px",
+                                color: "#555",
+                                border: "2px solid #8F44FD",
+                                borderRadius: "6px",
+                                padding: "6px 10px",
+                                background: "transparent",
+                                cursor: "pointer",
+                                width: "100%",
+                                outline: "none",
+                              }}
+                            />
+                            <input
+                              type="time"
+                              value={slot.startTime}
+                              onChange={(e) =>
+                                handleFieldChange("availability", [
+                                  ...editFields.availability.slice(0, index),
+                                  {
+                                    ...slot,
+                                    startTime: e.target.value,
+                                  },
+                                  ...editFields.availability.slice(index + 1),
+                                ])
+                              }
+                              style={{
+                                fontSize: "16px",
+                                color: "#555",
+                                border: "2px solid #8F44FD",
+                                borderRadius: "6px",
+                                padding: "6px 10px",
+                                background: "transparent",
+                                cursor: "pointer",
+                                width: "100%",
+                                outline: "none",
+                              }}
+                            />
+                            <input
+                              type="time"
+                              value={slot.endTime}
+                              onChange={(e) =>
+                                handleFieldChange("availability", [
+                                  ...editFields.availability.slice(0, index),
+                                  {
+                                    ...slot,
+                                    endTime: e.target.value,
+                                  },
+                                  ...editFields.availability.slice(index + 1),
+                                ])
+                              }
+                              style={{
+                                fontSize: "16px",
+                                color: "#555",
+                                border: "2px solid #8F44FD",
+                                borderRadius: "6px",
+                                padding: "6px 10px",
+                                background: "transparent",
+                                cursor: "pointer",
+                                width: "100%",
+                                outline: "none",
+                              }}
+                            />
+                            <button
+                              onClick={() => {
+                                const updatedAvailability =
+                                  editFields.availability.filter(
+                                    (_, idx) => idx !== index
+                                  );
+                                handleFieldChange(
+                                  "availability",
+                                  updatedAvailability
+                                );
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "red",
+                                marginTop: "8px",
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </Box>
                         </Box>
-                      </Box>
-                    ))
-                  ) : (
+                      ))
+                    ) : (
+                      <Typography variant="body2" sx={{ color: "#555" }}>
+                        Not Available
+                      </Typography>
+                    )}
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      sx={{ mt: -4 }}
+                      onClick={() =>
+                        handleFieldChange("availability", [
+                          ...editFields.availability,
+                          { day: "", startTime: "", endTime: "" },
+                        ])
+                      }
+                    >
+                      Add
+                    </Button>
+                  </>
+                ) : Array.isArray(doctorProfileData?.availability) &&
+                  doctorProfileData.availability.length > 0 ? (
+                  doctorProfileData.availability.map((slot, index) => (
+                    <Box
+                      key={index}
+                      sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                    >
+                      <AccessTimeIcon sx={{ color: "#8F44FD" }} />
+                      <Typography variant="body2" sx={{ color: "#555" }}>
+                        {slot.day}: {slot.startTime} - {slot.endTime}
+                      </Typography>
+                    </Box>
+                  ))
+                ) : (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <AccessTimeIcon sx={{ color: "#8F44FD" }} />
                     <Typography variant="body2" sx={{ color: "#555" }}>
                       Not Available
                     </Typography>
-                  )}
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    sx={{ mt: -4 }}
-                    onClick={() =>
-                      handleFieldChange("availability", [
-                        ...editFields.availability,
-                        { day: "", startTime: "", endTime: "" },
-                      ])
-                    }
-                  >
-                    Add
-                  </Button>
-                </>
-              ) : Array.isArray(doctorProfileData?.availability) &&
-                doctorProfileData.availability.length > 0 ? (
-                doctorProfileData.availability.map((slot, index) => (
-                  <Box
-                    key={index}
-                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                  >
-                    <AccessTimeIcon sx={{ color: "#8F44FD" }} />
-                    <Typography variant="body2" sx={{ color: "#555" }}>
-                      {slot.day}: {slot.startTime} - {slot.endTime}
-                    </Typography>
                   </Box>
-                ))
-              ) : (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <AccessTimeIcon sx={{ color: "#8F44FD" }} />
-                  <Typography variant="body2" sx={{ color: "#555" }}>
-                    Not Available
-                  </Typography>
-                </Box>
-              )}
-            </Box>
+                )}
+              </Box>
+            )}
 
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Hospital Affiliations
-              </Typography>
+            {role === "doctor" && (
+              <Box>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: "bold", mb: 0.5 }}
+                >
+                  Hospital Affiliations
+                </Typography>
 
-              {isEditOpen ? (
-                <>
-                  {editFields.hospitalAffiliations.length === 0 ? (
-                    <Typography variant="body2" sx={{ color: "#555" }}>
-                      No hospital affiliations added yet.
-                    </Typography>
-                  ) : (
-                    editFields.hospitalAffiliations.map((hospital, index) => (
-                      <Box
-                        key={index}
-                        sx={{
-                          display: "flex",
-                          alignItems: "center", // Align the icon and input horizontally
-                          gap: 1,
-                          mb: 1,
-                          flexDirection: "column", // Stack the input and remove button vertically
-                        }}
-                      >
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
-                          <input
-                            type="text"
-                            value={hospital}
-                            onChange={(e) =>
-                              handleFieldChange(
-                                "hospitalAffiliations",
-                                e.target.value,
-                                index
-                              )
-                            }
-                            style={{
-                              fontSize: "16px",
-                              color: "#555",
-                              border: "2px solid #8F44FD",
-                              borderRadius: "6px",
-                              padding: "6px 10px",
-                              width: "300px",
-                              outline: "none",
-                              background: "transparent",
-                              transition: "border 0.2s ease-in-out",
-                            }}
-                          />
-                        </Box>
-                        {/* Remove button below the input field */}
-                        <button
-                          onClick={() => {
-                            const updatedAffiliations =
-                              editFields.hospitalAffiliations.filter(
-                                (_, idx) => idx !== index
-                              );
-                            handleFieldChange(
-                              "hospitalAffiliations",
-                              updatedAffiliations
-                            );
-                          }}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "red",
-                            marginTop: "1px",
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </Box>
-                    ))
-                  )}
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    sx={{ mt: -2 }}
-                    onClick={() =>
-                      setEditFields({
-                        ...editFields,
-                        hospitalAffiliations: [
-                          ...editFields.hospitalAffiliations,
-                          "",
-                        ],
-                      })
-                    }
-                  >
-                    Add
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {Array.isArray(doctorProfileData?.hospitalAffiliations) &&
-                  doctorProfileData.hospitalAffiliations.length > 0 ? (
-                    doctorProfileData.hospitalAffiliations.map(
-                      (hospital, index) => (
-                        <Box
-                          key={index}
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
-                          <Typography variant="body2" sx={{ color: "#555" }}>
-                            {hospital}
-                          </Typography>
-                        </Box>
-                      )
-                    )
-                  ) : (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                {isEditOpen ? (
+                  <>
+                    {editFields?.hospitalAffiliations?.length === 0 ? (
                       <Typography variant="body2" sx={{ color: "#555" }}>
-                        Apollo Hospital
+                        No hospital affiliations added yet.
                       </Typography>
-                    </Box>
-                  )}
-                </>
-              )}
-            </Box>
+                    ) : (
+                      editFields?.hospitalAffiliations?.map(
+                        (hospital, index) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              mb: 1,
+                              flexDirection: "column",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                              <input
+                                type="text"
+                                value={hospital}
+                                onChange={(e) =>
+                                  handleFieldChange(
+                                    "hospitalAffiliations",
+                                    e.target.value,
+                                    index
+                                  )
+                                }
+                                style={{
+                                  fontSize: "16px",
+                                  color: "#555",
+                                  border: "2px solid #8F44FD",
+                                  borderRadius: "6px",
+                                  padding: "6px 10px",
+                                  width: "300px",
+                                  outline: "none",
+                                  background: "transparent",
+                                  transition: "border 0.2s ease-in-out",
+                                }}
+                              />
+                            </Box>
+                            <button
+                              onClick={() => {
+                                const updatedAffiliations =
+                                  editFields.hospitalAffiliations.filter(
+                                    (_, idx) => idx !== index
+                                  );
+                                handleFieldChange(
+                                  "hospitalAffiliations",
+                                  updatedAffiliations
+                                );
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "red",
+                                marginTop: "1px",
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </Box>
+                        )
+                      )
+                    )}
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      sx={{ mt: -2 }}
+                      onClick={() =>
+                        setEditFields({
+                          ...editFields,
+                          hospitalAffiliations: [
+                            ...editFields.hospitalAffiliations,
+                            "",
+                          ],
+                        })
+                      }
+                    >
+                      Add
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {Array.isArray(doctorProfileData?.hospitalAffiliations) &&
+                    doctorProfileData.hospitalAffiliations.length > 0 ? (
+                      doctorProfileData.hospitalAffiliations.map(
+                        (hospital, index) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                            <Typography variant="body2" sx={{ color: "#555" }}>
+                              {hospital}
+                            </Typography>
+                          </Box>
+                        )
+                      )
+                    ) : (
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                        <Typography variant="body2" sx={{ color: "#555" }}>
+                          Apollo Hospital
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+              </Box>
+            )}
           </Box>
         </Box>
       )}

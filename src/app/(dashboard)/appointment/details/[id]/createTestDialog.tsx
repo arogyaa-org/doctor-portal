@@ -21,7 +21,7 @@ import {
   Description,
   ListAlt,
 } from "@mui/icons-material";
-import { styled } from "@mui/system";
+import { Box, styled } from "@mui/system";
 import { creator } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 import { useDispatch, useSelector } from "react-redux";
@@ -193,7 +193,7 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
               required
               placeholder="Enter test name"
               InputProps={{
-                startAdornment: <ListAlt sx={{ color: "#20ADA0", mr: 2 }} />,
+                startAdornment: <ListAlt sx={{ color: "#3f51b5", mr: 2 }} />,
               }}
             />
           </Grid>
@@ -209,11 +209,18 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
               helperText={errors.description}
               placeholder="Enter description"
               InputProps={{
-                startAdornment: <Description sx={{ color: "black", mr: 2 }} />,
+                startAdornment: (
+                  <Description sx={{ color: "#3f51b5", mr: 2 }} />
+                ),
               }}
             />
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid
+            item
+            xs={12}
+            sm={4}
+            sx={{ display: "flex", alignItems: "center" }}
+          >
             <Autocomplete
               options={optionsCategory}
               getOptionLabel={(option) => option.label}
@@ -228,23 +235,13 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
               }}
               fullWidth
               renderInput={(params) => (
-                <TextField {...params} label="Category" variant="outlined" />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.emptyStomach}
-                  onChange={handleCheckboxChange}
-                  sx={{
-                    color: formData.emptyStomach ? "#20ADA0" : "default",
-                    "&.Mui-checked": { color: "#20ADA0" },
-                  }}
+                <TextField
+                  {...params}
+                  label="Category"
+                  variant="outlined"
+                  fullWidth
                 />
-              }
-              label="Empty Stomach"
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -284,20 +281,38 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
             />
           </Grid>
           <Grid item xs={12} sm={4}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.emptyStomach}
+                  onChange={handleCheckboxChange}
+                  sx={{
+                    color: formData.emptyStomach ? "#20ADA0" : "default",
+                    "&.Mui-checked": { color: "#20ADA0" },
+                  }}
+                />
+              }
+              label="Empty Stomach"
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
             <Button
               component="label"
               variant="contained"
               startIcon={<ImageIcon />}
               sx={{
-                marginY: 1,
-                background:  "#1976D2", 
-                borderColor: "#20ADA0",
-                color: "#fff",
+                borderRadius: "12px",
+                padding: "10px",
+                textAlign: "center",
+                background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+                cursor: "pointer",
+                width: "100%",
+                marginTop: 0.6,
                 "&:hover": {
-                  background: "#1976D2",
+                  background:
+                    "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
                   boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
                 },
-                boxShadow: "none",
               }}
             >
               Choose File
@@ -309,17 +324,44 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
               />
             </Button>
             {formData.photo && (
-              <img
-                src={URL.createObjectURL(formData.photo)}
-                alt="Treatment"
-                style={{
+              <Box
+                sx={{
+                  position: "relative",
                   width: "100%",
                   maxHeight: "200px",
-                  objectFit: "cover",
-                  marginTop: 8,
+                  marginTop: 2,
                   borderRadius: 8,
+                  overflow: "hidden",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
                 }}
-              />
+              >
+                <img
+                  src={URL.createObjectURL(formData.photo)}
+                  alt="Uploaded"
+                  style={{
+                    width: "100%",
+                    maxHeight: "200px",
+                    objectFit: "cover",
+                    borderRadius: 8,
+                  }}
+                />
+
+                {/* Close Button */}
+                <IconButton
+                  onClick={() => setFormData({ ...formData, photo: null })}
+                  sx={{
+                    position: "absolute",
+                    top: 4,
+                    right: 8,
+
+                    color: "#20ADA0",
+                  }}
+                >
+                  <Close />
+                </IconButton>
+              </Box>
             )}
           </Grid>
         </Grid>

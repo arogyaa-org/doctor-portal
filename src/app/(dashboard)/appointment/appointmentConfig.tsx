@@ -34,19 +34,6 @@ export const datagridColumns = (): GridColDef[] => {
       ),
     },
     {
-      field: "doctorId",
-      headerName: "Doctor",
-      headerClassName: "super-app-theme--header",
-      headerAlign: "center",
-      align: "center",
-      flex: 1,
-      renderCell: ({ row: { doctorId } }) => (
-        <Typography>
-          {capitalizeFirstLetter(doctorId?.username) || "N/A"}
-        </Typography>
-      ),
-    },
-    {
       field: "appointmentDate",
       headerName: "Date",
       headerClassName: "super-app-theme--header",
