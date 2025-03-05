@@ -16,8 +16,22 @@ import { useRouter } from "next/navigation";
 
 export const datagridColumns = (): GridColDef[] => {
   const { capitalizeFirstLetter } = Utility();
-
+  const role = Utility().decodedToken()?.role;
   const router = useRouter();
+
+  const doctorColumn: GridColDef = {
+    field: "doctorId",
+    headerName: "Doctor",
+    headerClassName: "super-app-theme--header",
+    headerAlign: "center",
+    align: "center",
+    flex: 1,
+    renderCell: ({ row: { doctorId } }) => (
+      <Typography>
+        {capitalizeFirstLetter(doctorId?.username) || "N/A"}
+      </Typography>
+    ),
+  };
 
   const columns: GridColDef[] = [
     {
@@ -106,8 +120,7 @@ export const datagridColumns = (): GridColDef[] => {
             color="info"
             variant="contained"
             onClick={() =>
-            router.push(paths.dashboard.appointmentDetails_id(_id)) // for dynamic page 
-            // router.push(paths.dashboard.appointmentDetails)           // for static page
+              router.push(paths.dashboard.appointmentDetails_id(_id))
             }
             sx={{
               minWidth: "50px",
@@ -120,6 +133,11 @@ export const datagridColumns = (): GridColDef[] => {
       ),
     },
   ];
+
+  // Conditionally add the "Doctor" column
+  if (role !== "doctor") {
+    columns.splice(1, 0, doctorColumn); // Insert at the second position
+  }
 
   return columns;
 };

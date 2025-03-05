@@ -122,19 +122,17 @@ const DoctorForm: React.FC = () => {
   const doctorId = params?.id;
 
   const { value: specialities, swrLoading: specialityLoading } =
-    useGetSpeciality(null, "get-specialities", 1, 200);
-    
+    useGetSpeciality(null, "get-specialities", 1, 200,"");
+
   const { value: qualifications, swrLoading: qualificationLoading } =
-    useGetQualification(null, "get-qualifications", 1, 200);
+    useGetQualification(null, "get-qualifications", 1, 200,"");
   const { value: symptoms, swrLoading: symptomLoading } = useGetSymptom(
     null,
     "get-symptoms",
     1,
     200,
+    ""
   );
-
-  console.log("specialization:",qualifications);
-
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
   }, []);
@@ -781,7 +779,7 @@ const DoctorForm: React.FC = () => {
                   <AddPhotoAlternateIcon
                     sx={{
                       fontSize: "32px",
-                      color: "#aaa",
+                      color: "#4D55CC",
                       mb: 1,
                       transition: "color 0.3s ease",
                     }}
@@ -926,7 +924,7 @@ const DoctorForm: React.FC = () => {
                             ...params.InputProps,
                             startAdornment: (
                               <InputAdornment position="start">
-                                <CalendarMonthIcon />
+                                <CalendarMonthIcon color="primary"/>
                               </InputAdornment>
                             ),
                           }}
@@ -1005,7 +1003,7 @@ const DoctorForm: React.FC = () => {
                     <Button
                       variant="outlined"
                       color={
-                        values.availability.length > 1 ? "error" : "primary"
+                        values.availability.length > 1 ? "warning" : "primary"
                       }
                       fullWidth
                       disabled={
@@ -1042,8 +1040,8 @@ const DoctorForm: React.FC = () => {
                       sx={{ mt: 1 }}
                     >
                       {values.availability.length > 1
-                        ? "Remove"
-                        : "Apply for Week"}
+                        ? "Remove all"
+                        : "Apply for all days"}
                     </Button>
                   </Grid>
                 </Grid>
