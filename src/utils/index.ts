@@ -70,7 +70,7 @@ export const Utility = () => {
       payment: process.env.NEXT_PUBLIC_PAYMENT_URL as string,
       user: process.env.NEXT_PUBLIC_USER_URL as string,
       treatment:process.env.NEXT_PUBLIC_TREATMENT_URL as string,
-      test:process.env.NEXT_PUBLIC_TEST_URL as string,
+      test:process.env.NEXT_PUBLIC_TESTS_URL as string,
     };
 
     return urls[serviceName] || "";
