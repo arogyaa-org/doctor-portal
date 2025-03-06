@@ -34,8 +34,8 @@ import {
 } from "@mui/icons-material";
 import WcIcon from "@mui/icons-material/Wc";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import PinDrop from '@mui/icons-material/PinDrop';
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import PinDrop from "@mui/icons-material/PinDrop";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
 import dayjs from "dayjs";
@@ -46,7 +46,7 @@ import validationSchema from "./ValidationSchema";
 import { AppDispatch, RootState } from "@/redux/store";
 import { fetcher } from "@/apis/apiClient";
 import { useCreateDoctor, useModifyDoctor } from "@/hooks/doctor";
-import { useGetSpeciality } from "@/hooks/speciality";
+import { useGetSpeciality } from "@/hooks/Speciality";
 import { useGetQualification } from "@/hooks/qualification";
 import { useGetSymptom } from "@/hooks/symptoms";
 import { Utility } from "@/utils";
@@ -122,34 +122,24 @@ const DoctorForm: React.FC = () => {
   const doctorId = params?.id;
 
   const { value: specialities, swrLoading: specialityLoading } =
-    useGetSpeciality(
-      null,
-      "get-specialities",
-      1,
-      200
-    );
-  const { value: qualifications, swrLoading: qualificationLoading } =
-    useGetQualification(
-      null,
-      "get-qualifications",
-      1,
-      200
-    );
-  const { value: symptoms, swrLoading: symptomLoading } =
-    useGetSymptom(
-      null,
-      "get-symptoms",
-      1,
-      200
-    );
+    useGetSpeciality(null, "get-specialities", 1, 200,"");
 
+  const { value: qualifications, swrLoading: qualificationLoading } =
+    useGetQualification(null, "get-qualifications", 1, 200,"");
+  const { value: symptoms, swrLoading: symptomLoading } = useGetSymptom(
+    null,
+    "get-symptoms",
+    1,
+    200,
+    ""
+  );
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
   }, []);
 
   const handleUpdatePassword = useCallback(() => {
     if (formValues.password) {
-      editFormValues = { ...formValues }
+      editFormValues = { ...formValues };
     }
     if (!updatePassword) {
       setFormValues((prev) => ({
@@ -187,16 +177,24 @@ const DoctorForm: React.FC = () => {
         profilePicture: values?.profilePicture?.file || null,
         qualificationIds: getIdsFromObject(values?.qualificationIds),
         specializationIds: getIdsFromObject(values?.specializationIds),
-        symptomIds: getIdsFromObject(values?.symptomIds)
+        symptomIds: getIdsFromObject(values?.symptomIds),
       });
       if (response?.statusCode === 201) {
-        toastAndNavigate(dispatch, true, "success", "Created Successfully", () => router.back());
+        toastAndNavigate(
+          dispatch,
+          true,
+          "success",
+          "Created Successfully",
+          () => router.back()
+        );
       }
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
         "Error creating Doctor, please try again.";
-      toastAndNavigate(dispatch, true, "error", errorMessage, () => router.back());
+      toastAndNavigate(dispatch, true, "error", errorMessage, () =>
+        router.back()
+      );
     } finally {
       setLoading(false);
     }
@@ -207,7 +205,7 @@ const DoctorForm: React.FC = () => {
       setLoading(true);
       try {
         const response: DoctorResponse = await fetcher(
-          'doctor',
+          "doctor",
           `get-doctor-by-id/${doctorId}`
         );
         if (response?.statusCode === 200) {
@@ -241,12 +239,16 @@ const DoctorForm: React.FC = () => {
 
         const response = await modifyDoctor(payload);
         if (response?.statusCode === 200) {
-          toastAndNavigate(dispatch, true, "info", "Updated Successfully", () => router.back());
+          toastAndNavigate(dispatch, true, "info", "Updated Successfully", () =>
+            router.back()
+          );
         }
       } catch (err: any) {
         const errorMessage =
           err?.response?.data?.message || "Error Occurred. Please Try Again";
-        toastAndNavigate(dispatch, true, "error", errorMessage, () => router.back());
+        toastAndNavigate(dispatch, true, "error", errorMessage, () =>
+          router.back()
+        );
       } finally {
         setLoading(false);
       }
@@ -255,15 +257,15 @@ const DoctorForm: React.FC = () => {
   );
 
   return (
-    <Box margin='0 10px 10px 10px'>
+    <Box margin="0 10px 10px 10px">
       {doctorId && (
         <Button
           type="button"
           color={updatePassword ? "error" : "info"}
           variant="contained"
           sx={{
-            position: 'absolute',
-            right: 30
+            position: "absolute",
+            right: 30,
           }}
           onClick={handleUpdatePassword}
         >
@@ -273,7 +275,7 @@ const DoctorForm: React.FC = () => {
       <Typography
         variant="h4"
         gutterBottom
-        sx={{ color: "rgb(7, 135, 179)", fontWeight: "bold", mb: '20px' }}
+        sx={{ color: "rgb(7, 135, 179)", fontWeight: "bold", mb: "20px" }}
       >
         {title}
       </Typography>
@@ -294,7 +296,7 @@ const DoctorForm: React.FC = () => {
           handleChange,
           resetForm,
           setFieldValue,
-          isSubmitting
+          isSubmitting,
         }) => (
           <Form encType="multipart/form-data">
             <Box
@@ -357,11 +359,13 @@ const DoctorForm: React.FC = () => {
                       <InputAdornment position="end">
                         <IconButton
                           aria-label="toggle password visibility"
-                          onClick={togglePasswordVisibility}>
-                          {showPassword ?
+                          onClick={togglePasswordVisibility}
+                        >
+                          {showPassword ? (
                             <VisibilityIcon color="primary" />
-                            :
-                            <VisibilityOffIcon color="primary" />}
+                          ) : (
+                            <VisibilityOffIcon color="primary" />
+                          )}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -391,9 +395,7 @@ const DoctorForm: React.FC = () => {
                 label="Date of Birth *"
                 name="dob"
                 type="date"
-                value={
-                  values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""
-                }
+                value={values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const formattedDate = dayjs(e.target.value).format(
                     "YYYY-MM-DD"
@@ -551,12 +553,30 @@ const DoctorForm: React.FC = () => {
                 multiple
                 disableCloseOnSelect
                 options={specialities?.results || []}
-                getOptionLabel={option => option.name}
-                isOptionEqualToValue={(option, value) => option._id === value._id}    // populate ke time mismatch error na aye islye
-                value={values.specializationIds || undefined}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) =>
+                  option._id === value._id
+                }
+                value={values.specializationIds || []}
                 onChange={(event, value) => {
-                  console.log(value, 'on change')
-                  setFieldValue("specializationIds", value)
+                  setFieldValue("specializationIds", value);
+
+                  // Extract selected specialization names
+                  const selectedSpecializationTags = value.map(
+                    (item) => item.name
+                  );
+
+                  // Remove deselected specialization tags from tags
+                  const updatedTags = values.tags.filter(
+                    (tag) =>
+                      selectedSpecializationTags.includes(tag) ||
+                      values.qualificationIds.some((qual) => qual.name === tag)
+                  );
+
+                  // Add newly selected specializations
+                  setFieldValue("tags", [
+                    ...new Set([...updatedTags, ...selectedSpecializationTags]),
+                  ]);
                 }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
@@ -565,11 +585,11 @@ const DoctorForm: React.FC = () => {
                     label="Specialization *"
                     name="specializationIds"
                     type="text"
-                    error={!!touched.specializationIds && !!errors.specializationIds}
+                    error={
+                      !!touched.specializationIds && !!errors.specializationIds
+                    }
                     helperText={
-                      touched.specializationIds && typeof errors.specializationIds === "string"
-                        ? errors.specializationIds
-                        : ""
+                      touched.specializationIds ? errors.specializationIds : ""
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -585,12 +605,15 @@ const DoctorForm: React.FC = () => {
                   />
                 )}
               />
+
               <Autocomplete
                 multiple
                 disableCloseOnSelect
                 options={symptoms?.results || []}
-                getOptionLabel={option => option.name}
-                isOptionEqualToValue={(option, value) => option._id === value._id}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) =>
+                  option._id === value._id
+                }
                 value={values.symptomIds || undefined}
                 onChange={(event, value) => setFieldValue("symptomIds", value)}
                 sx={{ gridColumn: "span 2" }}
@@ -602,7 +625,8 @@ const DoctorForm: React.FC = () => {
                     type="text"
                     error={!!touched.symptomIds && !!errors.symptomIds}
                     helperText={
-                      touched.symptomIds && typeof errors.symptomIds === "string"
+                      touched.symptomIds &&
+                      typeof errors.symptomIds === "string"
                         ? errors.symptomIds
                         : ""
                     }
@@ -624,10 +648,31 @@ const DoctorForm: React.FC = () => {
                 multiple
                 disableCloseOnSelect
                 options={qualifications?.results || []}
-                getOptionLabel={option => option.name}
-                isOptionEqualToValue={(option, value) => option._id === value._id}
-                value={values.qualificationIds || undefined}
-                onChange={(event, value) => setFieldValue("qualificationIds", value)}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) =>
+                  option._id === value._id
+                }
+                value={values.qualificationIds || []}
+                onChange={(event, value) => {
+                  setFieldValue("qualificationIds", value);
+
+                  // Extract selected qualification names
+                  const selectedQualificationTags = value.map(
+                    (item) => item.name
+                  );
+
+                  // Remove deselected qualification tags from tags
+                  const updatedTags = values.tags.filter(
+                    (tag) =>
+                      selectedQualificationTags.includes(tag) ||
+                      values.specializationIds.some((spec) => spec.name === tag)
+                  );
+
+                  // Add newly selected qualifications
+                  setFieldValue("tags", [
+                    ...new Set([...updatedTags, ...selectedQualificationTags]),
+                  ]);
+                }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
                   <MuiTextField
@@ -635,11 +680,11 @@ const DoctorForm: React.FC = () => {
                     label="Qualification *"
                     name="qualificationIds"
                     type="text"
-                    error={!!touched.qualificationIds && !!errors.qualificationIds}
+                    error={
+                      !!touched.qualificationIds && !!errors.qualificationIds
+                    }
                     helperText={
-                      touched.qualificationIds && typeof errors.qualificationIds === "string"
-                        ? errors.qualificationIds
-                        : ""
+                      touched.qualificationIds ? errors.qualificationIds : ""
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -675,11 +720,12 @@ const DoctorForm: React.FC = () => {
               />
               <Field
                 as={MuiTextField}
-                label="Tags "
+                label="Tags"
                 name="tags"
                 fullWidth
                 multiline
-                minRows={3}
+                minRows={3} // Set the initial height of the textarea
+                maxRows={10} // Set a maximum number of rows to prevent it from growing indefinitely
                 value={values.tags?.join(", ")}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFieldValue(
@@ -722,9 +768,9 @@ const DoctorForm: React.FC = () => {
                     textAlign: "center",
                     transition: "border-color 0.3s ease, color 0.3s ease",
                     "&:hover": {
-                      borderColor: 'rgb(33, 38, 54)',
+                      borderColor: "rgb(33, 38, 54)",
                       "& svg": {
-                        color: 'rgb(33, 38, 54)', // Darker icon color on hover
+                        color: "rgb(33, 38, 54)", // Darker icon color on hover
                       },
                     },
                   }}
@@ -733,10 +779,11 @@ const DoctorForm: React.FC = () => {
                   <AddPhotoAlternateIcon
                     sx={{
                       fontSize: "32px",
-                      color: '#aaa',
+                      color: "#4D55CC",
                       mb: 1,
-                      transition: "color 0.3s ease"
-                    }} />
+                      transition: "color 0.3s ease",
+                    }}
+                  />
                   <Typography variant="body2">Upload Photo</Typography>
                   <input
                     ref={fileInputRef}
@@ -747,7 +794,8 @@ const DoctorForm: React.FC = () => {
                       const imgfiles = event.target.files;
                       if (imgfiles && imgfiles[0]) {
                         const file = imgfiles[0];
-                        if (file.size > 1048576) {   // Check file size (1MB = 1,048,576 bytes)
+                        if (file.size > 1048576) {
+                          // Check file size (1MB = 1,048,576 bytes)
                           toastAndNavigate(
                             dispatch,
                             true,
@@ -758,7 +806,10 @@ const DoctorForm: React.FC = () => {
                         }
                         // Set file to Formik field and create a preview
                         const fileUrl = URL.createObjectURL(file);
-                        setFieldValue("profilePicture", { file, preview: fileUrl });
+                        setFieldValue("profilePicture", {
+                          file,
+                          preview: fileUrl,
+                        });
                       }
                     }}
                   />
@@ -798,7 +849,8 @@ const DoctorForm: React.FC = () => {
                     </IconButton>
 
                     {/* Image Preview */}
-                    {(values.profilePicture?.preview || typeof values.profilePicture === "string") && (
+                    {(values.profilePicture?.preview ||
+                      typeof values.profilePicture === "string") && (
                       <Box
                         component="img"
                         src={
@@ -820,19 +872,22 @@ const DoctorForm: React.FC = () => {
               </Box>
             </Box>
 
+            {/* Availability Section */}
             <Box
               component="fieldset"
               sx={{
-                border: '2px solid #BADFE7',
-                borderRadius: '12px',
+                border: "2px solid #BADFE7",
+                borderRadius: "12px",
                 p: 2,
-                m: '40px 10px',
+                m: "40px 10px",
               }}
             >
               <Typography
                 component="legend"
-                sx={{ color: 'rgb(102, 112, 133)', fontSize: '1rem', mb: 1 }}
-              > Availability
+                sx={{ color: "rgb(102, 112, 133)", fontSize: "1rem", mb: 1 }}
+              >
+                {" "}
+                Availability
               </Typography>
               {values.availability.map((slot, index) => (
                 <Grid
@@ -854,10 +909,10 @@ const DoctorForm: React.FC = () => {
                         "Sunday",
                       ]}
                       getOptionLabel={(option) => option}
-                      value={slot.day || ''}
+                      value={slot.day || ""}
                       onChange={(event, newValue) => {
                         const updatedAvailability = [...values.availability];
-                        updatedAvailability[index].day = newValue || '';
+                        updatedAvailability[index].day = newValue || "";
                         setFieldValue("availability", updatedAvailability);
                       }}
                       renderInput={(params) => (
@@ -868,13 +923,9 @@ const DoctorForm: React.FC = () => {
                           InputProps={{
                             ...params.InputProps,
                             startAdornment: (
-                              <>
-                                {/* The icon at the start */}
-                                <InputAdornment position="start">
-                                  <CalendarMonthIcon />
-                                </InputAdornment>
-                                {params.InputProps.startAdornment}
-                              </>
+                              <InputAdornment position="start">
+                                <CalendarMonthIcon color="primary"/>
+                              </InputAdornment>
                             ),
                           }}
                         />
@@ -889,11 +940,9 @@ const DoctorForm: React.FC = () => {
                       type="time"
                       variant="outlined"
                       fullWidth
-                      InputLabelProps={{
-                        shrink: true, // ensures the label stays on top
-                      }}
+                      InputLabelProps={{ shrink: true }}
                       value={slot.startTime || ""}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      onChange={(e) => {
                         const updatedAvailability = [...values.availability];
                         updatedAvailability[index].startTime = e.target.value;
                         setFieldValue("availability", updatedAvailability);
@@ -908,26 +957,23 @@ const DoctorForm: React.FC = () => {
                       type="time"
                       variant="outlined"
                       fullWidth
-                      InputLabelProps={{
-                        shrink: true
-                      }}
+                      InputLabelProps={{ shrink: true }}
                       value={slot.endTime || ""}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      onChange={(e) => {
                         const updatedAvailability = [...values.availability];
                         updatedAvailability[index].endTime = e.target.value;
                         setFieldValue("availability", updatedAvailability);
                       }}
                     />
                   </Grid>
-                  <Grid item xs={2}>
+                  <Grid item xs={2} sx={{ display: "flex", gap: 1 }}>
                     <Button
                       variant="outlined"
                       color="error"
                       onClick={() => {
-                        const updatedAvailability =
-                          values.availability.filter(
-                            (_, idx) => idx !== index
-                          );
+                        const updatedAvailability = values.availability.filter(
+                          (_, idx) => idx !== index
+                        );
                         setFieldValue("availability", updatedAvailability);
                       }}
                       fullWidth
@@ -938,42 +984,98 @@ const DoctorForm: React.FC = () => {
                 </Grid>
               ))}
               <Box mt={2}>
-                <Button
-                  variant="outlined"
-                  onClick={() =>
-                    setFieldValue("availability", [
-                      ...values.availability,
-                      { day: "", startTime: "", endTime: "" },
-                    ])
-                  }
-                  sx={{ mt: 1 }}
-                >
-                  Add Slot
-                </Button>
+                <Grid container spacing={2}>
+                  <Grid item sx={{ display: "flex", alignItems: "center" }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() =>
+                        setFieldValue("availability", [
+                          ...values.availability,
+                          { day: "", startTime: "", endTime: "" },
+                        ])
+                      }
+                      sx={{ mt: 1 }}
+                    >
+                      Add Slot
+                    </Button>
+                  </Grid>
+                  <Grid item sx={{ display: "flex", alignItems: "center" }}>
+                    <Button
+                      variant="outlined"
+                      color={
+                        values.availability.length > 1 ? "warning" : "primary"
+                      }
+                      fullWidth
+                      disabled={
+                        values.availability.length === 0 ||
+                        !values.availability[0]?.day ||
+                        !values.availability[0]?.startTime ||
+                        !values.availability[0]?.endTime
+                      }
+                      onClick={() => {
+                        if (values.availability.length > 0) {
+                          if (values.availability.length > 1) {
+                            setFieldValue("availability", [
+                              values.availability[0],
+                            ]);
+                          } else {
+                            const firstSlot = values.availability[0];
+                            const allDays = [
+                              "Monday",
+                              "Tuesday",
+                              "Wednesday",
+                              "Thursday",
+                              "Friday",
+                              "Saturday",
+                            ];
+                            const newAvailability = allDays.map((day) => ({
+                              day,
+                              startTime: firstSlot.startTime,
+                              endTime: firstSlot.endTime,
+                            }));
+                            setFieldValue("availability", newAvailability);
+                          }
+                        }
+                      }}
+                      sx={{ mt: 1 }}
+                    >
+                      {values.availability.length > 1
+                        ? "Remove all"
+                        : "Apply for all days"}
+                    </Button>
+                  </Grid>
+                </Grid>
               </Box>
             </Box>
 
             <Box display="flex" justifyContent="end" m="20px">
-              {   //hide reset button on edit
-                title === "Edit" ? null :
-                  <Button type="reset" color="warning" variant="contained" sx={{ mr: 3 }}
-                    disabled={!dirty || isSubmitting}
-                    onClick={() => {
-                      if (window.confirm("Do You Really Want To Reset?")) {
-                        resetForm();
-                      }
-                    }}
-                  >
-                    Reset
-                  </Button>
-              }
-              <Button color="error" variant="contained" sx={{ mr: 3 }}
-                onClick={() => router.back()}>
+              {title === "Edit" ? null : (
+                <Button
+                  type="reset"
+                  color="warning"
+                  variant="contained"
+                  sx={{ mr: 3 }}
+                  disabled={!dirty || isSubmitting}
+                  onClick={() => {
+                    if (window.confirm("Do You Really Want To Reset?")) {
+                      resetForm();
+                    }
+                  }}
+                >
+                  Reset
+                </Button>
+              )}
+              <Button
+                color="error"
+                variant="contained"
+                sx={{ mr: 3 }}
+                onClick={() => router.back()}
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                variant='contained'
+                variant="contained"
                 disabled={!dirty || isSubmitting}
                 color={title === "Edit" ? "info" : "success"}
               >
@@ -989,7 +1091,7 @@ const DoctorForm: React.FC = () => {
         severity={toast.toastSeverity}
         message={toast.toastMessage}
       />
-    </Box >
+    </Box>
   );
 };
 
