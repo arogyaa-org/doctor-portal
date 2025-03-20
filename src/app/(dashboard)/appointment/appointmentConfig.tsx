@@ -6,15 +6,28 @@
  * restrictions set forth in your license agreement with F2Fintech.
  */
 
-import { Typography, Box, Button } from "@mui/material";
+import { Typography, Box, Button, Select, MenuItem } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
 import { format } from "date-fns";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { Utility } from "@/utils";
 import { paths } from "@/paths";
+import {
+  CheckCircle,
+  HourglassEmpty,
+  Event,
+  Cancel,
+} from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 
-export const datagridColumns = (): GridColDef[] => {
+export const datagridColumns = ({
+  handleStatusChange,
+}: {
+  refetch: () => void;
+  selectedStatus: string;
+  selectedDateFilter: string;
+  handleStatusChange: (appointmentId: string, newStatus: string) => void;
+}): GridColDef[] => {
   const { capitalizeFirstLetter } = Utility();
   const role = Utility().decodedToken()?.role;
   const router = useRouter();
@@ -92,14 +105,114 @@ export const datagridColumns = (): GridColDef[] => {
     {
       field: "status",
       headerName: "Status",
-      headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",
       flex: 1.5,
       sortable: false,
-      renderCell: ({ row: { status } }) => (
-        <Typography>{capitalizeFirstLetter(status) || "N/A"}</Typography>
-      ),
+      renderCell: ({ row: { _id, status } }) => {
+        const statusOptions = [
+          {
+            value: "scheduled",
+            label: "Scheduled",
+            color: "#0056b3",
+            icon: <Event fontSize="small" />,
+          },
+          {
+            value: "rescheduled",
+            label: "Rescheduled",
+            color: "#856404",
+            icon: <HourglassEmpty fontSize="small" />,
+          },
+          {
+            value: "approved",
+            label: "Approved",
+            color: "#2D9735",
+            icon: <CheckCircle fontSize="small" />,
+          },
+          {
+            value: "rejected",
+            label: "Rejected",
+            color: "red",
+            icon: <Cancel fontSize="small" />,
+          },
+          {
+            value: "pending",
+            label: "Pending",
+            color: "#f39c12",
+            icon: <HourglassEmpty fontSize="small" />,
+          },
+        ];
+
+        const selectedStatus = statusOptions.find(
+          (option) => option.value === status
+        );
+
+        return (
+          <Select
+            value={status}
+            onChange={(e) => handleStatusChange(_id, e.target.value)}
+            variant="outlined"
+            size="small"
+            displayEmpty
+            sx={{
+              borderRadius: "20px",
+              width: "100%",
+              height: "36px",
+              textAlign: "center",
+              backgroundColor: selectedStatus
+                ? selectedStatus.color + "30"
+                : "#f8f9fa",
+              color: selectedStatus?.color || "#000",
+              fontWeight: "500",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              "& .MuiSelect-select": {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px", // Adds spacing between icon and text
+              },
+            }}
+            renderValue={() => (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                }}
+              >
+                {selectedStatus?.icon}
+                <Typography
+                  sx={{ fontWeight: 500, color: selectedStatus?.color }}
+                >
+                  {selectedStatus?.label}
+                </Typography>
+              </Box>
+            )}
+          >
+            {statusOptions
+              .filter((option) => option.value !== status)
+              .map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 1.5,
+                      color: option.color,
+                    }}
+                  >
+                    {option.icon}
+                    {option.label}
+                  </Box>
+                </MenuItem>
+              ))}
+          </Select>
+        );
+      },
     },
     {
       field: "action",
@@ -134,9 +247,8 @@ export const datagridColumns = (): GridColDef[] => {
     },
   ];
 
-  // Conditionally add the "Doctor" column
   if (role !== "doctor") {
-    columns.splice(1, 0, doctorColumn); // Insert at the second position
+    columns.splice(1, 0, doctorColumn);
   }
 
   return columns;

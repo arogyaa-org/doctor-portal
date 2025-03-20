@@ -65,8 +65,8 @@ const Search: React.FC<SearchProps> = ({ refetchAPI, holderText = "..." }) => {
         position: "relative",
         display: "flex",
         alignItems: "center",
-        maxWidth: "600px",
-        width: "100%",
+        // minWidth: "100px",
+        width: "300px",
       }}
     >
       <IconButton
