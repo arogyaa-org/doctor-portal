@@ -12,6 +12,7 @@ import {
   Button,
   useMediaQuery,
   useTheme,
+  Box,
 } from "@mui/material";
 import {
   Info as InfoIcon,
@@ -27,6 +28,7 @@ import {
   Assignment as AssignmentIcon,
   Schedule as ScheduleIcon,
   Phone as PhoneIcon,
+  ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 
 import TreatmentHistory from "./treatmentHistory";
@@ -44,6 +46,7 @@ const AppointmentDetails = () => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const dispatch = useDispatch();
+  const router = useRouter();
 
   const params = useParams();
   const appointmentId = params?.id;
@@ -194,8 +197,8 @@ const AppointmentDetails = () => {
       name: "Visits",
       content: (
         <div>
-          <Typography variant="h6" color="primary" gutterBottom>
-            Medical History
+          <Typography variant="h6" color="Black" gutterBottom>
+            Medical Details
           </Typography>
           {[
             { title: "Initial Consultation", progress: 100 },
@@ -232,7 +235,7 @@ const AppointmentDetails = () => {
         <div>
           <TestHistory patientId={patientId} />
         </div>
-      ), 
+      ),
     },
     {
       key: "treatment",
@@ -262,6 +265,35 @@ const AppointmentDetails = () => {
           borderRight: isSmallScreen ? "none" : "1px solid rgba(0,0,0,0.1)",
         }}
       >
+        {/* Heading and Back Button in the same row */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            marginBottom: 2,
+          }}
+        >
+          {/* Back Button */}
+          <IconButton
+            onClick={() => router.back()} // Use router.back() to go back to the previous page
+            sx={{
+              marginRight: 2, // Add margin between back button and heading
+            }}
+          >
+            <ArrowBackIcon sx={{ color: "primary.main" }} />
+          </IconButton>
+
+          {/* Appointment History Heading */}
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 600,
+              marginBottom: 0,
+            }}
+          >
+            Appointment Details
+          </Typography>
+        </Box>
         <div
           style={{
             display: "flex",
@@ -320,9 +352,11 @@ const AppointmentDetails = () => {
           flex: 1,
           display: "flex",
           padding: isSmallScreen ? "15px" : "30px",
+          marginTop:-12,
           justifyContent: "center",
           alignItems: "center",
-          background: "linear-gradient(to right, #e0e4e8 0%, #d7dde5 100%)",
+          background:
+            "linear-gradient(to bottom right, #f0f4f8 0%, #e1e5eb 100%)",
         }}
       >
         <Paper
@@ -333,36 +367,125 @@ const AppointmentDetails = () => {
             borderRadius: 3,
             overflow: "hidden",
             position: "relative",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
           }}
         >
-          <video
-            controls
-            style={{
-              width: "100%",
-              height: "auto",
-            }}
-          >
-            <source src="video.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-          <IconButton
+          {/* Header with icon and title */}
+          <Box
             sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              bgcolor: "rgba(255,255,255,0.2)",
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              borderBottom: "1px solid rgba(0,0,0,0.08)",
+              backgroundColor: theme.palette.primary.main,
               color: "white",
-              "&:hover": {
-                bgcolor: "rgba(255,255,255,0.3)",
-              },
-              width: 80,
-              height: 80,
             }}
           >
-            <PlayIcon fontSize="large" />
-          </IconButton>
+            <PlayIcon />
+            <Typography variant="h6" fontWeight="500">
+              Patient Symptom Video
+            </Typography>
+          </Box>
+
+          {/* Video thumbnail container with overlay */}
+          <Box sx={{ position: "relative", backgroundColor: "#000" }}>
+            <video
+              poster="/api/placeholder/800/450"
+              style={{
+                width: "100%",
+                height: "auto",
+                maxHeight: "450px",
+                objectFit: "cover",
+                opacity: 0.7,
+              }}
+            >
+              <source src="video.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+
+            {/* Play button overlay */}
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <IconButton
+                sx={{
+                  bgcolor: "#FE4F2D",
+                  color: "white",
+                  "&:hover": {
+                    transform: "scale(1.1)",
+                  },
+                  width: 70,
+                  height: 70,
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+                }}
+              >
+                <PlayIcon fontSize="large" />
+              </IconButton>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "white",
+                  fontWeight: "500",
+                  textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                }}
+              >
+                Click to play video
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Video details and description */}
+          <Box sx={{ padding: "16px 20px" }}>
+            <Typography
+              variant="h6"
+              color="primary"
+              gutterBottom
+              sx={{ fontWeight: 500 }}
+            >
+              Symptom Analysis
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary" paragraph>
+              This video provides a detailed overview of the patient's described
+              symptoms, helping with visual diagnosis and treatment planning.
+            </Typography>
+
+            {/* Additional metadata - removed "Verified" chip */}
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 2,
+                mt: 2,
+              }}
+            >
+              <Chip                           // time spam we can use dynamic which will come with video in the metadata
+                icon={<ScheduleIcon />} 
+                label="2:34 mins"
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                icon={<CalendarMonthIcon />}
+                label={`Recorded: ${new Date().toLocaleDateString()}`}
+                size="small"
+                variant="outlined"
+              />
+            </Box>
+          </Box>
         </Paper>
       </div>
     </div>
