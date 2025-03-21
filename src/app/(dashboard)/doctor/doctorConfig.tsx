@@ -60,9 +60,10 @@ export const doctorDatagridColumns = (): GridColDef[] => {
             sx={{
               display: "flex",
               flexDirection: "column",
+              justifyContent: 'center',
               width: "100%",
               whiteSpace: "normal",
-              minHeight:47
+              minHeight: 47
             }}
           >
             <Typography

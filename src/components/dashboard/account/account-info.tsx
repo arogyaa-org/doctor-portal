@@ -63,36 +63,13 @@ const StyledTab = styled(Tab)({
   },
 });
 
-interface DoctorResponse {
-  statusCode: string | number;
-  message: string;
-  data: DoctorFormValues;
+interface getApiResponse {
+  statusCode: number,
+  message: string,
+  data: DoctorData
 }
 
-interface DoctorFormValues {
-  _id?: string | number;
-  username: string;
-  email: string;
-  password: string;
-  contact: string;
-  experience: string | number;
-  bio: string;
-  tags: string[];
-  gender: string;
-  dob: string;
-  languagesSpoken: string[];
-  address: string;
-  pincode: string | number;
-  profilePicture: { file: File; preview: string } | null;
-  consultationFee: string | number;
-  status: string;
-  qualificationIds: any[];
-  specializationIds: any[];
-  symptomIds: any[];
-  availability: { day: string; startTime: string; endTime: string }[];
-}
-
-const initialValues: DoctorFormValues = {
+const initialValues: DoctorData = {
   username: "",
   email: "",
   password: "",
@@ -103,7 +80,7 @@ const initialValues: DoctorFormValues = {
   bio: "",
   tags: [],
   languagesSpoken: [],
-  address: "",
+  clinicAddress: "",
   pincode: "",
   profilePicture: null,
   consultationFee: "",
@@ -112,21 +89,25 @@ const initialValues: DoctorFormValues = {
   specializationIds: [],
   symptomIds: [],
   availability: [],
+  isVerified: false
 };
 
 const DoctorProfile = () => {
-  const doctorId = Utility().decodedToken()?.id || null;
-  const { modifyDoctor } = useModifyDoctor("update-doctor");
-  const [formValues, setFormValues] = useState<DoctorFormValues>(initialValues);
   const [selectedTab, setSelectedTab] = useState<string | null>("info");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
   const [doctorProfileData, setDoctorProfileData] = useState<DoctorData | null>(
     null
   );
+  const [editFields, setEditFields] = useState<DoctorData>(initialValues);
 
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const bioInputRef = useRef<HTMLInputElement | null>(null);
+  const { decodedToken } = Utility();
+  const doctorId = decodedToken()?.id || null;
+  const role = decodedToken()?.role;
+
+  const { modifyDoctor } = useModifyDoctor("update-doctor");
 
   useEffect(() => {
     if (isEditOpen && nameInputRef.current) {
@@ -147,17 +128,15 @@ const DoctorProfile = () => {
   const handleImageClick = () => setIsImageOpen(true);
   const handleImageClose = () => setIsImageOpen(false);
 
-  // **Extract role and doctorId from decoded token**
-  const role = Utility().decodedToken()?.role;
-
   useEffect(() => {
     const fetchProfile = async () => {
       if (!doctorId) return;
 
       try {
-        let response;
+        let response: undefined | getApiResponse;
         if (role === "doctor") {
           response = await fetcher("doctor", `get-doctor-by-id/${doctorId}`);
+          console.log(response, 'this is api resp')
         } else {
           response = await fetcher("user", `get-user-by-id/${doctorId}`);
         }
@@ -177,15 +156,19 @@ const DoctorProfile = () => {
     null,
     "get-specialities",
     1,
-    200
+    200,
+    ""
   );
   const { value: qualifications } = useGetQualification(
     null,
     "get-qualifications",
     1,
-    200
+    200,
+    ""
   );
-  const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200);
+  const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200, "");
+
+  console.log(doctorProfileData, specialities, qualifications, symptoms, 'profile data with config');
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -196,26 +179,6 @@ const DoctorProfile = () => {
       profilePicture: { file, preview: previewUrl },
     }));
   };
-
-  const [editFields, setEditFields] = useState<DoctorFormValues>(initialValues);
-
-  // Populate edit fields when doctorProfileData is loaded
-  useEffect(() => {
-    if (doctorProfileData && specialities?.results) {
-      setEditFields({
-        ...doctorProfileData,
-        specializationIds: doctorProfileData?.specializationIds?.map((spec) =>
-          typeof spec === "object" ? spec._id : spec
-        ),
-        qualificationIds: doctorProfileData?.qualificationIds?.map((qual) =>
-          typeof qual === "object" ? qual._id : qual
-        ),
-        symptomIds: doctorProfileData?.symptomIds?.map((sym) =>
-          typeof sym === "object" ? sym._id : sym
-        ),
-      });
-    }
-  }, [doctorProfileData, specialities]);
 
   // Handle input field changes
   const handleFieldChange = (
@@ -509,20 +472,20 @@ const DoctorProfile = () => {
           value="info"
         />
         {role === "doctor" && (
-          <>
+          [
             <StyledTab
               icon={<HistoryIcon />}
               iconPosition="start"
               label="Appointment History"
               value="history"
-            />
+            />,
             <StyledTab
               icon={<ReviewsIcon />}
               iconPosition="start"
               label="Rating and Reviews"
               value="reviews"
             />
-          </>
+          ]
         )}
       </Tabs>
 
@@ -869,39 +832,6 @@ const DoctorProfile = () => {
               </Box>
             </Box>
 
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Role
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <AssignmentIndIcon sx={{ color: "#8F44FD" }} />
-                {isEditOpen ? (
-                  <select
-                    value={editFields.role}
-                    onChange={(e) => handleFieldChange("role", e.target.value)}
-                    style={{
-                      fontSize: "16px",
-                      color: "#555",
-                      border: "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      background: "transparent",
-                      cursor: "pointer",
-                      width: "200px",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="Doctor">Doctor</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                ) : (
-                  <Typography variant="body2" sx={{ color: "#555" }}>
-                    {doctorProfileData?.role || "Doctor"}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
             {role === "doctor" && (
               <Box>
                 <Typography
@@ -943,22 +873,22 @@ const DoctorProfile = () => {
                   ) : (
                     <Typography variant="body2" sx={{ color: "#555" }}>
                       {Array.isArray(doctorProfileData?.qualificationIds) &&
-                      doctorProfileData.qualificationIds.length > 0
+                        doctorProfileData.qualificationIds.length > 0
                         ? doctorProfileData.qualificationIds
-                            .map((qualId) => {
-                              if (typeof qualId === "object" && qualId._id) {
-                                return qualId.name;
-                              } else {
-                                const qualification =
-                                  qualifications?.results.find(
-                                    (s) => s._id === qualId
-                                  );
-                                return qualification
-                                  ? qualification.name
-                                  : "Unknown";
-                              }
-                            })
-                            .join(", ")
+                          .map((qualId) => {
+                            if (typeof qualId === "object" && qualId._id) {
+                              return qualId.name;
+                            } else {
+                              const qualification =
+                                qualifications?.results.find(
+                                  (s) => s._id === qualId
+                                );
+                              return qualification
+                                ? qualification.name
+                                : "Unknown";
+                            }
+                          })
+                          .join(", ")
                         : "Not Specified"}
                     </Typography>
                   )}
@@ -1005,22 +935,22 @@ const DoctorProfile = () => {
                   ) : (
                     <Typography variant="body2" sx={{ color: "#555" }}>
                       {Array.isArray(doctorProfileData?.specializationIds) &&
-                      doctorProfileData.specializationIds.length > 0
+                        doctorProfileData.specializationIds.length > 0
                         ? doctorProfileData.specializationIds
-                            .map((spec) => {
-                              if (typeof spec === "object" && spec._id) {
-                                return spec.name;
-                              } else {
-                                const specialization =
-                                  specialities?.results.find(
-                                    (s) => s._id === spec
-                                  );
-                                return specialization
-                                  ? specialization.name
-                                  : "Unknown";
-                              }
-                            })
-                            .join(", ")
+                          .map((spec) => {
+                            if (typeof spec === "object" && spec._id) {
+                              return spec.name;
+                            } else {
+                              const specialization =
+                                specialities?.results.find(
+                                  (s) => s._id === spec
+                                );
+                              return specialization
+                                ? specialization.name
+                                : "Unknown";
+                            }
+                          })
+                          .join(", ")
                         : "Not Specified"}
                     </Typography>
                   )}
@@ -1065,19 +995,19 @@ const DoctorProfile = () => {
                   ) : (
                     <Typography variant="body2" sx={{ color: "#555" }}>
                       {Array.isArray(doctorProfileData?.symptomIds) &&
-                      doctorProfileData.symptomIds.length > 0
+                        doctorProfileData.symptomIds.length > 0
                         ? doctorProfileData.symptomIds
-                            .map((sym) => {
-                              if (typeof sym === "object" && sym._id) {
-                                return sym.name;
-                              } else {
-                                const symptom = symptoms?.results.find(
-                                  (s) => s._id === sym
-                                );
-                                return symptom ? symptom.name : "Unknown";
-                              }
-                            })
-                            .join(", ")
+                          .map((sym) => {
+                            if (typeof sym === "object" && sym._id) {
+                              return sym.name;
+                            } else {
+                              const symptom = symptoms?.results.find(
+                                (s) => s._id === sym
+                              );
+                              return symptom ? symptom.name : "Unknown";
+                            }
+                          })
+                          .join(", ")
                         : "Not Specified"}
                     </Typography>
                   )}
@@ -1096,7 +1026,7 @@ const DoctorProfile = () => {
                 {isEditOpen ? (
                   <>
                     {Array.isArray(editFields.availability) &&
-                    editFields.availability.length > 0 ? (
+                      editFields.availability.length > 0 ? (
                       editFields.availability.map((slot, index) => (
                         <Box
                           key={index}
@@ -1362,7 +1292,7 @@ const DoctorProfile = () => {
                 ) : (
                   <>
                     {Array.isArray(doctorProfileData?.hospitalAffiliations) &&
-                    doctorProfileData.hospitalAffiliations.length > 0 ? (
+                      doctorProfileData.hospitalAffiliations.length > 0 ? (
                       doctorProfileData.hospitalAffiliations.map(
                         (hospital, index) => (
                           <Box

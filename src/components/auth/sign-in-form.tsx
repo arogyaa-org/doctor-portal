@@ -79,14 +79,7 @@ export function SignInForm({ clientRole, setClientRole }: SignInFormProps): Reac
         console.log(response, 'this is response from login');
         if (response?.statusCode === 200) {
           document.cookie = `token=${response.token}; path=/; max-age=${1 * 24 * 60 * 60}; secure; samesite=strict`;
-
-          // Decoding token to get role
-          const role = decodedToken(response.token)?.role;
-          if (role === 'admin') {
-            router.push('/dashboard');
-          } else if (role === 'doctor') {
-            router.push('/account');
-          }
+          router.push('/dashboard');
         } else if (response?.statusCode === 409 || response?.statusCode === 404) {
           toastAndNavigate(dispatch, true, "error", 'User not found');
           setTimeout(() => {

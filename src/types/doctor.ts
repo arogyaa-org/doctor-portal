@@ -1,5 +1,5 @@
 export interface DoctorData {
-    _id: string | number;
+    _id?: string | number;
     username: string;
     email: string;
     password: string;
@@ -9,20 +9,28 @@ export interface DoctorData {
     tags: string[];
     gender: string | null;
     dob: string;
-    languageSpoken: string[];
-    address: string;
+    languagesSpoken: string[];
+    clinicAddress: string;
     pincode: string | number;
     profilePicture: { file: File; preview: string } | null;
     consultationFee: string | number;
     status: string | null;
-    role: string | null;
-    specializationIds: string[];
-    symptomIds: string[];
-    qualificationIds: string[];
-    availability: { day: string; startTime: string; endTime: string }[];
-    createdAt: string;
-    updatedAt: string;
-    __v: number;
+    specializationIds: any[];
+    symptomIds: any[];
+    qualificationIds: any[];
+    availability: {
+        hospital: {
+            name: string;
+            location: string;
+        };
+        day: string;
+        startTime: string;
+        endTime: string;
+    }[];
+    isVerified: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    __v?: number;
 }
 
 export interface Doctor {

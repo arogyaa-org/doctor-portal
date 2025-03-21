@@ -5,8 +5,8 @@ const emailRegExp = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
 
 const validationSchema = yup.object().shape({
   username: yup.string()
-    .min(2, 'Firstname is Too Short!')
-    .max(50, 'Firstname is Too Long!')
+    .min(2, 'Username is Too Short!')
+    .max(50, 'Username is Too Long!')
     .required("This Field is Required"),
   email: yup.string()
     .matches(emailRegExp, "Email Address is Not Valid")
@@ -27,7 +27,6 @@ const validationSchema = yup.object().shape({
     .min(1, "Select At Least 1 Symptom"),
   qualificationIds: yup.array()
     .min(1, "Select At Least 1 Qualification"),
-  role: yup.string(),
   gender: yup.string(),
   status: yup.string(),
   bio: yup.string(),

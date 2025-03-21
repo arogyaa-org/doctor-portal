@@ -20,10 +20,10 @@ const getNavItemsByRole = (): NavItemConfig[] => {
 
   if (role === "doctor") {
     return navItems.filter(item =>
-      ["dashboard", "appointment", "patient"].includes(item.key)
+      ["dashboard", "appointment"].includes(item.key)
     );
   }
-  return navItems; 
+  return navItems;
 };
 
 // **Hook to dynamically update nav items based on role**

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
 import { Formik, Form, Field } from "formik";
+import dayjs from "dayjs";
 import {
   Box,
   Button,
@@ -15,9 +16,12 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Paper,
   CircularProgress,
   IconButton,
   Autocomplete,
+  FormControlLabel,
+  Checkbox
 } from "@mui/material";
 import {
   Person as PersonIcon,
@@ -38,7 +42,6 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PinDrop from "@mui/icons-material/PinDrop";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
-import dayjs from "dayjs";
 
 import Loader from "@/components/common/Loader";
 import Toast from "@/components/common/Toast";
@@ -50,37 +53,15 @@ import { useGetSpeciality } from "@/hooks/Speciality";
 import { useGetQualification } from "@/hooks/qualification";
 import { useGetSymptom } from "@/hooks/symptoms";
 import { Utility } from "@/utils";
+import { DoctorData } from "@/types/doctor";
 
 interface DoctorResponse {
   statusCode: string | number;
   message: string;
-  data: DoctorFormValues;
+  data: DoctorData;
 }
 
-interface DoctorFormValues {
-  _id?: string | number;
-  username: string;
-  email: string;
-  password: string;
-  contact: string;
-  experience: string | number;
-  bio: string;
-  tags: string[];
-  gender: string;
-  dob: string;
-  languagesSpoken: string[];
-  address: string;
-  pincode: string | number;
-  profilePicture: { file: File; preview: string } | null;
-  consultationFee: string | number;
-  status: string;
-  qualificationIds: any[];
-  specializationIds: any[];
-  symptomIds: any[];
-  availability: { day: string; startTime: string; endTime: string }[];
-}
-
-const initialValues: DoctorFormValues = {
+const initialValues: DoctorData = {
   username: "",
   email: "",
   password: "",
@@ -91,7 +72,7 @@ const initialValues: DoctorFormValues = {
   bio: "",
   tags: [],
   languagesSpoken: [],
-  address: "",
+  clinicAddress: "",
   pincode: "",
   profilePicture: null,
   consultationFee: "",
@@ -100,13 +81,14 @@ const initialValues: DoctorFormValues = {
   specializationIds: [],
   symptomIds: [],
   availability: [],
+  isVerified: false
 };
-let editFormValues: DoctorFormValues;
+let editFormValues: DoctorData;
 
 const DoctorForm: React.FC = () => {
   const [title, setTitle] = useState<"Create" | "Edit">("Create");
   const [loading, setLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState<DoctorFormValues>(initialValues);
+  const [formValues, setFormValues] = useState<DoctorData>(initialValues);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [updatePassword, setUpdatePassword] = useState<boolean>(false);
   const pwFieldRef = useRef<HTMLInputElement | null>(null);
@@ -121,11 +103,9 @@ const DoctorForm: React.FC = () => {
   const { getIdsFromObject, toastAndNavigate } = Utility();
   const doctorId = params?.id;
 
-  const { value: specialities, swrLoading: specialityLoading } =
-    useGetSpeciality(null, "get-specialities", 1, 200,"");
+  const { value: specialities } = useGetSpeciality(null, "get-specialities", 1, 200, "");
 
-  const { value: qualifications, swrLoading: qualificationLoading } =
-    useGetQualification(null, "get-qualifications", 1, 200,"");
+  const { value: qualifications } = useGetQualification(null, "get-qualifications", 1, 200, "");
   const { value: symptoms, swrLoading: symptomLoading } = useGetSymptom(
     null,
     "get-symptoms",
@@ -133,6 +113,7 @@ const DoctorForm: React.FC = () => {
     200,
     ""
   );
+
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
   }, []);
@@ -167,7 +148,7 @@ const DoctorForm: React.FC = () => {
     }
   }, [doctorId]);
 
-  const create = useCallback(async (values: DoctorFormValues) => {
+  const create = useCallback(async (values: DoctorData) => {
     setLoading(true);
     try {
       const response = await createDoctor({
@@ -307,7 +288,7 @@ const DoctorForm: React.FC = () => {
               <Field
                 as={MuiTextField}
                 type="text"
-                label="Username *"
+                label="Fullname *"
                 name="username"
                 fullWidth
                 InputProps={{
@@ -338,7 +319,6 @@ const DoctorForm: React.FC = () => {
                 error={touched.email && Boolean(errors.email)}
                 helperText={touched.email && errors.email}
               />
-              {/* password */}
               {(title === "Create" || updatePassword) && (
                 <Field
                   fullWidth
@@ -410,9 +390,9 @@ const DoctorForm: React.FC = () => {
                 fullWidth
                 error={touched.gender && Boolean(errors.gender)}
               >
-                <InputLabel>Gender </InputLabel>
+                <InputLabel>Gender</InputLabel>
                 <Select
-                  label="Gender "
+                  label="Gender"
                   name="gender"
                   value={values.gender}
                   onChange={(e) => setFieldValue("gender", e.target.value)}
@@ -498,7 +478,7 @@ const DoctorForm: React.FC = () => {
               >
                 <InputLabel> Status </InputLabel>
                 <Select
-                  label="Status "
+                  label="Status"
                   name="status"
                   value={values.status}
                   onChange={(e) => setFieldValue("status", e.target.value)}
@@ -521,8 +501,8 @@ const DoctorForm: React.FC = () => {
 
               <Field
                 as={MuiTextField}
-                label="Address"
-                name="address"
+                label="Clinic Address"
+                name="clinicAddress"
                 fullWidth
                 InputProps={{
                   startAdornment: (
@@ -531,8 +511,8 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.address && Boolean(errors.address)}
-                helperText={touched.address && errors.address}
+                error={touched.clinicAddress && Boolean(errors.clinicAddress)}
+                helperText={touched.clinicAddress && errors.clinicAddress}
               />
               <Field
                 as={MuiTextField}
@@ -566,17 +546,16 @@ const DoctorForm: React.FC = () => {
                     (item) => item.name
                   );
 
-                  // Remove deselected specialization tags from tags
+                  // Remove deselected specialization names from tags
                   const updatedTags = values.tags.filter(
                     (tag) =>
                       selectedSpecializationTags.includes(tag) ||
                       values.qualificationIds.some((qual) => qual.name === tag)
                   );
-
-                  // Add newly selected specializations
-                  setFieldValue("tags", [
-                    ...new Set([...updatedTags, ...selectedSpecializationTags]),
-                  ]);
+                  setFieldValue(
+                    "tags",
+                    Array.from(new Set([...updatedTags, ...selectedSpecializationTags]))
+                  );
                 }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
@@ -589,7 +568,8 @@ const DoctorForm: React.FC = () => {
                       !!touched.specializationIds && !!errors.specializationIds
                     }
                     helperText={
-                      touched.specializationIds ? errors.specializationIds : ""
+                      touched.specializationIds && typeof errors.specializationIds === "string"
+                        ? errors.specializationIds : ""
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -615,7 +595,25 @@ const DoctorForm: React.FC = () => {
                   option._id === value._id
                 }
                 value={values.symptomIds || undefined}
-                onChange={(event, value) => setFieldValue("symptomIds", value)}
+                onChange={(event, value) => {
+                  setFieldValue("symptomIds", value);
+
+                  // Extract selected symptom names
+                  const selectedSymptomTags = value.map(
+                    (item) => item.name
+                  );
+
+                  // Remove deselected symptom names from tags
+                  const updatedTags = values.tags.filter(
+                    (tag) =>
+                      selectedSymptomTags.includes(tag) ||
+                      values.specializationIds.some((spec) => spec.name === tag)
+                  );
+                  setFieldValue(
+                    "tags",
+                    Array.from(new Set([...updatedTags, ...selectedSymptomTags]))
+                  );
+                }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
                   <MuiTextField
@@ -626,7 +624,7 @@ const DoctorForm: React.FC = () => {
                     error={!!touched.symptomIds && !!errors.symptomIds}
                     helperText={
                       touched.symptomIds &&
-                      typeof errors.symptomIds === "string"
+                        typeof errors.symptomIds === "string"
                         ? errors.symptomIds
                         : ""
                     }
@@ -661,17 +659,16 @@ const DoctorForm: React.FC = () => {
                     (item) => item.name
                   );
 
-                  // Remove deselected qualification tags from tags
+                  // Remove deselected qualification names from tags
                   const updatedTags = values.tags.filter(
                     (tag) =>
                       selectedQualificationTags.includes(tag) ||
                       values.specializationIds.some((spec) => spec.name === tag)
                   );
-
-                  // Add newly selected qualifications
-                  setFieldValue("tags", [
-                    ...new Set([...updatedTags, ...selectedQualificationTags]),
-                  ]);
+                  setFieldValue(
+                    "tags",
+                    Array.from(new Set([...updatedTags, ...selectedQualificationTags]))
+                  );
                 }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
@@ -684,7 +681,8 @@ const DoctorForm: React.FC = () => {
                       !!touched.qualificationIds && !!errors.qualificationIds
                     }
                     helperText={
-                      touched.qualificationIds ? errors.qualificationIds : ""
+                      touched.qualificationIds && typeof errors.qualificationIds === "string"
+                        ? errors.qualificationIds : ""
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -743,6 +741,21 @@ const DoctorForm: React.FC = () => {
                 error={touched.tags && Boolean(errors.tags)}
                 helperText={touched.tags && errors.tags}
               />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={values.isVerified}
+                    onChange={(event) => setFieldValue("isVerified", event.target.checked)}
+                    sx={{
+                      color: values.isVerified ? "#3f51b5" : "default",
+                      "&.Mui-checked": {
+                        color: "#3f51b5",
+                      },
+                    }}
+                  />
+                }
+                label="Is Verified"
+              />
 
               {/* File input and display */}
               <Box
@@ -789,7 +802,6 @@ const DoctorForm: React.FC = () => {
                     ref={fileInputRef}
                     hidden
                     type="file"
-                    accept=".jpg, .gif, .png, .jpeg, .svg, .webp"
                     onChange={(event) => {
                       const imgfiles = event.target.files;
                       if (imgfiles && imgfiles[0]) {
@@ -851,22 +863,22 @@ const DoctorForm: React.FC = () => {
                     {/* Image Preview */}
                     {(values.profilePicture?.preview ||
                       typeof values.profilePicture === "string") && (
-                      <Box
-                        component="img"
-                        src={
-                          typeof values.profilePicture === "string"
-                            ? values.profilePicture // value From database
-                            : values.profilePicture.preview // From file upload
-                        }
-                        alt="Profile Preview"
-                        sx={{
-                          width: "100%",
-                          height: "100%",
-                          borderRadius: "8px",
-                          border: "1px solid #aaa",
-                        }}
-                      />
-                    )}
+                        <Box
+                          component="img"
+                          src={
+                            typeof values.profilePicture === "string"
+                              ? values.profilePicture // value From database
+                              : values.profilePicture.preview // From file upload
+                          }
+                          alt="Profile Preview"
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: "8px",
+                            border: "1px solid #aaa",
+                          }}
+                        />
+                      )}
                   </Box>
                 )}
               </Box>
@@ -890,98 +902,150 @@ const DoctorForm: React.FC = () => {
                 Availability
               </Typography>
               {values.availability.map((slot, index) => (
-                <Grid
-                  container
-                  spacing={2}
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 2, mb: 3 }}
                   key={index}
-                  alignItems="center"
-                  sx={{ mb: 2 }}
                 >
-                  <Grid item xs={4}>
-                    <Autocomplete
-                      options={[
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                        "Sunday",
-                      ]}
-                      getOptionLabel={(option) => option}
-                      value={slot.day || ""}
-                      onChange={(event, newValue) => {
-                        const updatedAvailability = [...values.availability];
-                        updatedAvailability[index].day = newValue || "";
-                        setFieldValue("availability", updatedAvailability);
-                      }}
-                      renderInput={(params) => (
-                        <MuiTextField
-                          {...params}
-                          label="Day"
-                          type="text"
-                          InputProps={{
-                            ...params.InputProps,
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <CalendarMonthIcon color="primary"/>
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
+                  <Grid
+                    container
+                    spacing={2}
+                    alignItems="center"
+                  >
+                    <Grid item xs={4}>
+                      <Field
+                        as={MuiTextField}
+                        label="Hospital Name"
+                        name={`availability[${index}].hospital.name`}
+                        fullWidth
+                        value={slot.hospital?.name || ""}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].hospital = {
+                            ...updatedAvailability[index].hospital,
+                            name: event.target.value,
+                          };
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <AssignmentIcon color="primary" />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Field
+                        as={MuiTextField}
+                        label="Hospital Location"
+                        name={`availability[${index}].hospital.location`}
+                        fullWidth
+                        value={slot.hospital?.location || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].hospital = {
+                            ...updatedAvailability[index].hospital,
+                            location: e.target.value,
+                          };
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <PlaceIcon color="primary" />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Autocomplete
+                        options={[
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                          "Saturday",
+                          "Sunday",
+                        ]}
+                        getOptionLabel={(option) => option}
+                        value={slot.day || ""}
+                        onChange={(event, newValue) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].day = newValue || "";
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        renderInput={(params) => (
+                          <MuiTextField
+                            {...params}
+                            label="Day"
+                            type="text"
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <CalendarMonthIcon color="primary" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Field
+                        as={MuiTextField}
+                        label="Start Time"
+                        name={`availability[${index}].startTime`}
+                        type="time"
+                        variant="outlined"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        value={slot.startTime || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].startTime = e.target.value;
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Field
+                        as={MuiTextField}
+                        label="End Time"
+                        name={`availability[${index}].endTime`}
+                        type="time"
+                        variant="outlined"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        value={slot.endTime || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const updatedAvailability = [...values.availability];
+                          updatedAvailability[index].endTime = e.target.value;
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={2} sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => {
+                          const updatedAvailability = values.availability.filter(
+                            (_, idx) => idx !== index
+                          );
+                          setFieldValue("availability", updatedAvailability);
+                        }}
+                        fullWidth
+                      >
+                        Remove
+                      </Button>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={3}>
-                    <Field
-                      as={MuiTextField}
-                      label="Start Time"
-                      name={`availability[${index}].startTime`}
-                      type="time"
-                      variant="outlined"
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      value={slot.startTime || ""}
-                      onChange={(e) => {
-                        const updatedAvailability = [...values.availability];
-                        updatedAvailability[index].startTime = e.target.value;
-                        setFieldValue("availability", updatedAvailability);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Field
-                      as={MuiTextField}
-                      label="End Time"
-                      name={`availability[${index}].endTime`}
-                      type="time"
-                      variant="outlined"
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      value={slot.endTime || ""}
-                      onChange={(e) => {
-                        const updatedAvailability = [...values.availability];
-                        updatedAvailability[index].endTime = e.target.value;
-                        setFieldValue("availability", updatedAvailability);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={2} sx={{ display: "flex", gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={() => {
-                        const updatedAvailability = values.availability.filter(
-                          (_, idx) => idx !== index
-                        );
-                        setFieldValue("availability", updatedAvailability);
-                      }}
-                      fullWidth
-                    >
-                      Remove
-                    </Button>
-                  </Grid>
-                </Grid>
+                </Paper>
               ))}
               <Box mt={2}>
                 <Grid container spacing={2}>
@@ -991,7 +1055,7 @@ const DoctorForm: React.FC = () => {
                       onClick={() =>
                         setFieldValue("availability", [
                           ...values.availability,
-                          { day: "", startTime: "", endTime: "" },
+                          { day: "", startTime: "", endTime: "", hospital: { name: "", location: "" } }
                         ])
                       }
                       sx={{ mt: 1 }}
@@ -1032,6 +1096,10 @@ const DoctorForm: React.FC = () => {
                               day,
                               startTime: firstSlot.startTime,
                               endTime: firstSlot.endTime,
+                              hospital: {
+                                name: firstSlot.hospital?.name || "",
+                                location: firstSlot.hospital?.location || "",
+                              },
                             }));
                             setFieldValue("availability", newAvailability);
                           }
