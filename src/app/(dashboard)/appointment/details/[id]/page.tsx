@@ -40,6 +40,7 @@ import { useGetSymptom } from "@/hooks/symptoms";
 import { useRouter, useParams } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { setSymptom } from "@/redux/features/symptomsSlice";
+import VisitsHistory from "./visitHistory";
 
 const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState("info");
@@ -65,6 +66,10 @@ const AppointmentDetails = () => {
     1,
     1
   );
+
+  const handleTabChange = (tabKey) => {
+    setActiveTab(tabKey);
+  };
 
   const tabs = [
     {
@@ -196,35 +201,7 @@ const AppointmentDetails = () => {
       icon: <HospitalIcon sx={{ color: "#4CAF50" }} />,
       name: "Visits",
       content: (
-        <div>
-          <Typography variant="h6" color="Black" gutterBottom>
-            Medical Details
-          </Typography>
-          {[
-            { title: "Initial Consultation", progress: 100 },
-            { title: "Follow-up Checkup", progress: 75 },
-          ].map((visit, index) => (
-            <div key={index} style={{ marginBottom: 8 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 4,
-                }}
-              >
-                <Typography variant="subtitle1">{visit.title}</Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {visit.progress}% Complete
-                </Typography>
-              </div>
-              <LinearProgress
-                variant="determinate"
-                value={visit.progress}
-                color="secondary"
-              />
-            </div>
-          ))}
-        </div>
+        <VisitsHistory patientId={patientId} onTabChange={handleTabChange} />
       ),
     },
     {
@@ -275,15 +252,14 @@ const AppointmentDetails = () => {
         >
           {/* Back Button */}
           <IconButton
-            onClick={() => router.back()} // Use router.back() to go back to the previous page
+            onClick={() => router.back()} 
             sx={{
-              marginRight: 2, // Add margin between back button and heading
+              marginRight: 2, 
             }}
           >
             <ArrowBackIcon sx={{ color: "primary.main" }} />
           </IconButton>
 
-          {/* Appointment History Heading */}
           <Typography
             variant="h4"
             sx={{
@@ -352,7 +328,7 @@ const AppointmentDetails = () => {
           flex: 1,
           display: "flex",
           padding: isSmallScreen ? "15px" : "30px",
-          marginTop:-12,
+          marginTop: -12,
           justifyContent: "center",
           alignItems: "center",
           background:
@@ -472,8 +448,8 @@ const AppointmentDetails = () => {
                 mt: 2,
               }}
             >
-              <Chip                           // time spam we can use dynamic which will come with video in the metadata
-                icon={<ScheduleIcon />} 
+              <Chip // time spam we can use dynamic which will come with video in the metadata
+                icon={<ScheduleIcon />}
                 label="2:34 mins"
                 size="small"
                 variant="outlined"
