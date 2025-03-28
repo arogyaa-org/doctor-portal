@@ -211,16 +211,21 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       <DialogTitle
         sx={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "center",
           pb: 1,
           backgroundColor: "#f8f9fa",
         }}
       >
-        <Typography variant="h6" fontWeight="bold">
-          Appointment Details
-        </Typography>
-        <IconButton onClick={onClose} size="small">
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{
+            "&:hover": {
+              color: "red", // Changes the icon color on hover
+            },
+          }}
+        >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
