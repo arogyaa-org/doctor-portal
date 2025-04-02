@@ -91,6 +91,7 @@ const initialValues: DoctorData = {
   availability: [],
   isVerified: false
 };
+let editFormValues: DoctorData;
 
 const DoctorProfile = () => {
   const [selectedTab, setSelectedTab] = useState<string | null>("info");
@@ -100,7 +101,10 @@ const DoctorProfile = () => {
     null
   );
   const [editFields, setEditFields] = useState<DoctorData>(initialValues);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [updatePassword, setUpdatePassword] = useState<boolean>(false);
 
+  const pwFieldRef = useRef<HTMLInputElement | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const bioInputRef = useRef<HTMLInputElement | null>(null);
   const { decodedToken } = Utility();
@@ -136,7 +140,6 @@ const DoctorProfile = () => {
         let response: undefined | getApiResponse;
         if (role === "doctor") {
           response = await fetcher("doctor", `get-doctor-by-id/${doctorId}`);
-          console.log(response, 'this is api resp')
         } else {
           response = await fetcher("user", `get-user-by-id/${doctorId}`);
         }
@@ -168,7 +171,7 @@ const DoctorProfile = () => {
   );
   const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200, "");
 
-  console.log(doctorProfileData, specialities, qualifications, symptoms, 'profile data with config');
+  console.log(doctorProfileData, 'profile data');
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -186,17 +189,7 @@ const DoctorProfile = () => {
     value: any,
     index?: number
   ) => {
-    if (field === "hospitalAffiliations" && index !== undefined) {
-      // Handle updates to individual hospital affiliations when editing
-      const updatedHospitalAffiliations = [...editFields.hospitalAffiliations];
-      updatedHospitalAffiliations[index] = value;
-      setEditFields({
-        ...editFields,
-        hospitalAffiliations: updatedHospitalAffiliations,
-      });
-    } else {
-      setEditFields({ ...editFields, [field]: value });
-    }
+    setEditFields({ ...editFields, [field]: value });
   };
 
   // Handle cancel changes (reset to original values)
@@ -209,7 +202,7 @@ const DoctorProfile = () => {
   const handleSaveChanges = async () => {
     try {
       await modifyDoctor(editFields);
-      setDoctorProfileData(editFields); // Update local state
+      // setDoctorProfileData(editFields); // Update local state
       setIsEditOpen(false);
     } catch (error) {
       console.error("Error updating doctor profile:", error);
@@ -235,59 +228,19 @@ const DoctorProfile = () => {
           onClick={handleEditOpen}
           sx={{
             display: "flex",
-            flexDirection: "column", // Change to column to align the buttons vertically
+            flexDirection: "column",
             position: "absolute",
             top: 16,
             right: 2,
             bgcolor: "white",
             boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
             "&:hover": { bgcolor: "grey.100" },
-            transition: "all 0.3s ease", // Smooth transition when Edit icon is clicked
+            transition: "all 0.3s ease",
           }}
         >
           <EditIcon />
         </IconButton>
       </Tooltip>
-
-      {/* Save and Cancel buttons, shown when Edit mode is active */}
-      {isEditOpen && (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column", // Change to column to align the buttons vertically
-            position: "absolute",
-            top: 70, // Keep this to align the buttons below the Edit icon
-            right: -3,
-            opacity: isEditOpen ? 1 : 0,
-            transform: isEditOpen ? "translateY(0)" : "translateY(-20px)",
-            transition: "opacity 0.3s ease, transform 0.3s ease",
-            width: "auto", // Adjust the width to auto so buttons stay in the same space
-            mr: 1,
-          }}
-        >
-          <Button
-            type="button"
-            variant="contained"
-            color="success"
-            onClick={handleSaveChanges}
-            sx={{ mb: 1, width: "15" }} // Adjusted width to fill the container width
-            disabled={
-              JSON.stringify(editFields) === JSON.stringify(doctorProfileData)
-            }
-          >
-            Save
-          </Button>
-
-          <Button
-            color="error"
-            variant="contained"
-            sx={{ mb: 1, width: "20" }} // Adjusted width to fill the container width
-            onClick={handleCancelChanges}
-          >
-            Cancel
-          </Button>
-        </Box>
-      )}
 
       <Box
         sx={{
@@ -535,7 +488,7 @@ const DoctorProfile = () => {
                   />
                 ) : (
                   <Typography variant="body2" sx={{ color: "#555" }}>
-                    {doctorProfileData?.contact || "+91 9876543210"}
+                    {doctorProfileData?.contact || "No Contact Available"}
                   </Typography>
                 )}
               </Box>
@@ -566,7 +519,7 @@ const DoctorProfile = () => {
                   />
                 ) : (
                   <Typography variant="body2" sx={{ color: "#555" }}>
-                    {doctorProfileData?.email || "doctor@example.com"}
+                    {doctorProfileData?.email || "No Email Available"}
                   </Typography>
                 )}
               </Box>
@@ -1370,6 +1323,45 @@ const DoctorProfile = () => {
           />
         </Box>
       </Modal>
+      {/* Save and Cancel buttons, shown when Edit mode is active */}
+      {isEditOpen && (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column", // Change to column to align the buttons vertically
+            position: "absolute",
+            top: 70, // Keep this to align the buttons below the Edit icon
+            right: -3,
+            opacity: isEditOpen ? 1 : 0,
+            transform: isEditOpen ? "translateY(0)" : "translateY(-20px)",
+            transition: "opacity 0.3s ease, transform 0.3s ease",
+            width: "auto", // Adjust the width to auto so buttons stay in the same space
+            mr: 1,
+          }}
+        >
+          <Button
+            type="button"
+            variant="contained"
+            color="success"
+            onClick={handleSaveChanges}
+            sx={{ mb: 1, width: "15" }} // Adjusted width to fill the container width
+            disabled={
+              JSON.stringify(editFields) === JSON.stringify(doctorProfileData)
+            }
+          >
+            Save
+          </Button>
+
+          <Button
+            color="error"
+            variant="contained"
+            sx={{ mb: 1, width: "20" }} // Adjusted width to fill the container width
+            onClick={handleCancelChanges}
+          >
+            Cancel
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 };
