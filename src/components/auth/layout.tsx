@@ -54,7 +54,7 @@ export function Layout({ children, clientRole }: LayoutProps): React.JSX.Element
               >
                 Welcome to{' '}
                 <Box component="span" sx={{ color: '#15b79e' }}>
-                  Doctor Portal
+                Arogyaa's Doctor Portal
                 </Box>
               </Typography>}
             <Typography align="center" variant="subtitle1">

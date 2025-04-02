@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { Button, Card, Stack, Typography } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
+import { isEqual } from "lodash";
 
 import Search from "@/components/common/Search";
 import ServerPaginationGrid from "@/components/common/Datagrid";
@@ -18,35 +19,51 @@ import { useGetDoctor } from "@/hooks/doctor";
 const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const { doctor, reduxLoading } = useSelector(
     (state: RootState) => state.doctor
   );
-  const [inputValue, setInputValue] = React.useState<string>("");
+  const [inputValue, setInputValue] = useState<string>("");
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
+
+  const apiParams = useMemo(
+    () => ({
+      page: currentPage + 1,
+      limit: pageSize,
+      search: inputValue,
+    }),
+    [currentPage, pageSize, inputValue]
+  );
 
   const { value: data, refetch } = useGetDoctor(
     null,
     "get-doctors",
-    currentPage,
-    ITEMS_PER_PAGE,
-    inputValue
+    apiParams.page,
+    apiParams.limit,
+    apiParams.search
   );
 
   useEffect(() => {
-    if (data?.results) {
+    if (data?.results && !isEqual(data, doctor)) {
       dispatch(setDoctor(data));
     }
-  }, [data?.results?.length]);
+  }, [data, doctor, dispatch, data?.results?.length]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(0);
+  };
+
   const handleSearch = async (query: string): Promise<void> => {
-    setInputValue(query); // Set the search query
-    await refetch(query); // Refetch with the new query, make sure refetch is awaited
+    setInputValue(query);
+    await refetch(query);
+    setCurrentPage(0);
   };
 
   return (
@@ -100,10 +117,11 @@ const Page: React.FC = () => {
           count={doctor?.count}
           rows={doctor?.results || []}
           loading={reduxLoading}
-          page={currentPage - 1}
-          pageSize={ITEMS_PER_PAGE}
-          pageSizeOptions={[10, 15, 20]}
-          onPageChange={(params: any) => handlePageChange(params + 1)}
+          page={currentPage}
+          pageSize={pageSize}
+          pageSizeOptions={[5, 10, 15, 20]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
           noRowsMessage="No Doctor Available"
         />
       </Card>

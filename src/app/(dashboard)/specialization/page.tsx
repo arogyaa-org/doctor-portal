@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Stack, Typography } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
+import { isEqual } from "lodash";
 
 import FormInModal from "./FormInModal";
 import Search from "@/components/common/Search";
@@ -17,12 +18,12 @@ import { SpecialityDatagridColumns } from "./specialityConfig";
 const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedSpecialityId, setSelectedSpecialityId] = useState<
     string | null
   >(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [inputValue, setInputValue] = React.useState<string>("");
 
   const dispatch: AppDispatch = useDispatch();
@@ -33,18 +34,16 @@ const Page: React.FC = () => {
   const { value: data, refetch } = useGetSpeciality(
     null,
     "get-specialities",
-    currentPage,
+    currentPage + 1,
     pageSize,
     inputValue
   );
 
-  console.log("data",data);
-
   useEffect(() => {
-    if (data?.results) {
+    if (data?.results && !isEqual(data, Speciality)) {
       dispatch(setSpeciality(data));
     }
-  }, [data?.results?.length, currentPage]);
+  }, [data, Speciality, dispatch,data?.results?.length]);
 
   const handleOpenDialog = (SpecialityId: string | null = null) => {
     setSelectedSpecialityId(SpecialityId);
@@ -52,17 +51,18 @@ const Page: React.FC = () => {
   };
 
   const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
+    setCurrentPage(newPage); // Already 0-based
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
-    setCurrentPage(1);
+    setCurrentPage(0); // Reset to first page when page size changes
   };
 
   const handleSearch = async (query: string): Promise<void> => {
     setInputValue(query); // Set the search query
     await refetch(query); // Refetch with the new query, make sure refetch is awaited
+    setCurrentPage(0);
   };
 
   return (
@@ -116,8 +116,10 @@ const Page: React.FC = () => {
           count={Speciality?.count}
           rows={Speciality?.results}
           loading={reduxLoading}
-          pageSizeOptions={[10, 15, 20]}
-          onPageChange={(params: any) => handlePageChange(params + 1)}
+          page={currentPage}
+          pageSize={pageSize}
+          pageSizeOptions={[5, 10, 15]}
+          onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           noRowsMessage="No Specialization Available"
         />

@@ -6,7 +6,7 @@
  * restrictions set forth in your license agreement with F2Fintech.
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   DataGrid,
   GridToolbar,
@@ -22,8 +22,12 @@ interface ServerPaginationGridProps {
   rows: any[] | undefined;
   count?: number;
   loading: boolean;
+  page: number;
+  pageSize: number;
   pageSizeOptions: number[];
   noRowsMessage?: string;
+  onPageChange: (newPage: number) => void;
+  onPageSizeChange?: (newPageSize: number) => void;
 }
 
 const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
@@ -31,22 +35,36 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
   rows = [],
   count = 0,
   loading,
+  page,
+  pageSize,
   pageSizeOptions,
   noRowsMessage = "No data available",
+  onPageChange,
+  onPageSizeChange,
 }) => {
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-    page: 1,
-    pageSize: 10,
-  });
-  const [rowCountState, setRowCountState] = useState<number>(count);
+  const [rowCountState, setRowCountState] = useState(count);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const handlePaginationModelChange = (params: GridPaginationModel) => {
-    setPaginationModel((prev) => ({
-      ...prev,
-      page: params.page,
-      pageSize: params.pageSize,
-    }));
-  };
+  useEffect(() => {
+    setRowCountState(count);
+  }, [count]);
+
+  const handlePaginationModelChange = useCallback(
+    (params: GridPaginationModel) => {
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+        return;
+      }
+
+      if (params.pageSize !== pageSize) {
+        onPageSizeChange?.(params.pageSize);
+        onPageChange(0); 
+      } else {
+        onPageChange(params.page);
+      }
+    },
+    [onPageChange, onPageSizeChange, pageSize, isInitialLoad]
+  );
 
   useEffect(() => {
     setRowCountState(count);
@@ -122,11 +140,11 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
         paginationMode="server"
         rowCount={rowCountState}
         pageSizeOptions={pageSizeOptions}
-        paginationModel={paginationModel}
+        paginationModel={{ page, pageSize }}
         onPaginationModelChange={handlePaginationModelChange}
         disableRowSelectionOnClick
         keepNonExistentRowsSelected
-        getRowHeight={() => "auto"} 
+        getRowHeight={() => "auto"}
       />
     </div>
   );

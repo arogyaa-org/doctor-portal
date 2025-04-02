@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Card,
@@ -12,6 +12,7 @@ import {
   Button,
 } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
+import { isEqual } from "lodash";
 
 import Toast from "@/components/common/Toast";
 import Search from "@/components/common/Search";
@@ -19,15 +20,15 @@ import ServerPaginationGrid from "@/components/common/Datagrid";
 import AppointmentModal from "@/app/(dashboard)/appointment/AppointmentModal";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { datagridColumns } from "./appointmentConfig";
-import { modifier, fetcher } from "@/apis/apiClient";
+import { modifier } from "@/apis/apiClient";
 import { useGetAppointment } from "@/hooks/appointment";
 import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
 import { Appointment } from "@/types/appointment";
 import { Utility } from "@/utils";
 
 const Page: React.FC = () => {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(10);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [openModal, setOpenModal] = React.useState(false);
   const [selectedAppointment, setSelectedAppointment] =
     React.useState<Appointment | null>(null);
@@ -56,26 +57,29 @@ const Page: React.FC = () => {
     null,
     apiEndpoint,
     undefined,
-    currentPage,
-    limit,
+    currentPage + 1,
+    pageSize,
     inputValue ||
       (selectedStatus !== "all" ? selectedStatus : selectedDateFilter)
   );
 
-  // Fetch and store appointments in Redux
-  const handleDispatch = React.useCallback(() => {
-    dispatch(setLoading(true));
-    if (data) {
+  // Fetch and store appointments in Redux when data changes
+  useEffect(() => {
+    if (data?.results && !isEqual(data.results, appointment?.results)) {
       dispatch(setAppointment(data));
-      dispatch(setLoading(false));
-    } else {
-      dispatch(setLoading(false));
     }
-  }, [data?.results?.length, dispatch]);
+  }, [data, dispatch, appointment]);
 
-  React.useEffect(() => {
-    handleDispatch();
-  }, [handleDispatch]);
+  // Handle page changes
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  // Handle page size changes
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(0);
+  };
 
   const handleOpenModal = (appointment: Appointment | null) => {
     setSelectedAppointment(appointment || null);
@@ -99,50 +103,63 @@ const Page: React.FC = () => {
   const handleSearch = async (query: string): Promise<void> => {
     setInputValue(query);
     await refetch(query);
+    setCurrentPage(0);
   };
 
+  // Handle status changes
   const handleStatusChange = useCallback(
     async (appointmentId: string, newStatus: string) => {
       if (!appointmentId) return;
 
+      // Optimistically update the Redux store with the new status
+      const updatedAppointments = appointment.results.map(
+        (appointment: Appointment) =>
+          appointment._id === appointmentId
+            ? { ...appointment, status: newStatus }
+            : appointment
+      );
+      dispatch(
+        setAppointment({ ...appointment, results: updatedAppointments })
+      );
+
       try {
-        // Update appointment status
-        await modifier("appointment", "update-appointment", {
+        // Send the status update request to the backend
+        const response = await modifier("appointment", "update-appointment", {
           _id: appointmentId,
           status: newStatus,
         });
 
-        // Update Redux state with new status immediately
-        const updatedAppointments = appointment.results.map(
+        if (response) {
+          // Only refetch the data if the backend response confirms the change
+          await refetch();
+
+          // Optionally, refetch a specific data set if it's crucial
+          toastAndNavigate(
+            dispatch,
+            true,
+            "success",
+            "Status updated successfully"
+          );
+        }
+      } catch (error) {
+        console.error("Error updating status:", error);
+
+        // Revert the status change if the backend call fails
+        const revertedAppointments = appointment.results.map(
           (appointment: Appointment) =>
             appointment._id === appointmentId
-              ? { ...appointment, status: newStatus }
+              ? { ...appointment, status: appointment.status } // Keep the previous status
               : appointment
         );
         dispatch(
-          setAppointment({ ...appointment, results: updatedAppointments })
+          setAppointment({ ...appointment, results: revertedAppointments })
         );
 
-        // Optionally, refetch the data to sync UI
-        refetch();
-
-        toastAndNavigate(
-          dispatch,
-          true,
-          "success",
-          "Status updated successfully"
-        );
-      } catch (error) {
-        console.error("Error updating status:", error);
         toastAndNavigate(dispatch, true, "error", "Failed to update status");
       }
     },
-    [appointment, dispatch, refetch, toastAndNavigate]
+    [appointment, dispatch, toastAndNavigate, refetch]
   );
-
-  React.useEffect(() => {
-    refetch();
-  }, [selectedStatus, selectedDateFilter, inputValue]);
 
   return (
     <Stack spacing={3}>
@@ -210,27 +227,6 @@ const Page: React.FC = () => {
 
         <Stack direction="row" spacing={2} alignItems="center">
           <Search refetchAPI={handleSearch} holderText="Appointment" />
-
-          {/* <Button
-            variant="contained"
-            startIcon={<CreateIcon />}
-            onClick={() => handleOpenModal(null)}
-            sx={{
-              borderRadius: "100px",
-              background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
-              px: 3,
-              textTransform: "none",
-              fontWeight: 600,
-              boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-              minHeight: "45px",
-              "&:hover": {
-                background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
-                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-              },
-            }}
-          >
-            Create
-          </Button> */}
         </Stack>
       </Stack>
 
@@ -245,15 +241,16 @@ const Page: React.FC = () => {
       <Card sx={{ marginTop: "-25px" }}>
         <ServerPaginationGrid
           columns={datagridColumns({
-            refetch,
-            selectedStatus,
-            selectedDateFilter,
             handleStatusChange,
           })}
           count={appointment?.count}
           rows={appointment?.results || []}
           loading={reduxLoading}
+          page={currentPage}
+          pageSize={pageSize}
           pageSizeOptions={[5, 10, 20]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
           noRowsMessage="No Appointment Available"
         />
       </Card>
