@@ -3,66 +3,60 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, Stack, Typography, Box } from "@mui/material";
+import { isEqual } from "lodash";
 
 import Search from "@/components/common/Search";
 import ServerPaginationGrid from "@/components/common/Datagrid";
 import type { AppDispatch, RootState } from "@/redux/store";
-import type { Patient } from "@/types/patient";
 import { patientDatagridColumns as datagridColumns } from "./patientConfig";
 import { useGetPatient } from "@/hooks/patient";
-import { setPatient, setLoading } from "@/redux/features/patientSlice";
+import { setPatient } from "@/redux/features/patientSlice";
 import { Utility } from "@/utils";
+import { useEffect } from "react";
+
+const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(10);
-  const dispatch: AppDispatch = useDispatch();
-  const { patient, reduxLoading } = useSelector(
-    (state: RootState) => state.patient
-  );
-  const [inputValue, setInputValue] = React.useState<string>("");
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(ITEMS_PER_PAGE);
+  const [inputValue, setInputValue] = React.useState("");
+  const dispatch = useDispatch<AppDispatch>();
+  const { patient } = useSelector((state: RootState) => state.patient);
 
   const { decodedToken } = Utility();
-    const role = decodedToken()?.role;
-    const doctorId = decodedToken()?.id;
-  
-    const apiEndpoint =
-      role === "doctor" && doctorId
-        ? `get-patients-by-doctor-id/${doctorId}`
-        : "get-patients";
+  const role = decodedToken?.role;
+  const doctorId = decodedToken?.id;
 
-        console.log("lskdjlskdj",apiEndpoint);
-        
-  
+  const apiEndpoint =
+    role === "doctor" && doctorId
+      ? `get-patients-by-doctor-id/${doctorId}`
+      : "get-patients";
 
-  const { value: data, refetch } = useGetPatient(
-    null,
-    apiEndpoint,
-    currentPage,
-    limit,
-    inputValue
-  );
+  const {
+    value: data,
+    isLoading,
+    refetch,
+  } = useGetPatient(null, apiEndpoint, currentPage + 1, pageSize, inputValue);
 
-  const handleDispatch = React.useCallback(() => {
-    dispatch(setLoading(true));
-    if (data) {
+  useEffect(() => {
+    if (data?.results && !isEqual(data, patient)) {
       dispatch(setPatient(data));
-      dispatch(setLoading(false));
-    } else {
-      dispatch(setLoading(false));
     }
-  }, [data?.results?.length, dispatch]);
+  }, [data, patient, dispatch, data?.results?.length]);
 
-  React.useEffect(() => {
-    handleDispatch();
-  }, [handleDispatch]);
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
-  console.log("patient data:", patient);
-  console.log("total items:", data);
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(0);
+  };
 
   const handleSearch = async (query: string): Promise<void> => {
-    setInputValue(query); // Set the search query
-    await refetch(query); // Refetch with the new query, make sure refetch is awaited
+    setInputValue(query);
+    await refetch(query);
+    setCurrentPage(0);
   };
 
   return (
@@ -75,33 +69,26 @@ const Page: React.FC = () => {
       >
         <Typography
           variant="h4"
-          sx={{
-            flex: 1,
-            fontWeight: 600,
-            marginLeft: "25px",
-          }}
+          sx={{ flex: 1, fontWeight: 600, marginLeft: "25px" }}
         >
           Patient
         </Typography>
-
-        <Box
-          sx={{
-            maxWidth: "350px",
-            width: "100%",
-            marginRight: "25px",
-          }}
-        >
-           <Search refetchAPI={handleSearch} holderText="Patient" />
+        <Box sx={{ maxWidth: "350px", width: "100%", marginRight: "25px" }}>
+          <Search refetchAPI={handleSearch} holderText="Patient" />
         </Box>
       </Stack>
 
       <Card>
         <ServerPaginationGrid
           columns={datagridColumns()}
-          count={patient?.count}
+          count={patient?.count || 0}
           rows={patient?.results || []}
-          loading={reduxLoading}
+          loading={isLoading}
+          page={currentPage}
+          pageSize={pageSize}
           pageSizeOptions={[5, 10, 20]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
           noRowsMessage="No Patient Available"
         />
       </Card>

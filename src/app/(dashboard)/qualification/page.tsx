@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Stack, Typography } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
+import { isEqual } from "lodash";
 
 import FormInModal from "./FormInModal";
 import Search from "@/components/common/Search";
@@ -17,11 +18,12 @@ import { qualificationDatagridColumns } from "./qualificationConfig";
 const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedQualificationId, setSelectedQualificationId] = useState<
     string | null
   >(null);
-  const [currentPage, setCurrentPage] = useState(1);
 
   const [inputValue, setInputValue] = React.useState<string>("");
   const dispatch: AppDispatch = useDispatch();
@@ -32,16 +34,16 @@ const Page: React.FC = () => {
   const { value: data, refetch } = useGetQualification(
     null,
     "get-qualifications",
-    currentPage,
-    ITEMS_PER_PAGE,
+    currentPage + 1,
+    pageSize,
     inputValue
   );
 
   useEffect(() => {
-    if (data?.results) {
+    if (data?.results && !isEqual(data, qualification)) {
       dispatch(setQualification(data));
     }
-  }, [data?.results?.length]);
+  }, [data, qualification, dispatch, data?.results?.length]);
 
   const handleOpenDialog = (qualificationId: string | null = null) => {
     setSelectedQualificationId(qualificationId);
@@ -52,9 +54,15 @@ const Page: React.FC = () => {
     setCurrentPage(newPage);
   };
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(0); 
+  };
+
   const handleSearch = async (query: string): Promise<void> => {
-    setInputValue(query); 
-    await refetch(query); 
+    setInputValue(query);
+    await refetch(query);
+    setCurrentPage(0);
   };
 
   return (
@@ -77,7 +85,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-        <Search refetchAPI={handleSearch} holderText="Qualification" />
+          <Search refetchAPI={handleSearch} holderText="Qualification" />
 
           <Button
             variant="contained"
@@ -106,13 +114,13 @@ const Page: React.FC = () => {
         <ServerPaginationGrid
           columns={qualificationDatagridColumns(handleOpenDialog)}
           count={qualification?.count || 0}
-          paginationMode="server"
           rows={qualification?.results || []}
           loading={reduxLoading}
-          page={currentPage - 1}
-          pageSize={ITEMS_PER_PAGE}
-          pageSizeOptions={[10, 15, 20]}
-          onPageChange={(params: any) => handlePageChange(params + 1)}
+          page={currentPage}
+          pageSize={pageSize}
+          pageSizeOptions={[5, 10, 20]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
           noRowsMessage="No Qualification Available"
         />
       </Card>

@@ -140,11 +140,11 @@ const DoctorForm: React.FC = () => {
   //Create/Edit/Populate Doctor
   useEffect(() => {
     if (doctorId) {
-      setTitle("Edit");
+      setTitle("Edit Doctor");
       populateData(doctorId);
     } else {
       setFormValues(initialValues);
-      setTitle("Create");
+      setTitle("Create Doctor");
     }
   }, [doctorId]);
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Stack, Typography } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
+import { isEqual } from "lodash";
 
 import FormInModal from "./FormInModal";
 import Search from "@/components/common/Search";
@@ -17,11 +18,12 @@ import { symptomDatagridColumns } from "./symptomsConfig";
 const ITEMS_PER_PAGE = 10;
 
 const Page: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedSymptomId, setSelectedSymptomId] = useState<string | null>(
     null
   );
-  const [currentPage, setCurrentPage] = useState(1);
   const [inputValue, setInputValue] = React.useState<string>("");
 
   const dispatch: AppDispatch = useDispatch();
@@ -32,16 +34,16 @@ const Page: React.FC = () => {
   const { value: data, refetch } = useGetSymptom(
     null,
     "get-symptoms",
-    currentPage,
-    ITEMS_PER_PAGE,
+    currentPage + 1,
+    pageSize,
     inputValue
   );
 
   useEffect(() => {
-    if (data?.results) {
+    if (data?.results && !isEqual(data, symptom)) {
       dispatch(setSymptom(data));
     }
-  }, [data?.results?.length]);
+  }, [data, symptom, dispatch, data?.results?.length]);
 
   const handleOpenDialog = (symptomId: string | null = null) => {
     setSelectedSymptomId(symptomId);
@@ -49,14 +51,19 @@ const Page: React.FC = () => {
   };
 
   const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
+    setCurrentPage(newPage); // Already 0-based
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(0); // Reset to first page when page size changes
   };
 
   const handleSearch = async (query: string): Promise<void> => {
     setInputValue(query); // Set the search query
     await refetch(query); // Refetch with the new query, make sure refetch is awaited
+    setCurrentPage(0);
   };
-
 
   return (
     <Stack spacing={3}>
@@ -78,7 +85,7 @@ const Page: React.FC = () => {
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
-        <Search refetchAPI={handleSearch} holderText="Symptom" />
+          <Search refetchAPI={handleSearch} holderText="Symptom" />
 
           <Button
             variant="contained"
@@ -107,13 +114,13 @@ const Page: React.FC = () => {
         <ServerPaginationGrid
           columns={symptomDatagridColumns(handleOpenDialog)}
           count={symptom?.count}
-          paginationMode="server"
           rows={symptom?.results}
           loading={reduxLoading}
-          page={currentPage - 1}
-          pageSize={ITEMS_PER_PAGE}
-          pageSizeOptions={[10, 15, 20]}
-          onPageChange={(params: any) => handlePageChange(params + 1)}
+          page={currentPage}
+          pageSize={pageSize}
+          pageSizeOptions={[5, 10, 20]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
           noRowsMessage="No Symtom Available"
         />
       </Card>
