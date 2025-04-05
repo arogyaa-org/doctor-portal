@@ -21,7 +21,7 @@ import {
   IconButton,
   Autocomplete,
   FormControlLabel,
-  Checkbox
+  Checkbox,
 } from "@mui/material";
 import {
   Person as PersonIcon,
@@ -81,12 +81,12 @@ const initialValues: DoctorData = {
   specializationIds: [],
   symptomIds: [],
   availability: [],
-  isVerified: false
+  isVerified: false,
 };
 let editFormValues: DoctorData;
 
 const DoctorForm: React.FC = () => {
-  const [title, setTitle] = useState<"Create" | "Edit">("Create");
+  const [title, setTitle] = useState<"Create Doctor" | "Edit Doctor">();
   const [loading, setLoading] = useState<boolean>(false);
   const [formValues, setFormValues] = useState<DoctorData>(initialValues);
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -103,9 +103,21 @@ const DoctorForm: React.FC = () => {
   const { getIdsFromObject, toastAndNavigate } = Utility();
   const doctorId = params?.id;
 
-  const { value: specialities } = useGetSpeciality(null, "get-specialities", 1, 200, "");
+  const { value: specialities } = useGetSpeciality(
+    null,
+    "get-specialities",
+    1,
+    200,
+    ""
+  );
 
-  const { value: qualifications } = useGetQualification(null, "get-qualifications", 1, 200, "");
+  const { value: qualifications } = useGetQualification(
+    null,
+    "get-qualifications",
+    1,
+    200,
+    ""
+  );
   const { value: symptoms, swrLoading: symptomLoading } = useGetSymptom(
     null,
     "get-symptoms",
@@ -319,7 +331,7 @@ const DoctorForm: React.FC = () => {
                 error={touched.email && Boolean(errors.email)}
                 helperText={touched.email && errors.email}
               />
-              {(title === "Create" || updatePassword) && (
+              {(title === "Create Doctor" || updatePassword) && (
                 <Field
                   fullWidth
                   as={MuiTextField}
@@ -554,7 +566,9 @@ const DoctorForm: React.FC = () => {
                   );
                   setFieldValue(
                     "tags",
-                    Array.from(new Set([...updatedTags, ...selectedSpecializationTags]))
+                    Array.from(
+                      new Set([...updatedTags, ...selectedSpecializationTags])
+                    )
                   );
                 }}
                 sx={{ gridColumn: "span 2" }}
@@ -568,8 +582,10 @@ const DoctorForm: React.FC = () => {
                       !!touched.specializationIds && !!errors.specializationIds
                     }
                     helperText={
-                      touched.specializationIds && typeof errors.specializationIds === "string"
-                        ? errors.specializationIds : ""
+                      touched.specializationIds &&
+                      typeof errors.specializationIds === "string"
+                        ? errors.specializationIds
+                        : ""
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -599,9 +615,7 @@ const DoctorForm: React.FC = () => {
                   setFieldValue("symptomIds", value);
 
                   // Extract selected symptom names
-                  const selectedSymptomTags = value.map(
-                    (item) => item.name
-                  );
+                  const selectedSymptomTags = value.map((item) => item.name);
 
                   // Remove deselected symptom names from tags
                   const updatedTags = values.tags.filter(
@@ -611,7 +625,9 @@ const DoctorForm: React.FC = () => {
                   );
                   setFieldValue(
                     "tags",
-                    Array.from(new Set([...updatedTags, ...selectedSymptomTags]))
+                    Array.from(
+                      new Set([...updatedTags, ...selectedSymptomTags])
+                    )
                   );
                 }}
                 sx={{ gridColumn: "span 2" }}
@@ -624,7 +640,7 @@ const DoctorForm: React.FC = () => {
                     error={!!touched.symptomIds && !!errors.symptomIds}
                     helperText={
                       touched.symptomIds &&
-                        typeof errors.symptomIds === "string"
+                      typeof errors.symptomIds === "string"
                         ? errors.symptomIds
                         : ""
                     }
@@ -667,7 +683,9 @@ const DoctorForm: React.FC = () => {
                   );
                   setFieldValue(
                     "tags",
-                    Array.from(new Set([...updatedTags, ...selectedQualificationTags]))
+                    Array.from(
+                      new Set([...updatedTags, ...selectedQualificationTags])
+                    )
                   );
                 }}
                 sx={{ gridColumn: "span 2" }}
@@ -681,8 +699,10 @@ const DoctorForm: React.FC = () => {
                       !!touched.qualificationIds && !!errors.qualificationIds
                     }
                     helperText={
-                      touched.qualificationIds && typeof errors.qualificationIds === "string"
-                        ? errors.qualificationIds : ""
+                      touched.qualificationIds &&
+                      typeof errors.qualificationIds === "string"
+                        ? errors.qualificationIds
+                        : ""
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -745,7 +765,9 @@ const DoctorForm: React.FC = () => {
                 control={
                   <Checkbox
                     checked={values.isVerified}
-                    onChange={(event) => setFieldValue("isVerified", event.target.checked)}
+                    onChange={(event) =>
+                      setFieldValue("isVerified", event.target.checked)
+                    }
                     sx={{
                       color: values.isVerified ? "#3f51b5" : "default",
                       "&.Mui-checked": {
@@ -863,22 +885,22 @@ const DoctorForm: React.FC = () => {
                     {/* Image Preview */}
                     {(values.profilePicture?.preview ||
                       typeof values.profilePicture === "string") && (
-                        <Box
-                          component="img"
-                          src={
-                            typeof values.profilePicture === "string"
-                              ? values.profilePicture // value From database
-                              : values.profilePicture.preview // From file upload
-                          }
-                          alt="Profile Preview"
-                          sx={{
-                            width: "100%",
-                            height: "100%",
-                            borderRadius: "8px",
-                            border: "1px solid #aaa",
-                          }}
-                        />
-                      )}
+                      <Box
+                        component="img"
+                        src={
+                          typeof values.profilePicture === "string"
+                            ? values.profilePicture // value From database
+                            : values.profilePicture.preview // From file upload
+                        }
+                        alt="Profile Preview"
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #aaa",
+                        }}
+                      />
+                    )}
                   </Box>
                 )}
               </Box>
@@ -902,16 +924,8 @@ const DoctorForm: React.FC = () => {
                 Availability
               </Typography>
               {values.availability.map((slot, index) => (
-                <Paper
-                  variant="outlined"
-                  sx={{ p: 2, mb: 3 }}
-                  key={index}
-                >
-                  <Grid
-                    container
-                    spacing={2}
-                    alignItems="center"
-                  >
+                <Paper variant="outlined" sx={{ p: 2, mb: 3 }} key={index}>
+                  <Grid container spacing={2} alignItems="center">
                     <Grid item xs={4}>
                       <Field
                         as={MuiTextField}
@@ -919,7 +933,9 @@ const DoctorForm: React.FC = () => {
                         name={`availability[${index}].hospital.name`}
                         fullWidth
                         value={slot.hospital?.name || ""}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        onChange={(
+                          event: React.ChangeEvent<HTMLInputElement>
+                        ) => {
                           const updatedAvailability = [...values.availability];
                           updatedAvailability[index].hospital = {
                             ...updatedAvailability[index].hospital,
@@ -1034,9 +1050,10 @@ const DoctorForm: React.FC = () => {
                         variant="outlined"
                         color="error"
                         onClick={() => {
-                          const updatedAvailability = values.availability.filter(
-                            (_, idx) => idx !== index
-                          );
+                          const updatedAvailability =
+                            values.availability.filter(
+                              (_, idx) => idx !== index
+                            );
                           setFieldValue("availability", updatedAvailability);
                         }}
                         fullWidth
@@ -1055,7 +1072,12 @@ const DoctorForm: React.FC = () => {
                       onClick={() =>
                         setFieldValue("availability", [
                           ...values.availability,
-                          { day: "", startTime: "", endTime: "", hospital: { name: "", location: "" } }
+                          {
+                            day: "",
+                            startTime: "",
+                            endTime: "",
+                            hospital: { name: "", location: "" },
+                          },
                         ])
                       }
                       sx={{ mt: 1 }}
@@ -1117,7 +1139,7 @@ const DoctorForm: React.FC = () => {
             </Box>
 
             <Box display="flex" justifyContent="end" m="20px">
-              {title === "Edit" ? null : (
+              {title === "Edit Doctor" ? null : (
                 <Button
                   type="reset"
                   color="warning"
@@ -1145,7 +1167,7 @@ const DoctorForm: React.FC = () => {
                 type="submit"
                 variant="contained"
                 disabled={!dirty || isSubmitting}
-                color={title === "Edit" ? "info" : "success"}
+                color={title === "Edit Doctor" ? "info" : "success"}
               >
                 Submit
               </Button>
