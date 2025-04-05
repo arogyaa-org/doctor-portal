@@ -1,5 +1,5 @@
 /**
- * Copyright © 2023, F2Fintech Inc. ALL RIGHTS RESERVED.
+ * Copyright © 2024, F2Fintech Inc. ALL RIGHTS RESERVED.
  *
  * This software is the confidential information of F2Fintech Inc., and is licensed as
  * restricted rights software. The use, reproduction, or disclosure of this software is subject to
@@ -43,7 +43,6 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
   onPageSizeChange,
 }) => {
   const [rowCountState, setRowCountState] = useState(count);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     setRowCountState(count);
@@ -51,19 +50,14 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
 
   const handlePaginationModelChange = useCallback(
     (params: GridPaginationModel) => {
-      if (isInitialLoad) {
-        setIsInitialLoad(false);
-        return;
-      }
-
+      // Handle page size change
       if (params.pageSize !== pageSize) {
-        onPageSizeChange?.(params.pageSize);
-        onPageChange(0); 
-      } else {
-        onPageChange(params.page);
+        onPageSizeChange?.(params.pageSize); // Trigger page size change
+      } else if (params.page !== page) {
+        onPageChange(params.page); // Trigger page change if the page has changed
       }
     },
-    [onPageChange, onPageSizeChange, pageSize, isInitialLoad]
+    [onPageChange, onPageSizeChange, page, pageSize] // Depend on page and pageSize to trigger only when necessary
   );
 
   useEffect(() => {
