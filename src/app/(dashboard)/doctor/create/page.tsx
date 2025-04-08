@@ -68,7 +68,7 @@ const initialValues: DoctorData = {
   contact: "",
   gender: "",
   dob: "",
-  experience: "",
+  experience: null,
   bio: "",
   tags: [],
   languagesSpoken: [],
@@ -428,6 +428,7 @@ const DoctorForm: React.FC = () => {
                 as={MuiTextField}
                 label="Experience (in years)"
                 name="experience"
+                type="number"
                 fullWidth
                 InputProps={{
                   startAdornment: (
@@ -558,18 +559,18 @@ const DoctorForm: React.FC = () => {
                     (item) => item.name
                   );
 
-                  // Remove deselected specialization names from tags
-                  const updatedTags = values.tags.filter(
-                    (tag) =>
-                      selectedSpecializationTags.includes(tag) ||
-                      values.qualificationIds.some((qual) => qual.name === tag)
-                  );
-                  setFieldValue(
-                    "tags",
-                    Array.from(
-                      new Set([...updatedTags, ...selectedSpecializationTags])
-                    )
-                  );
+                  // Update tags by adding/removing the selected specialization tags
+                  const updatedTags = [
+                    ...new Set([
+                      ...values.tags.filter(
+                        (tag) =>
+                          !selectedSpecializationTags.includes(tag) // Remove existing selected tags
+                      ),
+                      ...selectedSpecializationTags, // Add newly selected tags
+                    ]),
+                  ];
+
+                  setFieldValue("tags", updatedTags);
                 }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
@@ -583,7 +584,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.specializationIds &&
-                      typeof errors.specializationIds === "string"
+                        typeof errors.specializationIds === "string"
                         ? errors.specializationIds
                         : ""
                     }
@@ -617,18 +618,18 @@ const DoctorForm: React.FC = () => {
                   // Extract selected symptom names
                   const selectedSymptomTags = value.map((item) => item.name);
 
-                  // Remove deselected symptom names from tags
-                  const updatedTags = values.tags.filter(
-                    (tag) =>
-                      selectedSymptomTags.includes(tag) ||
-                      values.specializationIds.some((spec) => spec.name === tag)
-                  );
-                  setFieldValue(
-                    "tags",
-                    Array.from(
-                      new Set([...updatedTags, ...selectedSymptomTags])
-                    )
-                  );
+                  // Update tags by adding/removing the selected symptom tags
+                  const updatedTags = [
+                    ...new Set([
+                      ...values.tags.filter(
+                        (tag) =>
+                          !selectedSymptomTags.includes(tag) // Remove existing selected tags
+                      ),
+                      ...selectedSymptomTags, // Add newly selected tags
+                    ]),
+                  ];
+
+                  setFieldValue("tags", updatedTags);
                 }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
@@ -640,7 +641,7 @@ const DoctorForm: React.FC = () => {
                     error={!!touched.symptomIds && !!errors.symptomIds}
                     helperText={
                       touched.symptomIds &&
-                      typeof errors.symptomIds === "string"
+                        typeof errors.symptomIds === "string"
                         ? errors.symptomIds
                         : ""
                     }
@@ -675,18 +676,18 @@ const DoctorForm: React.FC = () => {
                     (item) => item.name
                   );
 
-                  // Remove deselected qualification names from tags
-                  const updatedTags = values.tags.filter(
-                    (tag) =>
-                      selectedQualificationTags.includes(tag) ||
-                      values.specializationIds.some((spec) => spec.name === tag)
-                  );
-                  setFieldValue(
-                    "tags",
-                    Array.from(
-                      new Set([...updatedTags, ...selectedQualificationTags])
-                    )
-                  );
+                  // Update tags by adding/removing the selected qualification tags
+                  const updatedTags = [
+                    ...new Set([
+                      ...values.tags.filter(
+                        (tag) =>
+                          !selectedQualificationTags.includes(tag) // Remove existing selected tags
+                      ),
+                      ...selectedQualificationTags, // Add newly selected tags
+                    ]),
+                  ];
+
+                  setFieldValue("tags", updatedTags);
                 }}
                 sx={{ gridColumn: "span 2" }}
                 renderInput={(params) => (
@@ -700,7 +701,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.qualificationIds &&
-                      typeof errors.qualificationIds === "string"
+                        typeof errors.qualificationIds === "string"
                         ? errors.qualificationIds
                         : ""
                     }
@@ -744,7 +745,7 @@ const DoctorForm: React.FC = () => {
                 multiline
                 minRows={3} // Set the initial height of the textarea
                 maxRows={10} // Set a maximum number of rows to prevent it from growing indefinitely
-                value={values.tags?.join(", ")}
+                value={values.tags?.join(",")}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFieldValue(
                     "tags",
@@ -885,22 +886,22 @@ const DoctorForm: React.FC = () => {
                     {/* Image Preview */}
                     {(values.profilePicture?.preview ||
                       typeof values.profilePicture === "string") && (
-                      <Box
-                        component="img"
-                        src={
-                          typeof values.profilePicture === "string"
-                            ? values.profilePicture // value From database
-                            : values.profilePicture.preview // From file upload
-                        }
-                        alt="Profile Preview"
-                        sx={{
-                          width: "100%",
-                          height: "100%",
-                          borderRadius: "8px",
-                          border: "1px solid #aaa",
-                        }}
-                      />
-                    )}
+                        <Box
+                          component="img"
+                          src={
+                            typeof values.profilePicture === "string"
+                              ? values.profilePicture // value From database
+                              : values.profilePicture.preview // From file upload
+                          }
+                          alt="Profile Preview"
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: "8px",
+                            border: "1px solid #aaa",
+                          }}
+                        />
+                      )}
                   </Box>
                 )}
               </Box>

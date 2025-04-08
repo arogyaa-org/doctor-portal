@@ -21,12 +21,16 @@ const validationSchema = yup.object().shape({
   contact: yup.string()
     .matches(phoneRegExp, "Phone Number Is Not Valid")
     .required("This Field is Required"),
+  experience: yup.number()
+    .max(70, "Experience must be less than 70 years"),
   specializationIds: yup.array()
-    .min(1, "Select At Least 1 Specialization"),
+    .min(1, "Select At Least 1 Specialization")
+    .max(4, "Maximum 5 Specialization Allowed"),
   symptomIds: yup.array()
     .min(1, "Select At Least 1 Symptom"),
   qualificationIds: yup.array()
-    .min(1, "Select At Least 1 Qualification"),
+    .min(1, "Select At Least 1 Qualification")
+    .max(4, "Maximum 5 Qualifications Allowed"),
   gender: yup.string(),
   status: yup.string(),
   bio: yup.string(),
