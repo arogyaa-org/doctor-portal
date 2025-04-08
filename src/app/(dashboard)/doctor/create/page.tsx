@@ -172,6 +172,15 @@ const DoctorForm: React.FC = () => {
         specializationIds: getIdsFromObject(values?.specializationIds),
         symptomIds: getIdsFromObject(values?.symptomIds),
       });
+      if (response?.statusCode === 409) {
+        toastAndNavigate(
+          dispatch,
+          true,
+          "error",
+          "Email already exists",
+          () => location.reload()
+        );
+      }
       if (response?.statusCode === 201) {
         toastAndNavigate(
           dispatch,
@@ -185,8 +194,8 @@ const DoctorForm: React.FC = () => {
       const errorMessage =
         error?.response?.data?.message ||
         "Error creating Doctor, please try again.";
-      toastAndNavigate(dispatch, true, "error", errorMessage, () =>
-        router.back()
+      toastAndNavigate(dispatch, true, "error", errorMessage,
+        () => location.reload()
       );
     } finally {
       setLoading(false);
@@ -239,8 +248,8 @@ const DoctorForm: React.FC = () => {
       } catch (err: any) {
         const errorMessage =
           err?.response?.data?.message || "Error Occurred. Please Try Again";
-        toastAndNavigate(dispatch, true, "error", errorMessage, () =>
-          router.back()
+        toastAndNavigate(dispatch, true, "error", errorMessage,
+          () => location.reload()
         );
       } finally {
         setLoading(false);

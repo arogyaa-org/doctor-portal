@@ -272,9 +272,11 @@ const FormInModal: React.FC<FormInModalProps> = ({
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "1fr auto",
+                  gridTemplateColumns: "repeat(2, 1fr)",
                   gap: "16px",
                   alignItems: "center",
+                  justifyItems: "center",
+                  mt: "15px"
                 }}
               >
                 {/* Upload Icon with Label */}
@@ -286,8 +288,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
                     justifyContent: "center",
                     border: "1px solid #ccc",
                     borderRadius: "8%",
-                    width: "146px",
-                    height: "104px",
+                    width: "150px",
+                    height: "120px",
                     cursor: "pointer",
                     textAlign: "center",
                     transition: "border-color 0.3s ease, color 0.3s ease",
@@ -302,7 +304,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
                 >
                   <AddPhotoAlternateIcon
                     sx={{
-                      fontSize: "32px",
+                      fontSize: "36px",
                       color: '#aaa',
                       mb: 1,
                       transition: "color 0.3s ease"
@@ -340,7 +342,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
                     sx={{
                       position: "relative",
                       width: "150px",
-                      height: "106px",
+                      height: "120px",
                     }}
                   >
                     {/* Delete Icon */}
@@ -354,8 +356,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
                       }}
                       sx={{
                         position: "absolute",
-                        top: "-6px",
-                        right: "-6px",
+                        top: "-3px",
+                        right: "-4px",
                         backgroundColor: "white",
                         zIndex: 1,
                         p: "4px",
