@@ -38,7 +38,7 @@ export const datagridColumns = ({
     headerClassName: "super-app-theme--header",
     headerAlign: "center",
     align: "center",
-    flex: 1,
+    flex: 1.5,
     renderCell: ({ row: { doctorId } }) => (
       <Typography>
         {capitalizeFirstLetter(doctorId?.username) || "N/A"}
@@ -53,7 +53,7 @@ export const datagridColumns = ({
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",
-      flex: 1,
+      flex: 1.5,
       renderCell: ({ row: { patientId } }) => (
         <Typography>
           {capitalizeFirstLetter(patientId?.username) || "N/A"}
@@ -68,13 +68,19 @@ export const datagridColumns = ({
       align: "center",
       flex: 1,
       minWidth: 80,
-      renderCell: ({ row: { appointmentDate } }) => (
-        <Typography>
-          {appointmentDate
-            ? format(new Date(appointmentDate), "dd-MM-yyyy")
-            : "N/A"}
-        </Typography>
-      ),
+      renderCell: ({ row: { appointmentDate } }) => {
+        if (!appointmentDate) return <Typography>N/A</Typography>;
+
+        try {
+          const formattedDate = format(
+            new Date(appointmentDate),
+            "dd MMM yyyy"
+          ); 
+          return <Typography>{formattedDate}</Typography>;
+        } catch {
+          return <Typography>N/A</Typography>;
+        }
+      },
     },
     {
       field: "appointmentTime",
@@ -84,9 +90,23 @@ export const datagridColumns = ({
       align: "center",
       flex: 1,
       minWidth: 80,
-      renderCell: ({ row: { appointmentTime } }) => (
-        <Typography>{appointmentTime || "N/A"}</Typography>
-      ),
+      renderCell: ({ row: { appointmentTime } }) => {
+        if (!appointmentTime) return <Typography>N/A</Typography>;
+
+        // Handle both ISO strings (2023-01-01T14:30) and raw time (14:30)
+        const timeStr = appointmentTime.includes(":")
+          ? appointmentTime.includes("T")
+            ? appointmentTime
+            : `1970-01-01T${appointmentTime}`
+          : "N/A";
+
+        try {
+          const formattedTime = format(new Date(timeStr), "hh:mm a");
+          return <Typography>{formattedTime}</Typography>;
+        } catch {
+          return <Typography>N/A</Typography>; // If parsing fails
+        }
+      },
     },
     {
       field: "appointmentType",

@@ -26,6 +26,7 @@ import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
 import { Appointment } from "@/types/appointment";
 import { Utility } from "@/utils";
 
+// eslint-disable-next-line react/function-component-definition
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -38,6 +39,9 @@ const Page: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = React.useState<string>("all");
   const [selectedDateFilter, setSelectedDateFilter] =
     React.useState<string>("all");
+  const [locallyUpdatedIds, setLocallyUpdatedIds] = useState<Set<string>>(
+    new Set()
+  );
 
   const dispatch: AppDispatch = useDispatch();
   const { appointment, reduxLoading } = useSelector(
@@ -63,19 +67,78 @@ const Page: React.FC = () => {
       (selectedStatus !== "all" ? selectedStatus : selectedDateFilter)
   );
 
-  // Fetch and store appointments in Redux when data changes
   useEffect(() => {
-    if (data?.results && !isEqual(data.results, appointment?.results)) {
+    if (!data?.results) return;
+
+    if (locallyUpdatedIds.size > 0) {
+      const mergedResults = data.results.map((item) => {
+        if (locallyUpdatedIds.has(item._id)) {
+          const localVersion = appointment?.results?.find(
+            (a) => a._id === item._id
+          );
+          return localVersion || item;
+        }
+        return item;
+      });
+
+      dispatch(
+        setAppointment({
+          ...data,
+          results: mergedResults,
+        })
+      );
+      setLocallyUpdatedIds(new Set());
+    } else if (!isEqual(data.results, appointment?.results)) {
       dispatch(setAppointment(data));
     }
-  }, [data, dispatch, appointment]);
+  }, [data]);
 
-  // Handle page changes
+  const handleStatusChange = useCallback(
+    async (appointmentId: string, newStatus: string) => {
+      if (!appointmentId) return;
+
+      setLocallyUpdatedIds((prev) => new Set(prev).add(appointmentId));
+
+      const updatedAppointments = appointment?.results?.map((appt) =>
+        appt._id === appointmentId ? { ...appt, status: newStatus } : appt
+      );
+
+      dispatch(
+        setAppointment({
+          ...appointment,
+          results: updatedAppointments,
+        })
+      );
+
+      try {
+        await modifier("appointment", "update-appointment", {
+          _id: appointmentId,
+          status: newStatus,
+        });
+
+        toastAndNavigate(
+          dispatch,
+          true,
+          "success",
+          "Status updated successfully"
+        );
+      } catch (error) {
+        console.error("Error updating status:", error);
+        setLocallyUpdatedIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(appointmentId);
+          return newSet;
+        });
+        toastAndNavigate(dispatch, true, "error", "Failed to update status");
+      }
+    },
+    [appointment, dispatch, toastAndNavigate]
+  );
+
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
-  // Handle page size changes
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(0);
@@ -105,61 +168,6 @@ const Page: React.FC = () => {
     await refetch(query);
     setCurrentPage(0);
   };
-
-  // Handle status changes
-  const handleStatusChange = useCallback(
-    async (appointmentId: string, newStatus: string) => {
-      if (!appointmentId) return;
-
-      // Optimistically update the Redux store with the new status
-      const updatedAppointments = appointment.results.map(
-        (appointment: Appointment) =>
-          appointment._id === appointmentId
-            ? { ...appointment, status: newStatus }
-            : appointment
-      );
-      dispatch(
-        setAppointment({ ...appointment, results: updatedAppointments })
-      );
-
-      try {
-        // Send the status update request to the backend
-        const response = await modifier("appointment", "update-appointment", {
-          _id: appointmentId,
-          status: newStatus,
-        });
-
-        if (response) {
-          // Only refetch the data if the backend response confirms the change
-          await refetch();
-
-          // Optionally, refetch a specific data set if it's crucial
-          toastAndNavigate(
-            dispatch,
-            true,
-            "success",
-            "Status updated successfully"
-          );
-        }
-      } catch (error) {
-        console.error("Error updating status:", error);
-
-        // Revert the status change if the backend call fails
-        const revertedAppointments = appointment.results.map(
-          (appointment: Appointment) =>
-            appointment._id === appointmentId
-              ? { ...appointment, status: appointment.status } // Keep the previous status
-              : appointment
-        );
-        dispatch(
-          setAppointment({ ...appointment, results: revertedAppointments })
-        );
-
-        toastAndNavigate(dispatch, true, "error", "Failed to update status");
-      }
-    },
-    [appointment, dispatch, toastAndNavigate, refetch]
-  );
 
   return (
     <Stack spacing={3}>
