@@ -30,6 +30,7 @@ interface ServerPaginationGridProps {
   onPageSizeChange?: (newPageSize: number) => void;
 }
 
+// eslint-disable-next-line react/function-component-definition
 const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
   columns,
   rows = [],
@@ -103,8 +104,8 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
     []
   );
 
-  const CustomNoRowsOverlay = () => (
-    <NoRows
+  function CustomNoRowsOverlay() {
+  return <NoRows
       message={noRowsMessage}
       sx={{
         display: "flex",
@@ -114,7 +115,7 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
         height: "100%",
       }}
     />
-  );
+}
 
   const minHeight = rows.length === 0 ? "400px" : "auto";
 
