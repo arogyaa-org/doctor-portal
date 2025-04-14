@@ -352,7 +352,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
                         if (values.icon?.preview) {
                           URL.revokeObjectURL(values.icon.preview);
                         }
-                        setFieldValue("icon", null);
+                        setFieldValue("icon", '');
                       }}
                       sx={{
                         position: "absolute",
