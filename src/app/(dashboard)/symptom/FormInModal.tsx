@@ -153,7 +153,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
       try {
         await modifySymptom({
           ...values,
-          icon: values?.icon?.file || null
+          icon: values?.icon?.file || ''
         });
         setLoading(false);
         toastAndNavigate(dispatch, true, "info", "Successfully Updated");
