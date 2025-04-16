@@ -3,8 +3,14 @@
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 
-import { creator, fetcher, modifier } from '@/apis/apiClient';
-import { AppointmentData, Appointment } from '@/types/appointment';
+import { creator, fetcher, modifier } from "@/apis/apiClient";
+import { AppointmentData, Appointment } from "@/types/appointment";
+
+interface AppointmentFilters {
+  dateFilter?: string;
+  statusFilter?: string;
+  search?: string;
+}
 
 /**
  * Hook for fetching appointments with SWR (stale-while-revalidate) strategy.
@@ -14,6 +20,7 @@ import { AppointmentData, Appointment } from '@/types/appointment';
  * @param appointmentId
  * @param page
  * @param limit
+ * @param filters - Object containing dateFilter, statusFilter, and search
  * @returns An object containing the fetched appointments, loading, error state and refetch function.
  */
 export const useGetAppointment = (
@@ -22,23 +29,46 @@ export const useGetAppointment = (
   appointmentId?: string,
   page: number = 1,
   limit: number = 5,
-  keyword?: string
+  filters?: AppointmentFilters
 ) => {
-  const url = appointmentId
-    ? `${pathKey}/${appointmentId}?page=${page}&limit=${limit}&search=${keyword}`
-    : `${pathKey}?page=${page}&limit=${limit}&search=${keyword}`;
+  const { dateFilter, statusFilter, search } = filters || {};
 
-    const { data: swrData, error, isValidating } = useSWR<Appointment | null>(
-        url,
-        () => fetcher('appointment', url),
-        {
+  const queryParams = new URLSearchParams();
+  queryParams.append("page", page.toString());
+  queryParams.append("limit", limit.toString());
+  if (dateFilter) queryParams.append("dateFilter", dateFilter);
+  if (statusFilter) queryParams.append("statusFilter", statusFilter);
+  if (search) queryParams.append("search", search);
+
+  const url = appointmentId
+    ? `${pathKey}/${appointmentId}?${queryParams.toString()}`
+    : `${pathKey}?${queryParams.toString()}`;
+
+  const {
+    data: swrData,
+    error,
+    isValidating,
+  } = useSWR<Appointment | null>(url, () => fetcher("appointment", url), {
     fallbackData: initialData,
     refreshInterval: initialData ? 3600000 : 0,
     revalidateOnFocus: false,
   });
 
-  const refetch = async (newKeyword?: string) => {
-    await mutate(`${url}&keyword=${newKeyword || keyword}`);
+  const refetch = async (newFilters?: AppointmentFilters) => {
+    const newQueryParams = new URLSearchParams();
+    newQueryParams.append("page", page.toString());
+    newQueryParams.append("limit", limit.toString());
+    if (newFilters?.dateFilter)
+      newQueryParams.append("dateFilter", newFilters.dateFilter);
+    if (newFilters?.statusFilter)
+      newQueryParams.append("statusFilter", newFilters.statusFilter);
+    if (newFilters?.search) newQueryParams.append("search", newFilters.search);
+
+    const newUrl = appointmentId
+      ? `${pathKey}/${appointmentId}?${newQueryParams.toString()}`
+      : `${pathKey}?${newQueryParams.toString()}`;
+
+    await mutate(newUrl);
   };
 
   return {

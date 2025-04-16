@@ -10,9 +10,25 @@ import {
   Select,
   MenuItem,
   Button,
+  Box,
+  Chip,
 } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
 import { isEqual } from "lodash";
+import {
+  Today as TodayIcon,
+  Upcoming as UpcomingIcon,
+  History as PreviousIcon,
+  Event as AllDatesIcon,
+  CheckCircle as ApprovedIcon,
+  Pending as PendingIcon,
+  Cancel as RejectedIcon,
+  Schedule as ScheduledIcon,
+  EventRepeat as RescheduledIcon,
+  PendingActions as PendingActionsIcon,
+  AllInclusive,
+  History as HistoryIcon,
+} from "@mui/icons-material";
 
 import Toast from "@/components/common/Toast";
 import Search from "@/components/common/Search";
@@ -26,6 +42,72 @@ import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
 import { Appointment } from "@/types/appointment";
 import { Utility } from "@/utils";
 
+const statusOptions = [
+  {
+    value: "all",
+    label: "Select Status",
+    icon: <PendingActionsIcon fontSize="small" color="secondary" />,
+    color: "secondary",
+  },
+  {
+    value: "scheduled",
+    label: "Scheduled",
+    icon: <AllDatesIcon fontSize="small" color="primary" />,
+    color: "primary",
+  },
+  {
+    value: "rescheduled",
+    label: "Rescheduled",
+    icon: <RescheduledIcon fontSize="small" sx={{ color: "#856404" }} />,
+    textColor: "#856404",
+  },
+  {
+    value: "approved",
+    label: "Approved",
+    icon: <ApprovedIcon fontSize="small" color="success" />,
+    color: "success",
+  },
+  {
+    value: "rejected",
+    label: "Rejected",
+    icon: <RejectedIcon fontSize="small" color="error" />,
+    color: "error",
+  },
+  {
+    value: "pending",
+    label: "Pending",
+    icon: <PendingIcon fontSize="small" color="warning" />,
+    color: "warning",
+  },
+];
+
+const dateOptions = [
+  {
+    value: "all",
+    label: "Select Dates",
+    color: "primary",
+    icon: <AllInclusive fontSize="small" />,
+  },
+  {
+    value: "today",
+    label: "Today",
+    color: "#2D9735",
+    icon: <TodayIcon fontSize="small" />,
+  },
+  {
+    value: "upcoming",
+    label: "Upcoming",
+    color: "#f39c12",
+    icon: <UpcomingIcon fontSize="small" />,
+  },
+  {
+    value: "previous",
+    label: "Previous",
+    color: "#FF0000",
+    icon: <HistoryIcon fontSize="small" />,
+  },
+];
+
 // eslint-disable-next-line react/function-component-definition
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
@@ -34,8 +116,9 @@ const Page: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] =
     React.useState<Appointment | null>(null);
   const { toast } = useSelector((state: RootState) => state.toast);
-  const [inputValue, setInputValue] = React.useState<string>("");
 
+  // State for filters
+  const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [selectedStatus, setSelectedStatus] = React.useState<string>("all");
   const [selectedDateFilter, setSelectedDateFilter] =
     React.useState<string>("all");
@@ -63,8 +146,11 @@ const Page: React.FC = () => {
     undefined,
     currentPage + 1,
     pageSize,
-    inputValue ||
-      (selectedStatus !== "all" ? selectedStatus : selectedDateFilter)
+    {
+      dateFilter: selectedDateFilter !== "all" ? selectedDateFilter : undefined,
+      statusFilter: selectedStatus !== "all" ? selectedStatus : undefined,
+      search: searchQuery,
+    }
   );
 
   useEffect(() => {
@@ -92,6 +178,16 @@ const Page: React.FC = () => {
       dispatch(setAppointment(data));
     }
   }, [data]);
+
+  // Refetch data when filters change
+  useEffect(() => {
+    refetch({
+      dateFilter: selectedDateFilter !== "all" ? selectedDateFilter : undefined,
+      statusFilter: selectedStatus !== "all" ? selectedStatus : undefined,
+      search: searchQuery,
+    });
+    setCurrentPage(0); 
+  }, [selectedStatus, selectedDateFilter]);
 
   const handleStatusChange = useCallback(
     async (appointmentId: string, newStatus: string) => {
@@ -164,8 +260,12 @@ const Page: React.FC = () => {
   };
 
   const handleSearch = async (query: string): Promise<void> => {
-    setInputValue(query);
-    await refetch(query);
+    setSearchQuery(query);
+    await refetch({
+      dateFilter: selectedDateFilter !== "all" ? selectedDateFilter : undefined,
+      statusFilter: selectedStatus !== "all" ? selectedStatus : undefined,
+      search: query,
+    });
     setCurrentPage(0);
   };
 
@@ -185,56 +285,191 @@ const Page: React.FC = () => {
             marginLeft: "11px",
           }}
         >
-          Appointment
+          Appointments
         </Typography>
 
-        <Stack direction="row" spacing={3} alignItems="center">
+        <Stack direction="row" spacing={2} alignItems="center">
+          {/* Status Filter */}
           <Select
             value={selectedStatus}
             onChange={(event) =>
               setSelectedStatus(event.target.value as string)
             }
-            displayEmpty
             variant="outlined"
             size="small"
             sx={{
-              minWidth: 144,
+              minWidth: 160,
+              minHeight: 40,
+              px: 1.5,
+              py: 0.5,
               borderRadius: "10px",
-              backgroundColor: "#f4f6f8",
-              marginRight: "-6px",
+              backgroundColor: (() => {
+                const opt = statusOptions.find(
+                  (o) => o.value === selectedStatus
+                );
+                if (!opt) return "#f8f9fa";
+                return opt.textColor
+                  ? opt.textColor + "30"
+                  : (theme) => theme.palette[opt.color || "text"]?.main + "30";
+              })(),
+              "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+              "& .MuiSelect-select": {
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                padding: 0,
+              },
+            }}
+            renderValue={(selected) => {
+              const option = statusOptions.find(
+                (opt) => opt.value === selected
+              );
+              const getClr = (theme) =>
+                option?.textColor ||
+                (option?.color
+                  ? theme.palette[option.color]?.main
+                  : theme.palette.text.primary);
+
+              return (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  height="100%"
+                  width="100%"
+                >
+                  <Box display="flex" alignItems="center" gap={1}>
+                    {React.cloneElement(option?.icon || <></>, {
+                      sx: { color: getClr },
+                    })}
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{
+                        color: getClr,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {option?.label}
+                    </Typography>
+                  </Box>
+                </Box>
+              );
             }}
           >
-            <MenuItem value="all">All Status</MenuItem>
-            <MenuItem value="scheduled">Scheduled</MenuItem>
-            <MenuItem value="rescheduled">Rescheduled</MenuItem>
-            <MenuItem value="approved">Approved</MenuItem>
-            <MenuItem value="rejected">Rejected</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
+            {statusOptions
+              .filter((opt) => opt.value !== selectedStatus)
+              .map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Box display="flex" alignItems="center" gap={1.5}>
+                    {React.cloneElement(option.icon, {
+                      sx: { color: option.textColor || option.color },
+                    })}
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      sx={{
+                        color:
+                          option.textColor ||
+                          ((theme) => theme.palette[option.color]?.main),
+                      }}
+                    >
+                      {option.label}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
           </Select>
 
+          {/* Date Filter */}
           <Select
             value={selectedDateFilter}
             onChange={(event) =>
               setSelectedDateFilter(event.target.value as string)
             }
-            displayEmpty
             variant="outlined"
             size="small"
             sx={{
-              minWidth: 144,
+              minWidth: 150,
+              minHeight: 40,
+              marginRight: 1.5,
               borderRadius: "10px",
-              backgroundColor: "#f4f6f8",
+              px: 1.5,
+              py: 0.5,
+              backgroundColor: (() => {
+                const opt = dateOptions.find(
+                  (o) => o.value === selectedDateFilter
+                );
+                return opt?.color
+                  ? opt.color.startsWith("#")
+                    ? opt.color + "30"
+                    : (theme) => theme.palette[opt.color].main + "30"
+                  : "#f8f9fa";
+              })(),
+              "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+              "& .MuiSelect-select": {
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                padding: 0,
+              },
+            }}
+            renderValue={(selected) => {
+              const option = dateOptions.find((opt) => opt.value === selected);
+              return (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  height="100%"
+                  width="100%"
+                >
+                  <Box display="flex" alignItems="center" gap={1}>
+                    {React.cloneElement(option?.icon || <></>, {
+                      sx: { color: option?.color },
+                    })}
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{
+                        color: option?.color,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {option?.label}
+                    </Typography>
+                  </Box>
+                </Box>
+              );
             }}
           >
-            <MenuItem value="all">All Dates</MenuItem>
-            <MenuItem value="today">Today</MenuItem>
-            <MenuItem value="upcoming">Upcoming</MenuItem>
-            <MenuItem value="previous">Previous</MenuItem>
+            {dateOptions
+              .filter((opt) => opt.value !== selectedDateFilter)
+              .map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={1.5}
+                    color={option.color}
+                  >
+                    {React.cloneElement(option.icon, {
+                      sx: { color: option.color },
+                    })}
+                    <Typography variant="body2" fontWeight={500}>
+                      {option.label}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
           </Select>
-        </Stack>
 
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Search refetchAPI={handleSearch} holderText="Appointment" />
+          {/* Search */}
+          <Search
+            refetchAPI={handleSearch}
+            holderText="Appointments..."
+            sx={{ width: 250 }}
+          />
         </Stack>
       </Stack>
 
@@ -246,7 +481,7 @@ const Page: React.FC = () => {
         />
       </Stack>
 
-      <Card sx={{ marginTop: "-25px" }}>
+      <Card sx={{ marginTop: "-25px", boxShadow: 3 }}>
         <ServerPaginationGrid
           columns={datagridColumns({
             handleStatusChange,
@@ -259,7 +494,7 @@ const Page: React.FC = () => {
           pageSizeOptions={[5, 10, 20]}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          noRowsMessage="No Appointment Available"
+          noRowsMessage="No appointments found"
         />
       </Card>
 

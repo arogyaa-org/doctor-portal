@@ -14,9 +14,11 @@ import { Utility } from "@/utils";
 import { paths } from "@/paths";
 import {
   CheckCircle,
-  HourglassEmpty,
+
   Event,
   Cancel,
+  EventRepeat as RescheduledIcon,
+  Pending as PendingIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 
@@ -75,7 +77,7 @@ export const datagridColumns = ({
           const formattedDate = format(
             new Date(appointmentDate),
             "dd MMM yyyy"
-          ); 
+          );
           return <Typography>{formattedDate}</Typography>;
         } catch {
           return <Typography>N/A</Typography>;
@@ -141,7 +143,7 @@ export const datagridColumns = ({
             value: "rescheduled",
             label: "Rescheduled",
             color: "#856404",
-            icon: <HourglassEmpty fontSize="small" />,
+            icon: <RescheduledIcon fontSize="small" />,
           },
           {
             value: "approved",
@@ -152,14 +154,14 @@ export const datagridColumns = ({
           {
             value: "rejected",
             label: "Rejected",
-            color: "red",
+            color: "#FF0000",
             icon: <Cancel fontSize="small" />,
           },
           {
             value: "pending",
             label: "Pending",
             color: "#f39c12",
-            icon: <HourglassEmpty fontSize="small" />,
+            icon: <PendingIcon fontSize="small" />,
           },
         ];
 

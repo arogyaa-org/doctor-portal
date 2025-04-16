@@ -76,7 +76,7 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
         alignItems: "center",
       },
       "& .mui-yrdy0g-MuiDataGrid-columnHeaderRow": {
-        background: "rgb(11, 101, 190)   !important",
+        background: "rgb(34, 116, 199)   !important",
         color: "white",
       },
       "& .MuiDataGrid-cell": {

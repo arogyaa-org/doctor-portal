@@ -92,6 +92,7 @@ const statusOptions = [
   },
 ];
 
+// eslint-disable-next-line react/function-component-definition
 const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState("info");
   const theme = useTheme();
@@ -166,13 +167,13 @@ const AppointmentDetails = () => {
       const updatedResults = appointmentData?.data?.results?.map(
         (appointment) =>
           appointment._id === appointmentId
-            ? { ...appointment, status: newStatus } 
+            ? { ...appointment, status: newStatus }
             : appointment
       );
 
       const updatedAppointment = {
         ...appointmentData,
-        results: updatedResults, 
+        results: updatedResults,
       };
 
       // Dispatch the updated appointment to Redux
@@ -270,36 +271,48 @@ const AppointmentDetails = () => {
                 {/* Avatar in the first column */}
                 <StyledAvatar
                   sx={{
-                    width: 85,
-                    height: 85,
+                    width: 75,
+                    height: 75,
                     fontSize: "2.5rem",
                   }}
                 >
                   {getInitial(patientData?.data?.username)}
                 </StyledAvatar>
 
-                {/* Second column containing name and date/time */}
                 <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography variant="h5" fontWeight="bold">
+                  {/* Name aligned with chip text (not icon) */}
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{
+                      ml: 4, // Matches chip icon+spacing (EventIcon + margins)
+                      mb: 1, // Space between name and chip
+                      marginLeft:"-7px"
+                    }}
+                  >
                     {patientData?.data?.username}
                   </Typography>
 
-                  {/* Date and Time in the same row */}
+                  {/* Date and Time Chip */}
                   <AppointmentInfoChip
-                    sx={{ display: "flex", alignItems: "center" }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      width: "fit-content",
+                      marginLeft:"-13.5px"
+                    }}
                   >
-                    <EventIcon sx={{ marginRight: 0.5 }} />
+                    <EventIcon sx={{ mr: 0.5, ml: 0.5 }} />
                     <Typography variant="body2" sx={{ mr: 1 }}>
                       {appointmentData?.data?.appointmentDate
                         ? format(
                             new Date(appointmentData?.data?.appointmentDate),
                             "dd MMM yyyy"
                           )
-                        : "N/A"}{" "}
+                        : "N/A"}
                     </Typography>
-
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <AccessTimeIcon sx={{ marginRight: 0.5 }} />
+                      <AccessTimeIcon sx={{ mr: 0.5 }} />
                       <Typography variant="body2">
                         {appointmentData?.data?.appointmentTime
                           ? format(
@@ -508,13 +521,16 @@ const AppointmentDetails = () => {
           </>
         ),
     },
-
     {
       key: "visits",
       icon: <HospitalIcon sx={{ color: "#4CAF50" }} />,
       name: "Visits",
       content: (
-        <VisitsHistory patientId={patientId} onTabChange={handleTabChange} />
+        <VisitsHistory
+          patientId={patientId}
+          doctorID={appointmentData?.data?.doctorId._id}
+          onTabChange={handleTabChange}
+        />
       ),
     },
     {
@@ -657,7 +673,7 @@ const AppointmentDetails = () => {
             overflow: "hidden",
             position: "relative",
             boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
-            marginTop: "-90px"
+            marginTop: "-90px",
           }}
         >
           {/* Header with icon and title */}

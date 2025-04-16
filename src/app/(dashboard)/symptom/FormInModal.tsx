@@ -87,6 +87,16 @@ const FormInModal: React.FC<FormInModalProps> = ({
     setOpenDialog(false);
   };
 
+  const handleClose = (
+    event: {},
+    reason: "backdropClick" | "escapeKeyDown"
+  ) => {
+    // Only allow closing programmatically or via escape key
+    if (reason !== "backdropClick") {
+      handleDialogClose();
+    }
+  };
+
   //Create/Edit/Populate Symptom
   useEffect(() => {
     if (symptomId) {
@@ -183,7 +193,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
     <Dialog
       fullScreen={fullScreen}
       open={openDialog}
-      onClose={handleDialogClose}
+      onClose={handleClose}
       aria-labelledby="responsive-dialog-title"
     >
       <Box
