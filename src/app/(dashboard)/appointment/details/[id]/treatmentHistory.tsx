@@ -26,6 +26,7 @@ import {
   AddCircle,
   HourglassEmpty,
 } from "@mui/icons-material";
+import dayjs from "dayjs";
 import { fetcher, modifier } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 import { useDispatch, useSelector } from "react-redux";
@@ -50,6 +51,7 @@ interface TreatmentHistoryProps {
   patientId: string;
 }
 
+// eslint-disable-next-line react/function-component-definition
 const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [page, setPage] = useState(0);
@@ -267,21 +269,26 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
             }}
           >
             <TableRow sx={{ textAlign: "center" }}>
-              {["Name", "Description", "Status", "Type", "Photo"].map(
-                (header) => (
-                  <TableCell
-                    key={header}
-                    sx={{
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      color: "text.secondary",
-                      textAlign: "center",
-                    }}
-                  >
-                    {header}
-                  </TableCell>
-                )
-              )}
+              {[
+                "Name",
+                "Description",
+                "Status",
+                "Type",
+                "Follow Up Date",
+                "Photo",
+              ].map((header) => (
+                <TableCell
+                  key={header}
+                  sx={{
+                    fontWeight: 600,
+                    color: "text.secondary",
+                    textTransform: "uppercase",
+                    textAlign: "center",
+                  }}
+                >
+                  {header}
+                </TableCell>
+              ))}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -419,6 +426,18 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
                 <TableCell sx={{ textAlign: "center" }}>
                   {capitalizeFirstLetter(treatment.type)}
                 </TableCell>
+                <TableCell
+                  sx={{
+                    textAlign: "center",
+                    minWidth: 120, 
+                    whiteSpace: "nowrap", 
+                  }}
+                >
+                  {treatment.followUpDate
+                    ? dayjs(treatment.followUpDate).format("DD MMM YYYY")
+                    : "No Follow Up"}
+                </TableCell>
+
                 <TableCell sx={{ textAlign: "center" }}>
                   {treatment.photo ? (
                     <Box sx={{ position: "relative", display: "inline-block" }}>

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Formik, Field } from "formik";
 import {
   Dialog,
@@ -10,22 +10,25 @@ import {
   useMediaQuery,
   InputAdornment,
   IconButton,
-} from '@mui/material';
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import SchoolIcon from '@mui/icons-material/School';
-import DescriptionIcon from '@mui/icons-material/Description';
+import SchoolIcon from "@mui/icons-material/School";
+import DescriptionIcon from "@mui/icons-material/Description";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
-import * as Yup from 'yup';
+import * as Yup from "yup";
 
-import Loader from '@/components/common/Loader';
-import Toast from '@/components/common/Toast';
-import type { AppDispatch, RootState } from '@/redux/store';
-import { useCreateQualification, useModifyQualification } from '@/hooks/qualification';
-import { fetcher } from '@/apis/apiClient';
-import { setQualification } from '@/redux/features/qualificationSlice';
-import { Utility } from '@/utils';
-import { QualificationData } from '@/types/qualification';
+import Loader from "@/components/common/Loader";
+import Toast from "@/components/common/Toast";
+import type { AppDispatch, RootState } from "@/redux/store";
+import {
+  useCreateQualification,
+  useModifyQualification,
+} from "@/hooks/qualification";
+import { fetcher } from "@/apis/apiClient";
+import { setQualification } from "@/redux/features/qualificationSlice";
+import { Utility } from "@/utils";
+import { QualificationData } from "@/types/qualification";
 
 interface QualificationFormValues {
   _id?: string | number;
@@ -58,11 +61,12 @@ const FormInModal: React.FC<FormInModalProps> = ({
   openDialog,
   setOpenDialog,
   qualificationId,
-  refetch
+  refetch,
 }) => {
   const [title, setTitle] = useState<"Create" | "Edit">("Create");
   const [loading, setLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState<QualificationFormValues>(initialValues);
+  const [formValues, setFormValues] =
+    useState<QualificationFormValues>(initialValues);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const theme = useTheme();
@@ -71,11 +75,24 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
 
-  const { createQualification } = useCreateQualification("create-qualification");
-  const { modifyQualification } = useModifyQualification("update-qualification");
+  const { createQualification } = useCreateQualification(
+    "create-qualification"
+  );
+  const { modifyQualification } = useModifyQualification(
+    "update-qualification"
+  );
 
   const handleDialogClose = () => {
     setOpenDialog(false);
+  };
+
+  const handleClose = (
+    event: {},
+    reason: "backdropClick" | "escapeKeyDown"
+  ) => {
+    if (reason !== "backdropClick") {
+      handleDialogClose();
+    }
   };
 
   useEffect(() => {
@@ -93,7 +110,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
     try {
       await createQualification({
         ...values,
-        icon: values?.icon?.file || null
+        icon: values?.icon?.file || null,
       });
       toastAndNavigate(dispatch, true, "success", "Created Successfully");
       setTimeout(async () => {
@@ -104,7 +121,9 @@ const FormInModal: React.FC<FormInModalProps> = ({
         }
       }, 2200);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || "Error creating qualification, please try again.";
+      const errorMessage =
+        error?.response?.data?.message ||
+        "Error creating qualification, please try again.";
       toastAndNavigate(dispatch, true, "error", errorMessage);
       setTimeout(() => {
         handleDialogClose();
@@ -117,7 +136,10 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const populateData = useCallback(async (id: string | number) => {
     setLoading(true);
     try {
-      const response = await fetcher<QualificationData>(`qualification`, `get-qualification-by-id/${id}`);
+      const response = await fetcher<QualificationData>(
+        `qualification`,
+        `get-qualification-by-id/${id}`
+      );
       if (response?.statusCode === 200) {
         setFormValues(response.data);
       }
@@ -132,43 +154,54 @@ const FormInModal: React.FC<FormInModalProps> = ({
     }
   }, []);
 
-  const update = useCallback(async (values: any) => {
-    setLoading(true);
-    try {
-      await modifyQualification({
-        ...values,
-        icon: values?.icon?.file || null
-      });
-      setLoading(false);
-      toastAndNavigate(dispatch, true, "info", "Successfully Updated");
-      setTimeout(async () => {
-        handleDialogClose();
-        const updatedQualifications = await refetch();
-        if (updatedQualifications) {
-          dispatch(setQualification(updatedQualifications));
-        }
-      }, 2200);
-    } catch (err: any) {
-      setLoading(false);
-      const errorMessage = err?.response?.data?.message || "Error Occurred. Please Try Again";
-      toastAndNavigate(dispatch, true, "error", errorMessage);
-      setTimeout(() => {
-        handleDialogClose();
-      }, 2200);
-    } finally {
-      setLoading(false);
-    }
-  }, [formValues]);
+  const update = useCallback(
+    async (values: any) => {
+      setLoading(true);
+      try {
+        await modifyQualification({
+          ...values,
+          icon: values?.icon?.file || null,
+        });
+        setLoading(false);
+        toastAndNavigate(dispatch, true, "info", "Successfully Updated");
+        setTimeout(async () => {
+          handleDialogClose();
+          const updatedQualifications = await refetch();
+          if (updatedQualifications) {
+            dispatch(setQualification(updatedQualifications));
+          }
+        }, 2200);
+      } catch (err: any) {
+        setLoading(false);
+        const errorMessage =
+          err?.response?.data?.message || "Error Occurred. Please Try Again";
+        toastAndNavigate(dispatch, true, "error", errorMessage);
+        setTimeout(() => {
+          handleDialogClose();
+        }, 2200);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [formValues]
+  );
 
   return (
     <Dialog
       fullScreen={fullScreen}
       open={openDialog}
-      onClose={handleDialogClose}
+      onClose={handleClose}
       aria-labelledby="responsive-dialog-title"
     >
-      <Box sx={{ display: 'flex', flexDirection: 'column', p: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", p: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            p: 2,
+          }}
+        >
           <Typography variant="h4" gutterBottom>
             {title}
           </Typography>
@@ -190,10 +223,14 @@ const FormInModal: React.FC<FormInModalProps> = ({
             isSubmitting,
             handleChange,
             handleSubmit,
-            setFieldValue
+            setFieldValue,
           }) => (
             <form onSubmit={handleSubmit}>
-              <Box display="grid" gap="30px" gridTemplateColumns="repeat(2, minmax(0, 1fr))">
+              <Box
+                display="grid"
+                gap="30px"
+                gridTemplateColumns="repeat(2, minmax(0, 1fr))"
+              >
                 <Field
                   as={TextField}
                   fullWidth
@@ -242,7 +279,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
                   gap: "16px",
                   alignItems: "center",
                   justifyItems: "center",
-                  mt: "15px"
+                  mt: "15px",
                 }}
               >
                 {/* Upload Icon with Label */}
@@ -260,9 +297,9 @@ const FormInModal: React.FC<FormInModalProps> = ({
                     textAlign: "center",
                     transition: "border-color 0.3s ease, color 0.3s ease",
                     "&:hover": {
-                      borderColor: 'rgb(33, 38, 54)',
+                      borderColor: "rgb(33, 38, 54)",
                       "& svg": {
-                        color: 'rgb(33, 38, 54)', // Darker icon color on hover
+                        color: "rgb(33, 38, 54)", // Darker icon color on hover
                       },
                     },
                   }}
@@ -271,10 +308,11 @@ const FormInModal: React.FC<FormInModalProps> = ({
                   <AddPhotoAlternateIcon
                     sx={{
                       fontSize: "36px",
-                      color: '#aaa',
+                      color: "#aaa",
                       mb: 1,
-                      transition: "color 0.3s ease"
-                    }} />
+                      transition: "color 0.3s ease",
+                    }}
+                  />
                   <Typography variant="body2">Upload Icon</Typography>
                   <input
                     ref={fileInputRef}
@@ -285,7 +323,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
                       const imgfiles = event.target.files;
                       if (imgfiles && imgfiles[0]) {
                         const file = imgfiles[0];
-                        if (file.size > 1048576) {   // Check file size (1MB = 1,048,576 bytes)
+                        if (file.size > 1048576) {
+                          // Check file size (1MB = 1,048,576 bytes)
                           toastAndNavigate(
                             dispatch,
                             true,
@@ -336,7 +375,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
                     </IconButton>
 
                     {/* Image Preview */}
-                    {(values.icon?.preview || typeof values.icon === "string") && (
+                    {(values.icon?.preview ||
+                      typeof values.icon === "string") && (
                       <Box
                         component="img"
                         src={
@@ -358,12 +398,17 @@ const FormInModal: React.FC<FormInModalProps> = ({
               </Box>
 
               <Box display="flex" justifyContent="center" p="20px">
-                <Button color="error" variant="contained" sx={{ mr: 3, width: '20%' }} onClick={handleDialogClose}>
+                <Button
+                  color="error"
+                  variant="contained"
+                  sx={{ mr: 3, width: "20%" }}
+                  onClick={handleDialogClose}
+                >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  sx={{ width: '20%' }}
+                  sx={{ width: "20%" }}
                   disabled={!dirty || isSubmitting}
                   color={title === "Edit" ? "info" : "success"}
                   variant="contained"

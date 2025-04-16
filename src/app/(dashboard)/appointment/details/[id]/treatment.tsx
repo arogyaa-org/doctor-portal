@@ -112,6 +112,9 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
     type: "",
     status: "in progress",
     photo: null,
+    diagnosis: "",
+    isFollowUp: false,
+    followUpDate: "",
   });
 
   const [errors, setErrors] = useState({
@@ -121,6 +124,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
     frequency: "",
     duration: "",
     type: "",
+    diagnosis: "",
   });
 
   const validateForm = () => {
@@ -132,6 +136,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
       frequency: formData.frequency ? "" : "Frequency is required",
       duration: formData.duration ? "" : "Duration is required",
       type: formData.type ? "" : "Type is required",
+      diagnosis: formData.diagnosis ? "" : "Diagnosis is required",
     };
 
     setErrors(newErrors);
@@ -293,25 +298,8 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={4} sx={{ mt: 2 }} className="mt-4">
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.isEmptyStomach}
-                    onChange={handleCheckboxChange}
-                    sx={{
-                      color: formData.isEmptyStomach ?  "#3f51b5" : "default",
-                      "&.Mui-checked": {
-                        color: "#3f51b5",
-                      },
-                    }}
-                  />
-                }
-                label="Empty Stomach"
-              />
-            </Grid>
 
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={4} sx={{ mt: 1 }}>
               <StyledAutocomplete
                 options={optionsType}
                 getOptionLabel={(option) => option.label}
@@ -337,6 +325,74 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
               />
             </Grid>
 
+            <Grid item xs={12} sm={4} sx={{ mt: 2 }} className="mt-4">
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.isEmptyStomach}
+                    onChange={handleCheckboxChange}
+                    sx={{
+                      color: formData.isEmptyStomach ? "#3f51b5" : "default",
+                      "&.Mui-checked": {
+                        color: "#3f51b5",
+                      },
+                    }}
+                  />
+                }
+                label="Empty Stomach"
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.isFollowUp}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isFollowUp: e.target.checked })
+                    }
+                    sx={{
+                      color: formData.isFollowUp ? "#3f51b5" : "default",
+                      "&.Mui-checked": { color: "#3f51b5" },
+                    }}
+                  />
+                }
+                label="Is Follow Up?"
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <StyledTextField
+                label="Follow Up Date"
+                name="followUpDate"
+                type="date"
+                fullWidth
+                margin="dense"
+                InputLabelProps={{ shrink: true }}
+                value={formData.followUpDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, followUpDate: e.target.value })
+                }
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <StyledTextField
+                label="Diagnosis"
+                name="diagnosis"
+                fullWidth
+                margin="dense"
+                value={formData.diagnosis}
+                onChange={handleChange}
+                error={!!errors.diagnosis}
+                helperText={errors.diagnosis}
+                placeholder="Enter diagnosis"
+                InputProps={{
+                  startAdornment: (
+                    <Description sx={{ color: "#3f51b5", mr: 2 }} />
+                  ),
+                }}
+              />
+            </Grid>
+
             <Grid item xs={12} sm={4}>
               <StyledAutocomplete
                 options={optionsStatus}
@@ -358,7 +414,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
             </Grid>
 
             {/* Image Upload Grid */}
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={4} sx={{ mt:0 }}>
               <Button
                 component="label"
                 variant="contained"

@@ -16,6 +16,7 @@ import {
   Chip,
   alpha,
   Button,
+  Typography,
 } from "@mui/material";
 import { format } from "date-fns";
 import {
@@ -38,11 +39,14 @@ interface Appointment {
 
 interface VisitsHistoryProps {
   patientId: string;
+  doctorID: string;
   onTabChange: (tabKey: string) => void;
 }
 
+// eslint-disable-next-line react/function-component-definition
 const VisitsHistory: React.FC<VisitsHistoryProps> = ({
   patientId,
+  doctorID,
   onTabChange,
 }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -53,7 +57,10 @@ const VisitsHistory: React.FC<VisitsHistoryProps> = ({
   const [openModal, setOpenModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const { decodedToken } = Utility();
-  const doctorId = decodedToken()?.id;
+  const token = decodedToken();
+  const isDoctor = token?.role === "doctor";
+
+  const doctorId = isDoctor ? token?.id : doctorID;
 
   const fetchAppointments = React.useCallback(async () => {
     if (patientId) {
@@ -100,13 +107,13 @@ const VisitsHistory: React.FC<VisitsHistoryProps> = ({
       date.setMinutes(parseInt(timeParts[1], 10));
 
       return new Intl.DateTimeFormat("en-IN", {
-        timeZone: "Asia/Kolkata", 
+        timeZone: "Asia/Kolkata",
         hour: "2-digit",
         minute: "2-digit",
-        hour12: true, 
+        hour12: true,
       }).format(date);
     } else {
-      return "Invalid time"; 
+      return "Invalid time";
     }
   };
 
@@ -235,21 +242,20 @@ const VisitsHistory: React.FC<VisitsHistoryProps> = ({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} align="center">
+                <TableCell colSpan={4} align="center" sx={{ height: "72px" }}>
                   <Box
                     sx={{
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "center",
-                      gap: 0.5,
-
-                      borderRadius: "8px",
-
-                      color: "#20ADA0",
+                      gap: 1,
+                      height: "100%",
                     }}
                   >
-                    <CalendarMonth sx={{ fontSize: 18, color: "#20ADA0" }} />
-                    No Appointment Booked
+                    <CalendarMonth sx={{ color: "#20ADA0", fontSize: 18 }} />
+                    <Typography variant="body2" sx={{ color: "#20ADA0" }}>
+                      No Appointment Booked
+                    </Typography>
                   </Box>
                 </TableCell>
               </TableRow>

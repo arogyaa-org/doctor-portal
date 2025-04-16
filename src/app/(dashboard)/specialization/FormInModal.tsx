@@ -53,10 +53,10 @@ const validationSchema = Yup.object({
     .max(40, "Name is too long!")
     .matches(/^[a-zA-Z\s]+$/, "Name should only contain letters")
     .required("This field is required"),
-  description: Yup.string()
-    .min(5, "Description is too short!")
+  description: Yup.string().min(5, "Description is too short!"),
 });
 
+// eslint-disable-next-line react/function-component-definition
 const FormInModal: React.FC<FormInModalProps> = ({
   openDialog,
   setOpenDialog,
@@ -75,12 +75,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
 
-  const { createSpeciality } = useCreateSpeciality(
-    "create-speciality"
-  );
-  const { modifySpeciality } = useModifySpeciality(
-    "update-speciality"
-  );
+  const { createSpeciality } = useCreateSpeciality("create-speciality");
+  const { modifySpeciality } = useModifySpeciality("update-speciality");
 
   const handleDialogClose = () => {
     setOpenDialog(false);
@@ -97,12 +93,22 @@ const FormInModal: React.FC<FormInModalProps> = ({
     }
   }, [specialityId, openDialog]);
 
+  const handleClose = (
+    event: {},
+    reason: "backdropClick" | "escapeKeyDown"
+  ) => {
+    // Only allow closing programmatically or via escape key
+    if (reason !== "backdropClick") {
+      handleDialogClose();
+    }
+  };
+
   const create = useCallback(async (values: SpecialityFormValues) => {
     setLoading(true);
     try {
       await createSpeciality({
         ...values,
-        icon: values?.icon?.file || null
+        icon: values?.icon?.file || null,
       });
       toastAndNavigate(dispatch, true, "success", "Created Successfully");
       setTimeout(async () => {
@@ -129,7 +135,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
     setLoading(true);
     try {
       const response = await fetcher<SpecialityData>(
-        'speciality',
+        "speciality",
         `get-speciality-by-id/${id}`
       );
       if (response?.statusCode === 200) {
@@ -152,7 +158,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
       try {
         await modifySpeciality({
           ...values,
-          icon: values?.icon?.file || null
+          icon: values?.icon?.file || null,
         });
         setLoading(false);
         toastAndNavigate(dispatch, true, "info", "Successfully Updated");
@@ -182,7 +188,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
     <Dialog
       fullScreen={fullScreen}
       open={openDialog}
-      onClose={handleDialogClose}
+      onClose={handleClose}
       aria-labelledby="responsive-dialog-title"
     >
       <Box
@@ -220,7 +226,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
             isSubmitting,
             handleChange,
             handleSubmit,
-            setFieldValue
+            setFieldValue,
           }) => (
             <form onSubmit={handleSubmit}>
               <Box
@@ -275,7 +281,7 @@ const FormInModal: React.FC<FormInModalProps> = ({
                   gap: "16px",
                   alignItems: "center",
                   justifyItems: "center",
-                  mt: "15px"
+                  mt: "15px",
                 }}
               >
                 {/* Upload Icon with Label */}
@@ -293,9 +299,9 @@ const FormInModal: React.FC<FormInModalProps> = ({
                     textAlign: "center",
                     transition: "border-color 0.3s ease, color 0.3s ease",
                     "&:hover": {
-                      borderColor: 'rgb(33, 38, 54)',
+                      borderColor: "rgb(33, 38, 54)",
                       "& svg": {
-                        color: 'rgb(33, 38, 54)', // Darker icon color on hover
+                        color: "rgb(33, 38, 54)", // Darker icon color on hover
                       },
                     },
                   }}
@@ -304,10 +310,11 @@ const FormInModal: React.FC<FormInModalProps> = ({
                   <AddPhotoAlternateIcon
                     sx={{
                       fontSize: "36px",
-                      color: '#aaa',
+                      color: "#aaa",
                       mb: 1,
-                      transition: "color 0.3s ease"
-                    }} />
+                      transition: "color 0.3s ease",
+                    }}
+                  />
                   <Typography variant="body2">Upload Icon</Typography>
                   <input
                     ref={fileInputRef}
@@ -318,7 +325,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
                       const imgfiles = event.target.files;
                       if (imgfiles && imgfiles[0]) {
                         const file = imgfiles[0];
-                        if (file.size > 1048576) {   // Check file size (1MB = 1,048,576 bytes)
+                        if (file.size > 1048576) {
+                          // Check file size (1MB = 1,048,576 bytes)
                           toastAndNavigate(
                             dispatch,
                             true,
@@ -369,7 +377,8 @@ const FormInModal: React.FC<FormInModalProps> = ({
                     </IconButton>
 
                     {/* Image Preview */}
-                    {(values.icon?.preview || typeof values.icon === "string") && (
+                    {(values.icon?.preview ||
+                      typeof values.icon === "string") && (
                       <Box
                         component="img"
                         src={
