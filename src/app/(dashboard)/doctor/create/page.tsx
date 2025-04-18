@@ -85,6 +85,7 @@ const initialValues: DoctorData = {
 };
 let editFormValues: DoctorData;
 
+// eslint-disable-next-line react/function-component-definition
 const DoctorForm: React.FC = () => {
   const [title, setTitle] = useState<"Create Doctor" | "Edit Doctor">();
   const [loading, setLoading] = useState<boolean>(false);
@@ -299,6 +300,7 @@ const DoctorForm: React.FC = () => {
           resetForm,
           setFieldValue,
           isSubmitting,
+          isValid,
         }) => (
           <Form encType="multipart/form-data">
             <Box
@@ -396,17 +398,16 @@ const DoctorForm: React.FC = () => {
                 label="Date of Birth *"
                 name="dob"
                 type="date"
-                value={values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""}
+                value={values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""} 
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const formattedDate = dayjs(e.target.value).format(
-                    "YYYY-MM-DD"
-                  );
-                  setFieldValue("dob", formattedDate);
+                  const formattedDate = e.target.value; 
+                  setFieldValue("dob", formattedDate); 
                 }}
-                InputLabelProps={{ shrink: true }}
-                error={touched.dob && Boolean(errors.dob)}
-                helperText={touched.dob && errors.dob}
+                InputLabelProps={{ shrink: true }} 
+                error={touched.dob && Boolean(errors.dob)} 
+                helperText={touched.dob && errors.dob} 
               />
+
               <FormControl
                 fullWidth
                 error={touched.gender && Boolean(errors.gender)}
@@ -572,8 +573,7 @@ const DoctorForm: React.FC = () => {
                   const updatedTags = [
                     ...new Set([
                       ...values.tags.filter(
-                        (tag) =>
-                          !selectedSpecializationTags.includes(tag) // Remove existing selected tags
+                        (tag) => !selectedSpecializationTags.includes(tag) // Remove existing selected tags
                       ),
                       ...selectedSpecializationTags, // Add newly selected tags
                     ]),
@@ -593,7 +593,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.specializationIds &&
-                        typeof errors.specializationIds === "string"
+                      typeof errors.specializationIds === "string"
                         ? errors.specializationIds
                         : ""
                     }
@@ -631,8 +631,7 @@ const DoctorForm: React.FC = () => {
                   const updatedTags = [
                     ...new Set([
                       ...values.tags.filter(
-                        (tag) =>
-                          !selectedSymptomTags.includes(tag) // Remove existing selected tags
+                        (tag) => !selectedSymptomTags.includes(tag) // Remove existing selected tags
                       ),
                       ...selectedSymptomTags, // Add newly selected tags
                     ]),
@@ -650,7 +649,7 @@ const DoctorForm: React.FC = () => {
                     error={!!touched.symptomIds && !!errors.symptomIds}
                     helperText={
                       touched.symptomIds &&
-                        typeof errors.symptomIds === "string"
+                      typeof errors.symptomIds === "string"
                         ? errors.symptomIds
                         : ""
                     }
@@ -689,8 +688,7 @@ const DoctorForm: React.FC = () => {
                   const updatedTags = [
                     ...new Set([
                       ...values.tags.filter(
-                        (tag) =>
-                          !selectedQualificationTags.includes(tag) // Remove existing selected tags
+                        (tag) => !selectedQualificationTags.includes(tag) // Remove existing selected tags
                       ),
                       ...selectedQualificationTags, // Add newly selected tags
                     ]),
@@ -710,7 +708,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.qualificationIds &&
-                        typeof errors.qualificationIds === "string"
+                      typeof errors.qualificationIds === "string"
                         ? errors.qualificationIds
                         : ""
                     }
@@ -895,22 +893,22 @@ const DoctorForm: React.FC = () => {
                     {/* Image Preview */}
                     {(values.profilePicture?.preview ||
                       typeof values.profilePicture === "string") && (
-                        <Box
-                          component="img"
-                          src={
-                            typeof values.profilePicture === "string"
-                              ? values.profilePicture // value From database
-                              : values.profilePicture.preview // From file upload
-                          }
-                          alt="Profile Preview"
-                          sx={{
-                            width: "100%",
-                            height: "100%",
-                            borderRadius: "8px",
-                            border: "1px solid #aaa",
-                          }}
-                        />
-                      )}
+                      <Box
+                        component="img"
+                        src={
+                          typeof values.profilePicture === "string"
+                            ? values.profilePicture // value From database
+                            : values.profilePicture.preview // From file upload
+                        }
+                        alt="Profile Preview"
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #aaa",
+                        }}
+                      />
+                    )}
                   </Box>
                 )}
               </Box>
@@ -952,6 +950,7 @@ const DoctorForm: React.FC = () => {
                             name: event.target.value,
                           };
                           setFieldValue("availability", updatedAvailability);
+                          setFieldValue("dirty", true);
                         }}
                         InputProps={{
                           startAdornment: (
@@ -976,6 +975,7 @@ const DoctorForm: React.FC = () => {
                             location: e.target.value,
                           };
                           setFieldValue("availability", updatedAvailability);
+                          setFieldValue("dirty", true);
                         }}
                         InputProps={{
                           startAdornment: (
@@ -1003,6 +1003,7 @@ const DoctorForm: React.FC = () => {
                           const updatedAvailability = [...values.availability];
                           updatedAvailability[index].day = newValue || "";
                           setFieldValue("availability", updatedAvailability);
+                          setFieldValue("dirty", true);
                         }}
                         renderInput={(params) => (
                           <MuiTextField
@@ -1035,6 +1036,7 @@ const DoctorForm: React.FC = () => {
                           const updatedAvailability = [...values.availability];
                           updatedAvailability[index].startTime = e.target.value;
                           setFieldValue("availability", updatedAvailability);
+                          setFieldValue("dirty", true);
                         }}
                       />
                     </Grid>
@@ -1052,6 +1054,7 @@ const DoctorForm: React.FC = () => {
                           const updatedAvailability = [...values.availability];
                           updatedAvailability[index].endTime = e.target.value;
                           setFieldValue("availability", updatedAvailability);
+                          setFieldValue("dirty", true);
                         }}
                       />
                     </Grid>
@@ -1065,6 +1068,7 @@ const DoctorForm: React.FC = () => {
                               (_, idx) => idx !== index
                             );
                           setFieldValue("availability", updatedAvailability);
+                          setFieldValue("dirty", true);
                         }}
                         fullWidth
                       >
@@ -1134,6 +1138,7 @@ const DoctorForm: React.FC = () => {
                               },
                             }));
                             setFieldValue("availability", newAvailability);
+                            setFieldValue("dirty", true);
                           }
                         }
                       }}
@@ -1176,7 +1181,7 @@ const DoctorForm: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                disabled={!dirty || isSubmitting}
+                disabled={!dirty || isSubmitting || !isValid}
                 color={title === "Edit Doctor" ? "info" : "success"}
               >
                 Submit
