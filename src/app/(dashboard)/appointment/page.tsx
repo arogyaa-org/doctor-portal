@@ -112,6 +112,7 @@ const dateOptions = [
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+  const [loading, setLoading] = useState(false); // To track API request
   const [openModal, setOpenModal] = React.useState(false);
   const [selectedAppointment, setSelectedAppointment] =
     React.useState<Appointment | null>(null);
@@ -186,7 +187,7 @@ const Page: React.FC = () => {
       statusFilter: selectedStatus !== "all" ? selectedStatus : undefined,
       search: searchQuery,
     });
-    setCurrentPage(0); 
+    setCurrentPage(0);
   }, [selectedStatus, selectedDateFilter]);
 
   const handleStatusChange = useCallback(
@@ -231,14 +232,48 @@ const Page: React.FC = () => {
     [appointment, dispatch, toastAndNavigate]
   );
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
+  const handlePageChange = useCallback(
+    async (newPage: number) => {
+      if (loading) return; // Prevent API call if a request is in progress
 
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(0);
-  };
+      setLoading(true); // Mark API request as in progress
+      setCurrentPage(newPage); // Update the current page
+
+      try {
+        await refetch({
+          page: newPage + 1, // Page is 1-based
+          limit: pageSize,
+          dateFilter:
+            selectedDateFilter !== "all" ? selectedDateFilter : undefined,
+          statusFilter: selectedStatus !== "all" ? selectedStatus : undefined,
+          search: searchQuery,
+        });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false); // Reset the loading state
+      }
+    },
+    [
+      loading,
+      pageSize,
+      selectedDateFilter,
+      selectedStatus,
+      searchQuery,
+      refetch,
+    ]
+  );
+
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      if (pageSize !== newPageSize) {
+        // Only update if size actually changed
+        setPageSize(newPageSize);
+        setCurrentPage(0); // Reset to first page when page size changes
+      }
+    },
+    [pageSize]
+  );
 
   const handleOpenModal = (appointment: Appointment | null) => {
     setSelectedAppointment(appointment || null);

@@ -14,7 +14,6 @@ import { Utility } from "@/utils";
 import { paths } from "@/paths";
 import {
   CheckCircle,
-
   Event,
   Cancel,
   EventRepeat as RescheduledIcon,
@@ -35,30 +34,37 @@ export const datagridColumns = ({
   const router = useRouter();
 
   const doctorColumn: GridColDef = {
-    field: "doctorId",
+    field: "doctorData",
     headerName: "Doctor",
     headerClassName: "super-app-theme--header",
     headerAlign: "center",
     align: "center",
     flex: 1.5,
-    renderCell: ({ row: { doctorId } }) => (
-      <Typography>
-        {capitalizeFirstLetter(doctorId?.username) || "N/A"}
-      </Typography>
-    ),
+    renderCell: ({ row: { doctorData } }) => {
+      // Debugging logs
+      console.log("DoctorData object:", doctorData);
+      console.log("Doctor username:", doctorData?.username);
+      // console.log("Full row data:", row); // If you need access to the full row
+
+      return (
+        <Typography>
+          {capitalizeFirstLetter(doctorData?.[0]?.username) || "N/A"}
+        </Typography>
+      );
+    },
   };
 
   const columns: GridColDef[] = [
     {
-      field: "patientId",
+      field: "patientData",
       headerName: "Patient",
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",
       flex: 1.5,
-      renderCell: ({ row: { patientId } }) => (
+      renderCell: ({ row: { patientData } }) => (
         <Typography>
-          {capitalizeFirstLetter(patientId?.username) || "N/A"}
+          {capitalizeFirstLetter(patientData?.[0]?.username) || "N/A"}
         </Typography>
       ),
     },
