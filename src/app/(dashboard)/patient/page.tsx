@@ -12,16 +12,18 @@ import { patientDatagridColumns as datagridColumns } from "./patientConfig";
 import { useGetPatient } from "@/hooks/patient";
 import { setPatient } from "@/redux/features/patientSlice";
 import { Utility } from "@/utils";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const ITEMS_PER_PAGE = 10;
 
+// eslint-disable-next-line react/function-component-definition
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(0);
   const [pageSize, setPageSize] = React.useState(ITEMS_PER_PAGE);
   const [inputValue, setInputValue] = React.useState("");
   const dispatch = useDispatch<AppDispatch>();
   const { patient } = useSelector((state: RootState) => state.patient);
+  const [loading, setLoading] = useState(false);
 
   const { decodedToken } = Utility();
   const role = decodedToken?.role;
@@ -44,14 +46,33 @@ const Page: React.FC = () => {
     }
   }, [data, patient, dispatch, data?.results?.length]);
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
+  const handlePageChange = useCallback(
+    async (newPage: number) => {
+      if (loading) return;
 
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(0);
-  };
+      setLoading(true);
+      setCurrentPage(newPage);
+
+      try {
+        await refetch();
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading, pageSize, refetch]
+  );
+
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      if (pageSize !== newPageSize) {
+        setPageSize(newPageSize);
+        setCurrentPage(0);
+      }
+    },
+    [pageSize]
+  );
 
   const handleSearch = async (query: string): Promise<void> => {
     setInputValue(query);

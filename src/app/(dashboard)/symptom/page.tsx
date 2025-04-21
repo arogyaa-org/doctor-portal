@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Stack, Typography } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
@@ -25,6 +25,7 @@ const Page: React.FC = () => {
     null
   );
   const [inputValue, setInputValue] = React.useState<string>("");
+  const [loading, setLoading] = useState(false);
 
   const dispatch: AppDispatch = useDispatch();
   const { symptom, reduxLoading } = useSelector(
@@ -50,14 +51,33 @@ const Page: React.FC = () => {
     setOpenDialog(!openDialog);
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage); // Already 0-based
-  };
+  const handlePageChange = useCallback(
+    async (newPage: number) => {
+      if (loading) return;
 
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(0); // Reset to first page when page size changes
-  };
+      setLoading(true);
+      setCurrentPage(newPage);
+
+      try {
+        await refetch();
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading, pageSize, refetch]
+  );
+
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      if (pageSize !== newPageSize) {
+        setPageSize(newPageSize);
+        setCurrentPage(0);
+      }
+    },
+    [pageSize]
+  );
 
   const handleSearch = async (query: string): Promise<void> => {
     setInputValue(query); // Set the search query

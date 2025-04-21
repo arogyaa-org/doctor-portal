@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Stack, Typography } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
@@ -24,6 +24,7 @@ const Page: React.FC = () => {
   const [selectedQualificationId, setSelectedQualificationId] = useState<
     string | null
   >(null);
+  const [loading, setLoading] = useState(false);
 
   const [inputValue, setInputValue] = React.useState<string>("");
   const dispatch: AppDispatch = useDispatch();
@@ -50,14 +51,33 @@ const Page: React.FC = () => {
     setOpenDialog(!openDialog);
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
+  const handlePageChange = useCallback(
+    async (newPage: number) => {
+      if (loading) return;
 
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(0); 
-  };
+      setLoading(true);
+      setCurrentPage(newPage);
+
+      try {
+        await refetch();
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading, pageSize, refetch]
+  );
+
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      if (pageSize !== newPageSize) {
+        setPageSize(newPageSize);
+        setCurrentPage(0);
+      }
+    },
+    [pageSize]
+  );
 
   const handleSearch = async (query: string): Promise<void> => {
     setInputValue(query);
