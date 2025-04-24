@@ -339,7 +339,7 @@ export function SignInForm({
                   )}
                 />
 
-                <Typography align="right">
+                {/* <Typography align="right">
                   <Box
                     component="a"
                     href="/reset-password"
@@ -352,7 +352,7 @@ export function SignInForm({
                   >
                     Forgot password?
                   </Box>
-                </Typography>
+                </Typography> */}
 
                 <Button
                   disabled={loading}
