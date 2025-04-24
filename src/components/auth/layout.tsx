@@ -46,7 +46,7 @@ export function Layout({
       // Move to the next word
       setIsDeleting(false);
       setCurrentWordIndex((prev) => (prev + 1) % words.length);
-      const timeout = setTimeout(() => {}, 500);
+      const timeout = setTimeout(() => { }, 500);
       return () => clearTimeout(timeout);
     }
 
