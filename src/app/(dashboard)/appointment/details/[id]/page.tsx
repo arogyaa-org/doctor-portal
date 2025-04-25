@@ -185,8 +185,6 @@ const AppointmentDetails = () => {
         "success",
         "Status updated successfully"
       );
-
-
     } catch (error) {
       console.error("Error updating status:", error);
       toastAndNavigate(dispatch, true, "error", "Failed to update status");
@@ -287,7 +285,7 @@ const AppointmentDetails = () => {
                     sx={{
                       ml: 4, // Matches chip icon+spacing (EventIcon + margins)
                       mb: 1, // Space between name and chip
-                      marginLeft: "-7px"
+                      marginLeft: "-7px",
                     }}
                   >
                     {patientData?.data?.username}
@@ -299,16 +297,16 @@ const AppointmentDetails = () => {
                       display: "flex",
                       alignItems: "center",
                       width: "fit-content",
-                      marginLeft: "-13.5px"
+                      marginLeft: "-13.5px",
                     }}
                   >
                     <EventIcon sx={{ mr: 0.5, ml: 0.5 }} />
                     <Typography variant="body2" sx={{ mr: 1 }}>
                       {appointmentData?.data?.appointmentDate
                         ? format(
-                          new Date(appointmentData?.data?.appointmentDate),
-                          "dd MMM yyyy"
-                        )
+                            new Date(appointmentData?.data?.appointmentDate),
+                            "dd MMM yyyy"
+                          )
                         : "N/A"}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -316,11 +314,11 @@ const AppointmentDetails = () => {
                       <Typography variant="body2">
                         {appointmentData?.data?.appointmentTime
                           ? format(
-                            new Date(
-                              `1970-01-01T${appointmentData?.data?.appointmentTime}`
-                            ),
-                            "hh:mm a"
-                          )
+                              new Date(
+                                `1970-01-01T${appointmentData?.data?.appointmentTime}`
+                              ),
+                              "hh:mm a"
+                            )
                           : "N/A"}
                       </Typography>
                     </Box>
@@ -349,7 +347,7 @@ const AppointmentDetails = () => {
                       (option) => option.value === status
                     )
                       ? statusOptions.find((option) => option.value === status)
-                        ?.color + "30"
+                          ?.color + "30"
                       : "#f8f9fa",
                     color:
                       statusOptions.find((option) => option.value === status)
@@ -709,7 +707,10 @@ const AppointmentDetails = () => {
                 opacity: 0.7,
               }}
             >
-              <source src={appointmentData?.data?.videoUrl || ''} type="video/mp4" />
+              <source
+                src={appointmentData?.data?.videoUrl || ""}
+                type="video/mp4"
+              />
               Your browser does not support the video tag.
             </video>
 
@@ -771,29 +772,6 @@ const AppointmentDetails = () => {
               This video provides a detailed overview of the patient's described
               symptoms, helping with visual diagnosis and treatment planning.
             </Typography>
-
-            {/* Additional metadata - removed "Verified" chip */}
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 2,
-                mt: 2,
-              }}
-            >
-              <Chip // time spam we can use dynamic which will come with video in the metadata
-                icon={<ScheduleIcon />}
-                label="2:34 mins"
-                size="small"
-                variant="outlined"
-              />
-              <Chip
-                icon={<CalendarMonthIcon />}
-                label={`Recorded: ${new Date().toLocaleDateString()}`}
-                size="small"
-                variant="outlined"
-              />
-            </Box>
           </Box>
         </Paper>
       </div>

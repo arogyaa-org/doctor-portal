@@ -174,12 +174,8 @@ const DoctorForm: React.FC = () => {
         symptomIds: getIdsFromObject(values?.symptomIds),
       });
       if (response?.statusCode === 409) {
-        toastAndNavigate(
-          dispatch,
-          true,
-          "error",
-          "Email already exists",
-          () => location.reload()
+        toastAndNavigate(dispatch, true, "error", "Email already exists", () =>
+          location.reload()
         );
       }
       if (response?.statusCode === 201) {
@@ -195,8 +191,8 @@ const DoctorForm: React.FC = () => {
       const errorMessage =
         error?.response?.data?.message ||
         "Error creating Doctor, please try again.";
-      toastAndNavigate(dispatch, true, "error", errorMessage,
-        () => location.reload()
+      toastAndNavigate(dispatch, true, "error", errorMessage, () =>
+        location.reload()
       );
     } finally {
       setLoading(false);
@@ -249,8 +245,8 @@ const DoctorForm: React.FC = () => {
       } catch (err: any) {
         const errorMessage =
           err?.response?.data?.message || "Error Occurred. Please Try Again";
-        toastAndNavigate(dispatch, true, "error", errorMessage,
-          () => location.reload()
+        toastAndNavigate(dispatch, true, "error", errorMessage, () =>
+          location.reload()
         );
       } finally {
         setLoading(false);
@@ -1031,17 +1027,10 @@ const DoctorForm: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         InputLabelProps={{ shrink: true }}
-                        value={
-                          slot.endTime
-                            ? dayjs(slot.endTime, "hh:mm A").format("HH:mm")
-                            : ""
-                        }
+                        value={slot.startTime || ""}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].startTime = dayjs(
-                            e.target.value,
-                            "HH:mm"
-                          ).format("hh:mm A");
+                          updatedAvailability[index].startTime = e.target.value;
                           setFieldValue("availability", updatedAvailability);
                           setFieldValue("dirty", true);
                         }}
@@ -1056,22 +1045,16 @@ const DoctorForm: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         InputLabelProps={{ shrink: true }}
-                        value={
-                          slot.endTime
-                            ? dayjs(slot.endTime, "hh:mm A").format("HH:mm")
-                            : ""
-                        }
+                        value={slot.endTime || ""}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].endTime = dayjs(
-                            e.target.value,
-                            "HH:mm"
-                          ).format("hh:mm A");
+                          updatedAvailability[index].endTime = e.target.value;
                           setFieldValue("availability", updatedAvailability);
                           setFieldValue("dirty", true);
                         }}
                       />
                     </Grid>
+
                     <Grid item xs={2} sx={{ display: "flex", gap: 1 }}>
                       <Button
                         variant="outlined"
