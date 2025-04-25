@@ -3,9 +3,10 @@ import RouterLink from "next/link";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 
 import { paths } from "@/paths";
-import { DynamicLogo } from "@/components/core/logo"; // Correct import for DynamicLogo
+import { DynamicLogo } from "@/components/core/logo";
 
 export interface LayoutProps {
   children: React.ReactNode;
@@ -16,12 +17,10 @@ export function Layout({
   children,
   clientRole,
 }: LayoutProps): React.JSX.Element {
-  // Animation states for typing effect
   const [typingText, setTypingText] = React.useState<string>("");
   const [currentWordIndex, setCurrentWordIndex] = React.useState<number>(0);
   const [isDeleting, setIsDeleting] = React.useState<boolean>(false);
 
-  // Words to animate
   const words = [
     "Empowering Healthcare",
     "Managing Appointments",
@@ -30,20 +29,17 @@ export function Layout({
     "Providing Better Care",
   ];
 
-  // Typing animation effect
   React.useEffect(() => {
     const currentWord = words[currentWordIndex];
     const typingSpeed = isDeleting ? 50 : 150;
     const pauseDelay = 2000;
 
     if (!isDeleting && typingText === currentWord) {
-      // Pause at the end of typing
       const timeout = setTimeout(() => {
         setIsDeleting(true);
       }, pauseDelay);
       return () => clearTimeout(timeout);
     } else if (isDeleting && typingText === "") {
-      // Move to the next word
       setIsDeleting(false);
       setCurrentWordIndex((prev) => (prev + 1) % words.length);
       const timeout = setTimeout(() => { }, 500);
@@ -63,6 +59,13 @@ export function Layout({
     return () => clearTimeout(timeout);
   }, [typingText, isDeleting, currentWordIndex, words]);
 
+  const gradientBg =
+    clientRole === "admin"
+      ? "radial-gradient(50% 50% at 50% 50%, #122647 0%, #0d1030 100%)"
+      : "radial-gradient(50% 50% at 50% 50%, #122647 0%, #090E23 100%)";
+
+  const accentColor = clientRole === "admin" ? "#5c6bc0" : "#15b79e";
+
   return (
     <Box
       sx={{
@@ -72,39 +75,94 @@ export function Layout({
         minHeight: "100%",
       }}
     >
-      <Box sx={{ display: "flex", flex: "1 1 auto", flexDirection: "column" }}>
-        <Box sx={{ p: 3 }}>
+      {/* Left side - Form content */}
+      <Box
+        sx={{
+          display: "flex",
+          flex: "1 1 auto",
+          flexDirection: "column",
+          backgroundColor: "var(--mui-palette-background-paper)",
+          position: "relative",
+        }}
+      >
+        {/* Logo container */}
+        <Box
+          sx={{
+            p: 3,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Box
             component={RouterLink}
             href={paths.home}
-            sx={{ display: "inline-block", fontSize: 0 }}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              transition: "transform 0.2s",
+              "&:hover": {
+                transform: "scale(1.05)",
+              },
+            }}
           >
             <DynamicLogo
-              colorDark="light" // Adjust based on theme (light or dark)
-              colorLight="dark" // Adjust based on theme (dark or light)
+              colorDark="light"
+              colorLight="dark"
               height={32}
               width={122}
-              priority
             />
           </Box>
         </Box>
+
+        {/* Main content */}
         <Box
           sx={{
             alignItems: "center",
             display: "flex",
             flex: "1 1 auto",
             justifyContent: "center",
-            p: 3,
+            p: { xs: 2, sm: 3 },
           }}
         >
-          <Box sx={{ maxWidth: "450px", width: "100%" }}>{children}</Box>
+          <Box
+            sx={{
+              maxWidth: "450px",
+              width: "100%",
+              animation: "fadeIn 0.6s ease-out",
+              "@keyframes fadeIn": {
+                "0%": { opacity: 0, transform: "translateY(10px)" },
+                "100%": { opacity: 1, transform: "translateY(0)" },
+              },
+            }}
+          >
+            {children}
+          </Box>
+        </Box>
+
+        {/* Footer */}
+        <Box
+          sx={{
+            p: 3,
+            textAlign: "center",
+            color: "text.secondary",
+            fontSize: "0.75rem",
+            opacity: 0.7,
+            mt: -10,
+          }}
+        >
+          <Typography variant="caption">
+            © {new Date().getFullYear()} Arogyaa Health Systems. All rights
+            reserved.
+          </Typography>
         </Box>
       </Box>
+
+      {/* Right side - Branding & Animation */}
       <Box
         sx={{
           alignItems: "center",
-          background:
-            "radial-gradient(50% 50% at 50% 50%, #122647 0%, #090E23 100%)",
+          background: gradientBg,
           color: "var(--mui-palette-common-white)",
           display: { xs: "none", lg: "flex" },
           justifyContent: "center",
@@ -113,50 +171,75 @@ export function Layout({
           overflow: "hidden",
         }}
       >
-        {/* Background patterns */}
+        {/* Enhanced background patterns */}
         <Box
           sx={{
             position: "absolute",
             width: "100%",
             height: "100%",
-            opacity: 0.1,
+            opacity: 0.07,
             background: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
-        {/* Animated circles */}
+
+        {/* Animated circles with pulses */}
         <Box
           sx={{
             position: "absolute",
-            width: "300px",
-            height: "300px",
+            width: "350px",
+            height: "350px",
             borderRadius: "50%",
-            backgroundColor: "rgba(21, 183, 158, 0.05)",
+            backgroundColor: `${alpha(accentColor, 0.05)}`,
             top: "10%",
-            right: "-50px",
+            right: "-80px",
+            animation: "pulse 15s infinite alternate ease-in-out",
+            "@keyframes pulse": {
+              "0%": { transform: "scale(1)" },
+              "50%": { transform: "scale(1.1)" },
+              "100%": { transform: "scale(1)" },
+            },
           }}
         />
+
         <Box
           sx={{
             position: "absolute",
-            width: "200px",
-            height: "200px",
+            width: "250px",
+            height: "250px",
             borderRadius: "50%",
-            backgroundColor: "rgba(21, 183, 158, 0.05)",
+            backgroundColor: `${alpha(accentColor, 0.07)}`,
             bottom: "10%",
-            left: "-30px",
+            left: "-50px",
+            animation: "pulse2 18s infinite alternate-reverse ease-in-out",
+            "@keyframes pulse2": {
+              "0%": { transform: "scale(1)" },
+              "50%": { transform: "scale(1.15)" },
+              "100%": { transform: "scale(1)" },
+            },
           }}
         />
-        <Stack spacing={3} sx={{ position: "relative", zIndex: 1 }}>
+
+        {/* Content stack */}
+        <Stack
+          spacing={4}
+          sx={{
+            position: "relative",
+            zIndex: 1,
+            maxWidth: "500px",
+          }}
+        >
           <Stack spacing={1}>
             {clientRole === "admin" ? (
               <Typography
                 color="inherit"
                 sx={{
-                  fontSize: "28px",
-                  lineHeight: "34px",
+                  fontSize: { xs: "26px", sm: "32px" },
+                  lineHeight: 1.2,
                   textAlign: "center",
-                  paddingBottom: "10px",
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  letterSpacing: "-0.5px",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                  mb: 1,
                 }}
                 variant="h1"
               >
@@ -166,36 +249,56 @@ export function Layout({
               <Typography
                 color="inherit"
                 sx={{
-                  fontSize: "30px",
-                  lineHeight: "34px",
+                  fontSize: { xs: "20px", sm: "32px" },
+                  lineHeight: 1.2,
                   textAlign: "center",
-                  paddingBottom: "10px",
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  letterSpacing: "-0.5px",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                  mb: 1,
+                  whiteSpace: "nowrap",
                 }}
                 variant="h1"
               >
                 Welcome to{" "}
-                <Box component="span" sx={{ color: "#15b79e" }}>
+                <Box
+                  component="span"
+                  sx={{
+                    color: accentColor,
+                    position: "relative",
+                  }}
+                >
                   Arogyaa's Doctor Portal
                 </Box>
               </Typography>
             )}
 
-            {/* Animated typing text */}
-            <Box sx={{ height: "32px", textAlign: "center", mb: 2 }}>
+            {/* Animated typing text - keeping your implementation */}
+            <Box
+              sx={{
+                height: "40px",
+                textAlign: "center",
+                mb: 2,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <Typography
                 variant="h5"
                 align="center"
                 sx={{
                   display: "inline-block",
-                  borderRight: "3px solid #15b79e",
+                  borderRight: `3px solid ${accentColor}`,
                   paddingRight: "5px",
                   animation: "blink-caret 0.75s step-end infinite",
                   "@keyframes blink-caret": {
                     "from, to": { borderColor: "transparent" },
-                    "50%": { borderColor: "#15b79e" },
+                    "50%": { borderColor: accentColor },
                   },
                   whiteSpace: "nowrap",
+                  minHeight: "32px",
+                  fontWeight: 500,
                 }}
               >
                 {typingText}
@@ -207,88 +310,170 @@ export function Layout({
               variant="body1"
               sx={{
                 opacity: 0.9,
-                maxWidth: "80%",
+                maxWidth: "85%",
                 margin: "0 auto",
-                lineHeight: 1.6,
+                lineHeight: 1.7,
+                fontSize: "1rem",
+                fontWeight: 400,
               }}
             >
               A comprehensive platform for medical professionals and
-              administrators to manage patient care efficiently and effectively.
+              administrators to manage patient care efficiently.
             </Typography>
           </Stack>
 
-          {/* Medical icon or dashboard visualization could go here */}
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+          {/* Enhanced medical icon with animation */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              mt: 4,
+            }}
+          >
+            {/* Medical icon */}
             <Box
+              component="svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
               sx={{
-                width: "120px",
-                height: "120px",
-                borderRadius: "50%",
-                backgroundColor: "rgba(255,255,255,0.03)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 30px rgba(0,0,0,0.1)",
-                backdropFilter: "blur(5px)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                width: 80,
+                height: 80,
+                fill: "none",
+                stroke: accentColor,
+                animation: "pulse3 3s infinite ease-in-out",
+                "@keyframes pulse3": {
+                  "0%": { transform: "scale(1)" },
+                  "50%": { transform: "scale(1.05)" },
+                  "100%": { transform: "scale(1)" },
+                },
               }}
             >
-              {/* You can replace this with an appropriate icon */}
-              {/* <Box
-                component="svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                sx={{ width: 60, height: 60, fill: "#15b79e" }}
-              >
-                <path
-                  d="M8 2V5"
-                  stroke="#15b79e"
-                  strokeWidth="1.5"
-                  strokeMiterlimit="10"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M16 2V5"
-                  stroke="#15b79e"
-                  strokeWidth="1.5"
-                  strokeMiterlimit="10"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M3.5 9.09H20.5"
-                  stroke="#15b79e"
-                  strokeWidth="1.5"
-                  strokeMiterlimit="10"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M21 8.5V17C21 20 19.5 22 16 22H8C4.5 22 3 20 3 17V8.5C3 5.5 4.5 3.5 8 3.5H16C19.5 3.5 21 5.5 21 8.5Z"
-                  stroke="#15b79e"
-                  strokeWidth="1.5"
-                  strokeMiterlimit="10"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M15.6947 13.7H15.7037"
-                  stroke="#15b79e"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M15.6947 16.7H15.7037"
-                  stroke="#15b79e"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Box> */}
+              <path
+                d="M8 2V5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M16 2V5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M3.5 9.09H20.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M21 8.5V17C21 20 19.5 22 16 22H8C4.5 22 3 20 3 17V8.5C3 5.5 4.5 3.5 8 3.5H16C19.5 3.5 21 5.5 21 8.5Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 13.5H12.01"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M15.7 13.5H15.71"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M15.7 16.5H15.71"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 16.5H12.01"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8.3 13.5H8.31"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8.3 16.5H8.31"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </Box>
+          </Box>
+
+          {/* Feature bullets */}
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <Stack
+              spacing={1}
+              sx={{
+                maxWidth: "400px",
+                opacity: 0.9,
+              }}
+            >
+              {["Real-time Updates", "Advanced Analytics"].map(
+                (feature, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        bgcolor: accentColor,
+                      }}
+                    />
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: "0.875rem",
+                        letterSpacing: "0.5px",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {feature}
+                    </Typography>
+                  </Box>
+                )
+              )}
+            </Stack>
           </Box>
         </Stack>
       </Box>
