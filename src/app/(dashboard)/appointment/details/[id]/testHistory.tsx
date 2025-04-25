@@ -24,7 +24,9 @@ import {
   Select,
   MenuItem,
   Modal,
+  Typography,
 } from "@mui/material";
+import { Visibility } from "@mui/icons-material";
 
 import { CheckCircle, Event, Cancel } from "@mui/icons-material";
 import { fetcher, modifier } from "@/apis/apiClient";
@@ -53,6 +55,7 @@ interface TestHistoryProps {
   patientId: string;
 }
 
+// eslint-disable-next-line react/function-component-definition
 const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
   const [tests, setTests] = useState<Test[]>([]);
   const [page, setPage] = useState(0);
@@ -69,6 +72,11 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
   const [viewImageModal, setViewImageModal] = useState(false);
   const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
+
+  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
+  const [currentDescription, setCurrentDescription] = useState<string | null>(
+    null
+  );
 
   const [testImagePreview, setTestImagePreview] = useState<string | null>(null);
   const { toast } = useSelector((state: RootState) => state.toast);
@@ -160,6 +168,17 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
     setOpenModal(false);
     setTestImagePreview(null);
     setSelectedTestId(null);
+  };
+
+  const handleOpenDescriptionModal = (description: string) => {
+    setCurrentDescription(description);
+    setDescriptionModalOpen(true);
+  };
+
+  // Function to close the modal
+  const handleCloseDescriptionModal = () => {
+    setDescriptionModalOpen(false);
+    setCurrentDescription(null);
   };
 
   const handleUpload = useCallback(async () => {
@@ -304,9 +323,12 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                   {capitalizeFirstLetter(test.name)}
                 </TableCell>
                 <TableCell sx={{ textAlign: "center" }}>
-                  {capitalizeFirstLetter(test.description)}
+                  {/* Eye icon to trigger modal */}
+                  <Visibility
+                    sx={{ cursor: "pointer" }}
+                    onClick={() => handleOpenDescriptionModal(test.description)}
+                  />
                 </TableCell>
-                {/* Status Column (Moved before Type) */}
                 <TableCell sx={{ textAlign: "center" }}>
                   <Select
                     value={test.status}
@@ -407,7 +429,6 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
                     </MenuItem>
                   </Select>
                 </TableCell>
-                {/* Type Column (Moved after Status) */}
                 <TableCell sx={{ textAlign: "center" }}>
                   {capitalizeFirstLetter(test.type || "N/A")}
                 </TableCell>
@@ -451,7 +472,35 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
           }}
         />
       </TableContainer>
-
+      <Modal open={descriptionModalOpen} onClose={handleCloseDescriptionModal}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            backgroundColor: "white",
+            padding: 4,
+            borderRadius: 2,
+            boxShadow: 3,
+            width: "80%",
+            maxWidth: 500,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
+            Test Description
+          </Typography>
+          <Typography variant="body1">{currentDescription}</Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCloseDescriptionModal}
+            sx={{ mt: 2 }}
+          >
+            Close
+          </Button>
+        </Box>
+      </Modal>
       {openModal && selectedTestId && (
         <ImagePicker
           open={openModal}
@@ -510,7 +559,6 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
           )}
         </Box>
       </Modal>
-
       <Toast
         alerting={toast.toastAlert}
         severity={toast.toastSeverity}

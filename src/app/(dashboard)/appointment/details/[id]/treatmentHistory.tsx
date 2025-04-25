@@ -19,6 +19,7 @@ import {
   Select,
   IconButton,
   Modal,
+  Typography,
 } from "@mui/material";
 import {
   CheckCircle,
@@ -80,6 +81,11 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
   const dispatch: AppDispatch = useDispatch();
   const { capitalizeFirstLetter } = Utility();
 
+  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
+  const [currentDescription, setCurrentDescription] = useState<string | null>(
+    null
+  );
+
   // Function to fetch treatment data from API using patientId prop
   const fetchTreatments = useCallback(async () => {
     if (patientId) {
@@ -131,6 +137,17 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
   const handleCloseModal = () => {
     setOpenModal(false);
     setSelectedTreatmentId(null);
+  };
+
+  const handleOpenDescriptionModal = (description: string) => {
+    setCurrentDescription(description);
+    setDescriptionModalOpen(true);
+  };
+
+  // Function to close the modal
+  const handleCloseDescriptionModal = () => {
+    setDescriptionModalOpen(false);
+    setCurrentDescription(null);
   };
 
   // Upload treatment image
@@ -311,7 +328,13 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
                   {capitalizeFirstLetter(treatment.name)}
                 </TableCell>
                 <TableCell sx={{ textAlign: "center" }}>
-                  {capitalizeFirstLetter(treatment.description)}
+                  {/* Eye icon to trigger modal */}
+                  <Visibility
+                    sx={{ cursor: "pointer" }}
+                    onClick={() =>
+                      handleOpenDescriptionModal(treatment.description)
+                    }
+                  />
                 </TableCell>
                 <TableCell
                   sx={{
@@ -429,8 +452,8 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
                 <TableCell
                   sx={{
                     textAlign: "center",
-                    minWidth: 120, 
-                    whiteSpace: "nowrap", 
+                    minWidth: 120,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {treatment.followUpDate
@@ -494,6 +517,35 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
           }}
         />
       </TableContainer>
+      <Modal open={descriptionModalOpen} onClose={handleCloseDescriptionModal}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            backgroundColor: "white",
+            padding: 4,
+            borderRadius: 2,
+            boxShadow: 3,
+            width: "80%",
+            maxWidth: 500,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
+            Treatment Description
+          </Typography>
+          <Typography variant="body1">{currentDescription}</Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCloseDescriptionModal}
+            sx={{ mt: 2 }}
+          >
+            Close
+          </Button>
+        </Box>
+      </Modal>
 
       {openModal && selectedTreatmentId && (
         <ImagePicker

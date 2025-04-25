@@ -398,14 +398,14 @@ const DoctorForm: React.FC = () => {
                 label="Date of Birth *"
                 name="dob"
                 type="date"
-                value={values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""} 
+                value={values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const formattedDate = e.target.value; 
-                  setFieldValue("dob", formattedDate); 
+                  const formattedDate = e.target.value;
+                  setFieldValue("dob", formattedDate);
                 }}
-                InputLabelProps={{ shrink: true }} 
-                error={touched.dob && Boolean(errors.dob)} 
-                helperText={touched.dob && errors.dob} 
+                InputLabelProps={{ shrink: true }}
+                error={touched.dob && Boolean(errors.dob)}
+                helperText={touched.dob && errors.dob}
               />
 
               <FormControl
@@ -1031,10 +1031,17 @@ const DoctorForm: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         InputLabelProps={{ shrink: true }}
-                        value={slot.startTime || ""}
+                        value={
+                          slot.endTime
+                            ? dayjs(slot.endTime, "hh:mm A").format("HH:mm")
+                            : ""
+                        }
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].startTime = e.target.value;
+                          updatedAvailability[index].startTime = dayjs(
+                            e.target.value,
+                            "HH:mm"
+                          ).format("hh:mm A");
                           setFieldValue("availability", updatedAvailability);
                           setFieldValue("dirty", true);
                         }}
@@ -1049,10 +1056,17 @@ const DoctorForm: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         InputLabelProps={{ shrink: true }}
-                        value={slot.endTime || ""}
+                        value={
+                          slot.endTime
+                            ? dayjs(slot.endTime, "hh:mm A").format("HH:mm")
+                            : ""
+                        }
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].endTime = e.target.value;
+                          updatedAvailability[index].endTime = dayjs(
+                            e.target.value,
+                            "HH:mm"
+                          ).format("hh:mm A");
                           setFieldValue("availability", updatedAvailability);
                           setFieldValue("dirty", true);
                         }}

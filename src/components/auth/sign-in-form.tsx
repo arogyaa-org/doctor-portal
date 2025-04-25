@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
@@ -17,17 +15,10 @@ import Toast from "@/components/common/Toast";
 import { AppDispatch, RootState } from "@/redux/store";
 import { creator } from "@/apis/apiClient";
 import { Utility } from "@/utils";
-
-// Icons (using appropriate icons based on what's available in your project)
-// If you don't have these specific icons, you can replace them with icons from your current setup
 import { ArrowBack, Visibility } from "@mui/icons-material";
 import { VisibilityOff } from "@mui/icons-material";
 import { MedicalServices } from "@mui/icons-material";
 import { AdminPanelSettings } from "@mui/icons-material";
-// Fallback if icons import fails
-// const EyeIcon = () => <span>👁️</span>;
-// const EyeSlashIcon = () => <span>👁️‍🗨️</span>;
-
 interface DoctorResponse {
   statusCode: number;
   message: string;
@@ -58,59 +49,10 @@ export function SignInForm({
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [loading, setLoading] = React.useState<boolean>(false);
   const { toast } = useSelector((state: RootState) => state.toast);
-  const [typingText, setTypingText] = React.useState<string>("");
-  const [currentWordIndex, setCurrentWordIndex] = React.useState<number>(0);
-  const [isDeleting, setIsDeleting] = React.useState<boolean>(false);
 
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
   const { capitalizeFirstLetter, decodedToken, toastAndNavigate } = Utility();
-
-  // This effect is used to update the typing text for the Layout component
-  // Words to animate on the right side panel
-  const words = [
-    "Empowering Healthcare...",
-    "Managing Appointments...",
-    "Tracking Patients...",
-    "Analyzing Symptoms...",
-    "Providing Better Care...",
-  ];
-
-  // Typing animation effect
-  React.useEffect(() => {
-    // Only run the animation when client role is set (to avoid unnecessary animations)
-    if (!clientRole) return;
-
-    const currentWord = words[currentWordIndex];
-    const typingSpeed = isDeleting ? 50 : 150;
-    const pauseDelay = 2000;
-
-    if (!isDeleting && typingText === currentWord) {
-      // Pause at the end of typing
-      const timeout = setTimeout(() => {
-        setIsDeleting(true);
-      }, pauseDelay);
-      return () => clearTimeout(timeout);
-    } else if (isDeleting && typingText === "") {
-      // Move to the next word
-      setIsDeleting(false);
-      setCurrentWordIndex((prev) => (prev + 1) % words.length);
-      const timeout = setTimeout(() => {}, 500);
-      return () => clearTimeout(timeout);
-    }
-
-    const timeout = setTimeout(() => {
-      setTypingText((prev) => {
-        if (isDeleting) {
-          return prev.substring(0, prev.length - 1);
-        } else {
-          return currentWord.substring(0, prev.length + 1);
-        }
-      });
-    }, typingSpeed);
-
-    return () => clearTimeout(timeout);
-  }, [typingText, isDeleting, currentWordIndex, words, clientRole]);
 
   const {
     control,
@@ -124,12 +66,11 @@ export function SignInForm({
 
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
-      console.log(clientRole, "clientrole");
       setLoading(true);
 
       try {
         const response: DoctorResponse = await creator(
-          clientRole === "admin" ? "user" : clientRole,
+          clientRole === "admin" ? "user" : clientRole ?? "guest",
           "/login",
           {
             email: values.email,
@@ -177,21 +118,28 @@ export function SignInForm({
   return (
     <Box
       sx={{
-        backgroundColor: "#f9f9f9",
+        backgroundColor: "#fff",
         padding: 4,
         borderRadius: 2,
         boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
         maxWidth: 450,
         margin: "auto",
         transform: "translateY(-20px)",
+        position: "relative", // For Toast positioning
       }}
     >
       <Stack spacing={2}>
+        {/* Logo and Role Selection */}
         {!clientRole ? (
-          <Box sx={{ textAlign: "center" }}>
+          <Box sx={{ textAlign: "center", mb: 4 }}>
             <Typography
               variant="h5"
-              sx={{ mb: 4, fontWeight: 600, color: "#122647" }}
+              sx={{
+                fontWeight: 600,
+                color: "#122647",
+                mb: 2,
+                textAlign: "center",
+              }}
             >
               Choose your role
             </Typography>
@@ -235,14 +183,36 @@ export function SignInForm({
           </Box>
         ) : (
           <Stack spacing={2}>
+            {/* Login Section */}
             <Box
               sx={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
+                justifyContent: "center",
                 mb: 2,
+                flexDirection: "column",
               }}
             >
+              <Box
+                sx={{
+                  backgroundColor:
+                    clientRole === "admin" ? "#122647" : "#15b79e",
+                  borderRadius: "50%",
+                  width: 60,
+                  height: 60,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  mb: 2,
+                }}
+              >
+                {clientRole === "admin" ? (
+                  <AdminPanelSettings fontSize="large" />
+                ) : (
+                  <MedicalServices fontSize="large" />
+                )}
+              </Box>
               <Typography
                 variant="h4"
                 sx={{
@@ -252,28 +222,9 @@ export function SignInForm({
               >
                 {capitalizeFirstLetter(clientRole)} Login
               </Typography>
-
-              <Box
-                sx={{
-                  backgroundColor:
-                    clientRole === "admin" ? "#122647" : "#15b79e",
-                  borderRadius: "50%",
-                  width: 40,
-                  height: 40,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                }}
-              >
-                {clientRole === "admin" ? (
-                  <AdminPanelSettings fontSize="small" />
-                ) : (
-                  <MedicalServices fontSize="small" />
-                )}
-              </Box>
             </Box>
 
+            {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)}>
               <Stack spacing={2.5}>
                 <Controller
