@@ -186,7 +186,7 @@ const AppointmentDetails = () => {
         "Status updated successfully"
       );
 
-      
+
     } catch (error) {
       console.error("Error updating status:", error);
       toastAndNavigate(dispatch, true, "error", "Failed to update status");
@@ -287,7 +287,7 @@ const AppointmentDetails = () => {
                     sx={{
                       ml: 4, // Matches chip icon+spacing (EventIcon + margins)
                       mb: 1, // Space between name and chip
-                      marginLeft:"-7px"
+                      marginLeft: "-7px"
                     }}
                   >
                     {patientData?.data?.username}
@@ -299,16 +299,16 @@ const AppointmentDetails = () => {
                       display: "flex",
                       alignItems: "center",
                       width: "fit-content",
-                      marginLeft:"-13.5px"
+                      marginLeft: "-13.5px"
                     }}
                   >
                     <EventIcon sx={{ mr: 0.5, ml: 0.5 }} />
                     <Typography variant="body2" sx={{ mr: 1 }}>
                       {appointmentData?.data?.appointmentDate
                         ? format(
-                            new Date(appointmentData?.data?.appointmentDate),
-                            "dd MMM yyyy"
-                          )
+                          new Date(appointmentData?.data?.appointmentDate),
+                          "dd MMM yyyy"
+                        )
                         : "N/A"}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -316,11 +316,11 @@ const AppointmentDetails = () => {
                       <Typography variant="body2">
                         {appointmentData?.data?.appointmentTime
                           ? format(
-                              new Date(
-                                `1970-01-01T${appointmentData?.data?.appointmentTime}`
-                              ),
-                              "hh:mm a"
-                            )
+                            new Date(
+                              `1970-01-01T${appointmentData?.data?.appointmentTime}`
+                            ),
+                            "hh:mm a"
+                          )
                           : "N/A"}
                       </Typography>
                     </Box>
@@ -349,7 +349,7 @@ const AppointmentDetails = () => {
                       (option) => option.value === status
                     )
                       ? statusOptions.find((option) => option.value === status)
-                          ?.color + "30"
+                        ?.color + "30"
                       : "#f8f9fa",
                     color:
                       statusOptions.find((option) => option.value === status)
@@ -697,6 +697,9 @@ const AppointmentDetails = () => {
           {/* Video thumbnail container with overlay */}
           <Box sx={{ position: "relative", backgroundColor: "#000" }}>
             <video
+              controls
+              autoPlay
+              muted
               poster="/api/placeholder/800/450"
               style={{
                 width: "100%",
@@ -706,12 +709,12 @@ const AppointmentDetails = () => {
                 opacity: 0.7,
               }}
             >
-              <source src="video.mp4" type="video/mp4" />
+              <source src={appointmentData?.data?.videoUrl || ''} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
 
             {/* Play button overlay */}
-            <Box
+            {/* <Box
               sx={{
                 position: "absolute",
                 top: 0,
@@ -750,7 +753,7 @@ const AppointmentDetails = () => {
               >
                 Click to play video
               </Typography>
-            </Box>
+            </Box> */}
           </Box>
 
           {/* Video details and description */}
