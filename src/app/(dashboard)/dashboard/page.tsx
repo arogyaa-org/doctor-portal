@@ -9,7 +9,7 @@ import {
   todayAppointmentColumns,
   upcomingAppointmentColumns,
   appointmentStatusMap,
-} from "@/components/dashboard/overview/appointments-status";
+} from "@/components/dashboard/overview/appointments-tables";
 import { Sales } from "@/components/dashboard/overview/graph";
 import { StatCard } from "@/components/dashboard/overview/statCard";
 import {
