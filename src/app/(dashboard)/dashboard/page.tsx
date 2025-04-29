@@ -1,17 +1,8 @@
+"use client";
+
 import * as React from "react";
-import type { Metadata } from "next";
 import Grid from "@mui/material/Unstable_Grid2";
 import dayjs from "dayjs";
-
-import { config } from "@/config";
-import {
-  ReusableTable,
-  todayAppointmentColumns,
-  upcomingAppointmentColumns,
-  appointmentStatusMap,
-} from "@/components/dashboard/overview/appointments-tables";
-import { Sales } from "@/components/dashboard/overview/graph";
-import { StatCard } from "@/components/dashboard/overview/statCard";
 import {
   Vaccines as VaccinesIcon,
   Person as PersonIcon,
@@ -23,11 +14,25 @@ import {
   HourglassEmpty as HourglassEmptyIcon,
 } from "@mui/icons-material";
 
-export const metadata = {
-  title: `Overview | Dashboard | ${config.site.name}`,
-} satisfies Metadata;
+import { config } from "@/config";
+import {
+  ReusableTable,
+  todayAppointmentColumns,
+  upcomingAppointmentColumns,
+  appointmentStatusMap,
+} from "@/components/dashboard/overview/appointments-tables";
+import { Sales } from "@/components/dashboard/overview/graph";
+import { StatCard } from "@/components/dashboard/overview/statCard";
+import { Utility } from "@/utils";
 
 export default function Page(): React.JSX.Element {
+  const { decodedToken } = Utility();
+  const role = decodedToken()?.role;
+
+  React.useEffect(() => {
+    console.log("Role:", role);
+  }, [role]);
+
   const cardColors = {
     doctors: "#4CAF50",
     patients: "#2196F3",
@@ -188,111 +193,128 @@ export default function Page(): React.JSX.Element {
     },
   ];
 
+  // Determine which stat cards to show based on role
+  const isDoctor = role === "doctor";
+
+  // Create dynamic stat card arrays for better organization
+  const statCardsRow1 = [
+    ...(isDoctor
+      ? []
+      : [
+          {
+            value: "360",
+            diff: 12,
+            trend: "up",
+            Icon: VaccinesIcon,
+            title: "DOCTORS",
+            iconColor: cardColors.doctors,
+          },
+          {
+            value: "200",
+            diff: 16,
+            trend: "down",
+            Icon: PersonIcon,
+            title: "PATIENTS",
+            iconColor: cardColors.patients,
+          },
+        ]),
+    {
+      value: "15000",
+      diff: 16,
+      trend: "up",
+      Icon: CurrencyRupeeIcon,
+      title: "TOTAL PAYMENTS",
+      iconColor: cardColors.payments,
+    },
+    {
+      value: "5000",
+      diff: 16,
+      trend: "down",
+      Icon: BookOnlineIcon,
+      title: "BOOKED APPOINTMENTS",
+      iconColor: cardColors.appointments,
+    },
+  ];
+
+  const statCardsRow2 = [
+    {
+      value: "4500",
+      diff: 16,
+      trend: "down",
+      Icon: CheckCircleIcon,
+      title: "COMPLETED APPOINTMENTS",
+      iconColor: cardColors.completed,
+    },
+    {
+      value: "500",
+      diff: 16,
+      trend: "down",
+      Icon: CancelIcon,
+      title: "CANCELLED APPOINTMENTS",
+      iconColor: cardColors.dropped,
+    },
+    {
+      value: "500",
+      diff: 16,
+      trend: "down",
+      Icon: HourglassEmptyIcon,
+      title: "PENDING APPOINTMENTS",
+      iconColor: cardColors.pending,
+    },
+    {
+      value: "200",
+      diff: 16,
+      trend: "down",
+      Icon: CalendarMonthIcon,
+      title: "APPOINTMENTS THIS MONTH",
+      iconColor: cardColors.monthly,
+    },
+  ];
+
+  // Calculate column width for stat cards based on number of cards
+  const getStatCardWidth = (cardsInRow) => {
+    // For small screens, always use full width
+    // For medium screens, use half width
+    // For large screens, distribute evenly
+    return {
+      xs: 12,
+      sm: 6,
+      md: 6,
+      lg: 12 / Math.min(cardsInRow.length, 4),
+    };
+  };
+
   return (
     <Grid container spacing={3}>
-      {/* Total Doctors Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="360"
-          diff={12}
-          trend="up"
-          Icon={VaccinesIcon}
-          title="DOCTORS"
-          iconColor={cardColors.doctors}
-          sx={cardStyle}
-        />
-      </Grid>
+      {/* First row of stat cards - dynamically sized */}
+      {statCardsRow1.map((card, index) => (
+        <Grid key={`stat-card-1-${index}`} {...getStatCardWidth(statCardsRow1)}>
+          <StatCard
+            value={card.value}
+            diff={card.diff}
+            trend={card.trend}
+            Icon={card.Icon}
+            title={card.title}
+            iconColor={card.iconColor}
+            sx={cardStyle}
+          />
+        </Grid>
+      ))}
 
-      {/* Total Patients Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="200"
-          diff={16}
-          trend="down"
-          Icon={PersonIcon}
-          title="PATIENTS"
-          iconColor={cardColors.patients}
-          sx={cardStyle}
-        />
-      </Grid>
-
-      {/* Total Payments Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="15000"
-          diff={16}
-          trend="up"
-          Icon={CurrencyRupeeIcon}
-          title="TOTAL PAYMENTS"
-          iconColor={cardColors.payments}
-          sx={cardStyle}
-        />
-      </Grid>
-
-      {/* Total Appointment Booked Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="5000"
-          diff={16}
-          trend="down"
-          Icon={BookOnlineIcon}
-          title="BOOKED APPOINTMENTS "
-          iconColor={cardColors.appointments}
-          sx={cardStyle}
-        />
-      </Grid>
-
-      {/* Total Appointment Completed Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="4500"
-          diff={16}
-          trend="down"
-          Icon={CheckCircleIcon}
-          title="COMPLETED APPOINTMENTS "
-          iconColor={cardColors.completed}
-          sx={cardStyle}
-        />
-      </Grid>
-
-      {/* Total Appointment Dropped Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="500"
-          diff={16}
-          trend="down"
-          Icon={CancelIcon}
-          title="CANCELLED APPOINTMENTS "
-          iconColor={cardColors.dropped}
-          sx={cardStyle}
-        />
-      </Grid>
-
-      {/* Total Appointment Pending Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="500"
-          diff={16}
-          trend="down"
-          Icon={HourglassEmptyIcon}
-          title="PENDING APPOINTMENTS"
-          iconColor={cardColors.pending}
-          sx={cardStyle}
-        />
-      </Grid>
-
-      {/* Total Appointment This Month Card */}
-      <Grid lg={3} sm={6} xs={12}>
-        <StatCard
-          value="200"
-          diff={16}
-          trend="down"
-          Icon={CalendarMonthIcon}
-          title="APPOINTMENTS THIS MONTH"
-          iconColor={cardColors.monthly}
-          sx={cardStyle}
-        />
-      </Grid>
+      {/* Second row of stat cards - dynamically sized */}
+      {statCardsRow2.map((card, index) => (
+        <Grid key={`stat-card-2-${index}`} {...getStatCardWidth(statCardsRow2)}>
+          <StatCard
+            value={card.value}
+            diff={card.diff}
+            trend={card.trend}
+            Icon={card.Icon}
+            title={card.title}
+            iconColor={card.iconColor}
+            sx={cardStyle}
+          />
+        </Grid>
+      ))}
 
       {/* Today's Appointments Table */}
       <Grid lg={6} md={12} xs={12}>
@@ -320,114 +342,62 @@ export default function Page(): React.JSX.Element {
         />
       </Grid>
 
-      {/* Doctor Onboarded Chart */}
-      <Grid lg={6} md={12} xs={12}>
-        <Sales
-          chartSeries={doctorData}
-          title="Doctors Onboarded"
-          syncButtonText="Refresh"
-          overviewButtonText="Details"
-          enableStacked={true}
-          chartType="bar"
-          sx={cardStyle}
-        />
-      </Grid>
+      {/* Charts section - adaptive layout */}
+      <Grid container item spacing={3} xs={12}>
+        {/* Doctor Onboarded Chart - only shown for non-doctors */}
+        {!isDoctor && (
+          <Grid lg={6} md={12} xs={12}>
+            <Sales
+              chartSeries={doctorData}
+              title="Doctors Onboarded"
+              syncButtonText="Refresh"
+              overviewButtonText="Details"
+              enableStacked={true}
+              chartType="bar"
+              sx={cardStyle}
+            />
+          </Grid>
+        )}
 
-      {/* Patient Monthly Chart */}
-      <Grid lg={6} md={12} xs={12}>
-        <Sales
-          chartSeries={patientMonthlyData}
-          title="Patient Monthly"
-          syncButtonText="Update"
-          chartType="bar"
-          enableStacked={true}
-          yAxisSuffix=""
-          sx={cardStyle}
-        />
-      </Grid>
+        {/* Patient Monthly Chart - will expand to full width for doctors */}
+        <Grid lg={isDoctor ? 12 : 6} md={12} xs={12}>
+          <Sales
+            chartSeries={patientMonthlyData}
+            title="Patient Monthly"
+            syncButtonText="Update"
+            chartType="bar"
+            enableStacked={true}
+            yAxisSuffix=""
+            sx={cardStyle}
+          />
+        </Grid>
 
-      {/* Payment Monthly Chart */}
-      <Grid lg={6} md={12} xs={12}>
-        <Sales
-          chartSeries={paymentMonthlyData}
-          title="Payment Monthly"
-          syncButtonText="Sync"
-          overviewButtonText="View All"
-          chartType="bar"
-          enableStacked={true}
-          yAxisSuffix="K"
-          sx={cardStyle}
-        />
-      </Grid>
+        {/* Payment Monthly Chart */}
+        <Grid lg={6} md={12} xs={12}>
+          <Sales
+            chartSeries={paymentMonthlyData}
+            title="Payment Monthly"
+            syncButtonText="Sync"
+            overviewButtonText="View All"
+            chartType="bar"
+            enableStacked={true}
+            yAxisSuffix="K"
+            sx={cardStyle}
+          />
+        </Grid>
 
-      {/* Appointment Chart */}
-      <Grid lg={6} md={12} xs={12}>
-        <Sales
-          chartSeries={appointmentData}
-          title="Patient Appointments"
-          syncButtonText="Update"
-          chartType="bar"
-          enableStacked={true}
-          sx={cardStyle}
-        />
+        {/* Appointment Chart */}
+        <Grid lg={6} md={12} xs={12}>
+          <Sales
+            chartSeries={appointmentData}
+            title="Patient Appointments"
+            syncButtonText="Update"
+            chartType="bar"
+            enableStacked={true}
+            sx={cardStyle}
+          />
+        </Grid>
       </Grid>
-
-      {/* <Grid lg={4} md={6} xs={12}>
-        <Traffic
-          chartSeries={[63, 15, 22]}
-          labels={["Desktop", "Tablet", "Phone"]}
-          sx={cardStyle}
-        />
-      </Grid> */}
-      {/* <Grid lg={4} md={6} xs={12}>
-        <LatestProducts
-          products={[
-            {
-              id: "PRD-005",
-              name: "Soja & Co. Eucalyptus",
-              image: "/assets/product-5.png",
-              updatedAt: dayjs()
-                .subtract(18, "minutes")
-                .subtract(5, "hour")
-                .toDate(),
-            },
-            {
-              id: "PRD-004",
-              name: "Necessaire Body Lotion",
-              image: "/assets/product-4.png",
-              updatedAt: dayjs()
-                .subtract(41, "minutes")
-                .subtract(3, "hour")
-                .toDate(),
-            },
-            {
-              id: "PRD-003",
-              name: "Ritual of Sakura",
-              image: "/assets/product-3.png",
-              updatedAt: dayjs()
-                .subtract(5, "minutes")
-                .subtract(3, "hour")
-                .toDate(),
-            },
-            {
-              id: "PRD-002",
-              name: "Lancome Rouge",
-              image: "/assets/product-2.png",
-              updatedAt: dayjs()
-                .subtract(23, "minutes")
-                .subtract(2, "hour")
-                .toDate(),
-            },
-            {
-              id: "PRD-001",
-              name: "Erbology Aloe Vera",
-              image: "/assets/product-1.png",
-              updatedAt: dayjs().subtract(10, "minutes").toDate(),
-            },
-          ]}
-          sx={cardStyle}
-        />
-      </Grid> */}
     </Grid>
   );
 }

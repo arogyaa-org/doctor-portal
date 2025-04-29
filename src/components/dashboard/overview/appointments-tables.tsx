@@ -14,6 +14,12 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { ArrowRight as ArrowRightIcon } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import dayjs from "dayjs";
+import { alpha, useTheme } from "@mui/material/styles";
+import Typography from "@mui/material/Typography";
+import TableContainer from "@mui/material/TableContainer";
+
+// Utility function to get token (can be used in the component)
+import { Utility } from "@/utils";
 
 // Define generic status map type
 type StatusConfigType = Record<
@@ -44,6 +50,8 @@ export interface ColumnConfig {
   format?: (value: any, rowData: any) => React.ReactNode;
   sortable?: boolean;
   sortDirection?: "asc" | "desc";
+  hideForRoles?: string[]; // New property to hide column for specific roles
+  width?: string; // Column width control
 }
 
 // Generic data item interface
@@ -60,9 +68,10 @@ export interface TableProps {
   statusMap?: StatusConfigType;
   actionButtonText?: string;
   onActionClick?: () => void;
-  minWidth?: number;
   dateFormat?: string;
   sx?: SxProps;
+  emptyMessage?: string;
+  dense?: boolean;
 }
 
 export function ReusableTable({
@@ -73,71 +82,174 @@ export function ReusableTable({
   statusMap = orderStatusMap,
   actionButtonText = "View all",
   onActionClick,
-  minWidth = 800,
   dateFormat = "MMM D, YYYY",
   sx,
+  emptyMessage = "No data available",
+  dense = false,
 }: TableProps): React.JSX.Element {
+  const theme = useTheme();
+  const { decodedToken } = Utility();
+  const userRole = decodedToken()?.role || "";
+
+  // Filter columns based on user role
+  const visibleColumns = columns.filter(
+    (column) => !column.hideForRoles?.includes(userRole)
+  );
+
+  // Strip the border with border-radius to avoid visual issues
+  const cardSx = {
+    ...sx,
+    borderRadius: 2,
+    boxShadow: theme.shadows[3],
+    overflow: "hidden",
+    transition: "box-shadow 0.3s ease-in-out",
+    "&:hover": {
+      boxShadow: theme.shadows[6],
+    },
+  };
+
+  // Calculate table layout based on visible columns
+  const tableLayout = "fixed"; // Use fixed layout to honor column widths
+
   return (
-    <Card sx={sx}>
-      <CardHeader title={title} />
+    <Card sx={cardSx}>
+      <CardHeader
+        title={
+          <Typography variant="h6" fontWeight="bold" color="primary">
+            {title}
+          </Typography>
+        }
+        sx={{
+          backgroundColor: alpha(theme.palette.primary.main, 0.05),
+          padding: theme.spacing(1.5),
+        }}
+      />
       <Divider />
-      <Box sx={{ overflowX: "auto" }}>
-        <Table sx={{ minWidth }}>
+      <TableContainer sx={{ maxHeight: 400 }}>
+        <Table
+          stickyHeader
+          size={dense ? "small" : "medium"}
+          sx={{
+            tableLayout: tableLayout,
+            width: "100%",
+          }}
+        >
           <TableHead>
             <TableRow>
-              {columns.map((column) => (
-                <TableCell key={column.id} sortDirection={column.sortDirection}>
+              {visibleColumns.map((column) => (
+                <TableCell
+                  key={column.id}
+                  sortDirection={column.sortDirection}
+                  sx={{
+                    backgroundColor: theme.palette.background.default,
+                    fontWeight: "bold",
+                    color: theme.palette.text.secondary,
+                    width: column.width,
+                    padding: theme.spacing(1.5),
+                  }}
+                >
                   {column.label}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {items.map((item) => {
-              return (
-                <TableRow hover key={item.id}>
-                  {columns.map((column) => {
-                    // Handle status column with chips
-                    if (column.id === statusKey && item[statusKey]) {
-                      const { label, color } = statusMap[item[statusKey]] || {
-                        label: "Unknown",
-                        color: "default",
-                      };
+            {items.length > 0 ? (
+              items.map((item) => {
+                return (
+                  <TableRow
+                    hover
+                    key={item.id}
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: alpha(
+                          theme.palette.primary.main,
+                          0.04
+                        ),
+                      },
+                      cursor: "pointer",
+                    }}
+                  >
+                    {visibleColumns.map((column) => {
+                      // Handle status column with chips
+                      if (column.id === statusKey && item[statusKey]) {
+                        const { label, color } = statusMap[item[statusKey]] || {
+                          label: "Unknown",
+                          color: "default",
+                        };
+                        return (
+                          <TableCell
+                            key={column.id}
+                            sx={{ padding: theme.spacing(1) }}
+                          >
+                            <Chip
+                              color={color}
+                              label={label}
+                              size="small"
+                              sx={{
+                                fontWeight: "medium",
+                                minWidth: 80,
+                                textAlign: "center",
+                              }}
+                            />
+                          </TableCell>
+                        );
+                      }
+
+                      // Handle date formatting
+                      if (column.format) {
+                        return (
+                          <TableCell
+                            key={column.id}
+                            sx={{ padding: theme.spacing(1) }}
+                          >
+                            {column.format(item[column.id], item)}
+                          </TableCell>
+                        );
+                      }
+
+                      // Default rendering
                       return (
-                        <TableCell key={column.id}>
-                          <Chip color={color} label={label} size="small" />
+                        <TableCell
+                          key={column.id}
+                          sx={{ padding: theme.spacing(1) }}
+                        >
+                          {item[column.id]}
                         </TableCell>
                       );
-                    }
-
-                    // Handle date formatting
-                    if (column.format) {
-                      return (
-                        <TableCell key={column.id}>
-                          {column.format(item[column.id], item)}
-                        </TableCell>
-                      );
-                    }
-
-                    // Default rendering
-                    return (
-                      <TableCell key={column.id}>{item[column.id]}</TableCell>
-                    );
-                  })}
-                </TableRow>
-              );
-            })}
+                    })}
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={visibleColumns.length}
+                  align="center"
+                  sx={{ py: 4 }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    {emptyMessage}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
-      </Box>
+      </TableContainer>
       <Divider />
-      <CardActions sx={{ justifyContent: "flex-end" }}>
+      <CardActions sx={{ justifyContent: "flex-end", py: 1, px: 2 }}>
         <Button
-          color="inherit"
+          color="primary"
           endIcon={<ArrowRightIcon fontSize="var(--icon-fontSize-md)" />}
           size="small"
-          variant="text"
+          variant="contained"
           onClick={onActionClick}
+          sx={{
+            textTransform: "none",
+            borderRadius: 1.5,
+            px: 2,
+          }}
         >
           {actionButtonText}
         </Button>
@@ -148,47 +260,62 @@ export function ReusableTable({
 
 // Export specific configurations for common use cases
 export const orderColumns: ColumnConfig[] = [
-  { id: "id", label: "Order" },
+  { id: "id", label: "Order", width: "25%" },
   {
     id: "customerName",
     label: "Customer",
     format: (value, rowData) => rowData.customer?.name || value,
+    width: "30%",
   },
   {
     id: "createdAt",
     label: "Date",
     format: (value) => dayjs(value).format("MMM D, YYYY"),
     sortDirection: "desc",
+    width: "25%",
   },
-  { id: "status", label: "Status" },
+  { id: "status", label: "Status", width: "20%" },
 ];
 
 export const todayAppointmentColumns: ColumnConfig[] = [
-  { id: "patientName", label: "Patient" },
-  { id: "doctorName", label: "Doctor" },
+  { id: "patientName", label: "Patient", width: "40%" },
+  {
+    id: "doctorName",
+    label: "Doctor",
+    hideForRoles: ["doctor"],
+    width: "35%",
+  },
   {
     id: "time",
     label: "Time",
     format: (value) => dayjs(value).format("h:mm A"),
+    width: "25%",
   },
-  { id: "status", label: "Status" },
+  { id: "status", label: "Status", width: "25%" },
 ];
 
 export const upcomingAppointmentColumns: ColumnConfig[] = [
-  { id: "patientName", label: "Patient" },
-  { id: "doctorName", label: "Doctor" },
+  { id: "patientName", label: "Patient", width: "30%" },
+  {
+    id: "doctorName",
+    label: "Doctor",
+    hideForRoles: ["doctor"],
+    width: "30%",
+  },
   {
     id: "date",
     label: "Date",
     format: (value) => dayjs(value).format("MMM D, YYYY"),
     sortDirection: "asc",
+    width: "20%",
   },
   {
     id: "time",
     label: "Time",
     format: (value) => dayjs(value).format("h:mm A"),
+    width: "20%",
   },
-  { id: "status", label: "Status" },
+  { id: "status", label: "Status", width: "20%" },
 ];
 
 // Backward compatibility wrapper for LatestOrders
