@@ -1,31 +1,43 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Alert,
   Box,
   Button,
   Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
-  TablePagination,
-  alpha,
-  MenuItem,
-  Select,
+  Typography,
+  Divider,
   IconButton,
   Modal,
-  Typography,
+  Alert,
+  Collapse,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  useTheme,
+  useMediaQuery,
+  Select,
+  MenuItem,
+  Menu,
+  FormControl,
 } from "@mui/material";
 import {
   CheckCircle,
-  Visibility,
   AddCircle,
   HourglassEmpty,
+  KeyboardArrowDown,
+  KeyboardArrowUp,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Description as DescriptionIcon,
+  Category as CategoryIcon,
+  Event as EventIcon,
+  Photo as PhotoIcon,
+  LocalHospital as DiagnosisIcon,
+  Medication as MedicationIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { fetcher, modifier } from "@/apis/apiClient";
@@ -44,9 +56,15 @@ interface Treatment {
   status: string;
   type: string;
   photo: string;
+  followUpDate?: string;
+  diagnosis?: string;
+  treatments: Array<{
+    name: string;
+    description: string;
+    dose?: string;
+    frequency?: string;
+  }>;
 }
-
-const statuses = ["in progress", "completed"];
 
 interface TreatmentHistoryProps {
   patientId: string;
@@ -54,10 +72,13 @@ interface TreatmentHistoryProps {
 
 // eslint-disable-next-line react/function-component-definition
 const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [totalCount, setTotalCount] = useState(0);
+  const [expandedTreatment, setExpandedTreatment] = useState<string | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [selectedTreatmentId, setSelectedTreatmentId] = useState<string | null>(
@@ -73,6 +94,15 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
   >(null);
   const treatmentFileInputRef = useRef<HTMLInputElement>(null);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
+  const [currentTreatment, setCurrentTreatment] = useState<Treatment | null>(
+    null
+  );
+  const [loading, setLoading] = useState(false);
+  // New state for tracking status dropdown menus
+  const [statusMenuAnchors, setStatusMenuAnchors] = useState<{
+    [key: string]: HTMLElement | null;
+  }>({});
 
   // global state for snackbar from Redux
   const { toast } = useSelector((state: RootState) => state.toast);
@@ -81,51 +111,41 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
   const dispatch: AppDispatch = useDispatch();
   const { capitalizeFirstLetter } = Utility();
 
-  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
-  const [currentDescription, setCurrentDescription] = useState<string | null>(
-    null
-  );
-
   // Function to fetch treatment data from API using patientId prop
   const fetchTreatments = useCallback(async () => {
     if (patientId) {
       try {
+        setLoading(true);
         const response = await fetcher(
           "treatment",
-          `get-treatments-by-patientId/${patientId}?page=${
-            page + 1
-          }&limit=${rowsPerPage}`
+          `get-treatments-by-patientId/${patientId}`
         );
 
         if (!response) {
           throw new Error("No response from the API");
         }
-        setTreatments(response.results || []);
-        setTotalCount(response.count || 0);
+
+        const allTreatments = response.results || [];
+        setTreatments(allTreatments);
         setError(null);
       } catch (error) {
         console.error("Error fetching treatments:", error);
         setError(error instanceof Error ? error.message : String(error));
         setTreatments([]);
-        setTotalCount(0);
+      } finally {
+        setLoading(false);
       }
     }
-  }, [patientId, page, rowsPerPage]);
+  }, [patientId]);
 
   useEffect(() => {
     fetchTreatments();
   }, [fetchTreatments]);
 
-  // Handle table pagination
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+  const handleToggleExpand = (treatmentId: string) => {
+    setExpandedTreatment(
+      expandedTreatment === treatmentId ? null : treatmentId
+    );
   };
 
   // Open modal for uploading image
@@ -139,15 +159,14 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
     setSelectedTreatmentId(null);
   };
 
-  const handleOpenDescriptionModal = (description: string) => {
-    setCurrentDescription(description);
+  const handleOpenDescriptionModal = (treatment: Treatment) => {
+    setCurrentTreatment(treatment);
     setDescriptionModalOpen(true);
   };
 
-  // Function to close the modal
   const handleCloseDescriptionModal = () => {
     setDescriptionModalOpen(false);
-    setCurrentDescription(null);
+    setCurrentTreatment(null);
   };
 
   // Upload treatment image
@@ -180,13 +199,14 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
         "Image uploaded successfully"
       );
       handleCloseModal();
+      fetchTreatments();
     } catch (error) {
       console.error("Error uploading image:", error);
       toastAndNavigate(dispatch, true, "error", "Failed to upload image");
     } finally {
       setIsUploading(false);
     }
-  }, [treatmentImage, selectedTreatmentId]);
+  }, [selectedTreatmentId, treatmentImage, toastAndNavigate, dispatch, fetchTreatments]);
 
   // Open image viewer modal
   const handleOpenViewImageModal = (imageUrl: string) => {
@@ -198,6 +218,29 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
     event.stopPropagation();
     setViewImageModal(false);
     setViewImageUrl(null);
+  };
+
+  // Status menu handling
+  const handleStatusMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    treatmentId: string
+  ) => {
+    event.stopPropagation(); // Prevent treatment expansion when clicking dropdown
+    setStatusMenuAnchors((prev) => ({
+      ...prev,
+      [treatmentId]: event.currentTarget,
+    }));
+  };
+
+  const handleStatusMenuClose = (
+    event: React.MouseEvent | null,
+    treatmentId: string
+  ) => {
+    if (event) event.stopPropagation();
+    setStatusMenuAnchors((prev) => ({
+      ...prev,
+      [treatmentId]: null,
+    }));
   };
 
   // Status change handler
@@ -220,303 +263,497 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
           "Status updated successfully"
         );
         fetchTreatments();
+        // Close the menu
+        handleStatusMenuClose(null, treatmentId);
       } catch (error) {
         console.error("Error updating status:", error);
         toastAndNavigate(dispatch, true, "error", "Failed to update status");
       }
     },
-    [dispatch, fetchTreatments]
+    [dispatch, fetchTreatments, toastAndNavigate]
   );
 
+  // Helper to get diagnosis from treatment or default to medication names
+  const getDiagnosis = (treatment: Treatment) => {
+    // If there's an explicit diagnosis field, use that
+    if (treatment.diagnosis) {
+      return treatment.diagnosis;
+    }
+
+    // Otherwise, use the treatment name as a fallback
+    return treatment.name;
+  };
+
+  // Define status options with their icons and styling
+  const statusOptions = [
+    {
+      value: "in progress",
+      label: "In Progress",
+      icon: (
+        <HourglassEmpty
+          sx={{
+            fontSize: "1rem",
+            color: "#0056b3",
+          }}
+        />
+      ),
+      chipStyle: {
+        backgroundColor: "#cce5ff",
+        color: "#0056b3",
+      },
+    },
+    {
+      value: "completed",
+      label: "Completed",
+      icon: (
+        <CheckCircle
+          sx={{
+            fontSize: "1rem",
+            color: "#2D9735",
+          }}
+        />
+      ),
+      chipStyle: {
+        backgroundColor: "#d4edda",
+        color: "#2D9735",
+      },
+    },
+  ];
+
+  const getStatusChip = (treatment: Treatment) => {
+    // Find current status in options or use default
+    const currentStatus =
+      statusOptions.find(
+        (option) => option.value === treatment.status.toLowerCase()
+      ) || statusOptions[0];
+
+    return (
+      <>
+        <Chip
+          icon={React.cloneElement(currentStatus.icon, {
+            sx: {
+              ...currentStatus.icon.props.sx,
+              fontSize: "1rem !important",
+              color: `${currentStatus.chipStyle.color} !important`,
+            },
+          })}
+          label={currentStatus.label}
+          onClick={(e) => handleStatusMenuOpen(e, treatment._id)}
+          size="medium"
+          sx={{
+            ...currentStatus.chipStyle,
+            fontWeight: 600,
+            borderRadius: "20px",
+            padding: "4px 8px",
+            cursor: "pointer",
+            "&:hover": {
+              opacity: 0.9,
+            },
+            "& .MuiChip-label": {
+              px: 1.5,
+              py: 0.5,
+              fontSize: "0.9rem",
+            },
+          }}
+        />
+        <Menu
+          anchorEl={statusMenuAnchors[treatment._id] || null}
+          open={Boolean(statusMenuAnchors[treatment._id])}
+          onClose={(e) =>
+            handleStatusMenuClose(e as React.MouseEvent, treatment._id)
+          }
+          onClick={(e) => e.stopPropagation()}
+          PaperProps={{
+            elevation: 3,
+            sx: {
+              borderRadius: 2,
+              minWidth: 180,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+            },
+          }}
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        >
+          {statusOptions.map((option) => (
+            <MenuItem
+              key={option.value}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStatusChange(treatment._id, option.value);
+              }}
+              sx={{
+                py: 1.5,
+                "&:hover": {
+                  backgroundColor: option.chipStyle.backgroundColor,
+                },
+                ...(option.value === treatment.status.toLowerCase() && {
+                  backgroundColor: option.chipStyle.backgroundColor,
+                }),
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {option.icon}
+                <Typography variant="body2" fontWeight={500}>
+                  {option.label}
+                </Typography>
+              </Box>
+            </MenuItem>
+          ))}
+        </Menu>
+      </>
+    );
+  };
+
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
+    <Container maxWidth="lg" sx={{ mt: 3, pb: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Button
           onClick={() => setOpenCreateDialog(true)}
           sx={{
             background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
             color: "white",
             fontWeight: "bold",
-            padding: "6px 20px",
-            marginLeft: "4px",
-            borderRadius: "20px",
-            fontSize: "14px",
-            boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.2)",
+            padding: "8px 24px",
+            borderRadius: "24px",
+            fontSize: "15px",
+            boxShadow: "0px 6px 12px rgba(33, 150, 243, 0.3)",
             transition: "all 0.3s ease",
             display: "flex",
             alignItems: "center",
             gap: "8px",
             "&:hover": {
               background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
-              boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+              boxShadow: "0px 8px 16px rgba(33, 150, 243, 0.4)",
+              transform: "translateY(-2px)",
             },
           }}
         >
           <AddCircle sx={{ fontSize: 20 }} />
-          Create
+          Add Treatment
         </Button>
       </Box>
+
       <CreateTreatmentDialog
         open={openCreateDialog}
         onClose={() => setOpenCreateDialog(false)}
         fetchTreatments={fetchTreatments}
         patientId={patientId}
       />
-      {error && (
+
+      {error ? (
         <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
           {error}
         </Alert>
-      )}
+      ) : null}
 
-      <TableContainer
-        component={Paper}
-        sx={{
-          boxShadow: 3,
-          borderRadius: 2,
-          width: "600px",
-          margin: "0 auto",
-          marginLeft: "-23px",
-        }}
-      >
-        <Table>
-          <TableHead
-            sx={{
-              backgroundColor: (theme) =>
-                alpha(theme.palette.primary.main, 0.05),
-            }}
-          >
-            <TableRow sx={{ textAlign: "center" }}>
-              {[
-                "Name",
-                "Description",
-                "Status",
-                "Type",
-                "Follow Up Date",
-                "Photo",
-              ].map((header) => (
-                <TableCell
-                  key={header}
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <Typography>Loading treatments...</Typography>
+        </Box>
+      ) : (
+        <Paper
+          elevation={3}
+          sx={{
+            borderRadius: 3,
+            overflow: "hidden",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+          }}
+        >
+          <List disablePadding>
+            {treatments.map((treatment) => (
+              <React.Fragment key={treatment._id}>
+                <ListItem
+                  onClick={() => handleToggleExpand(treatment._id)}
                   sx={{
-                    fontWeight: 600,
-                    color: "text.secondary",
-                    textTransform: "uppercase",
-                    textAlign: "center",
+                    py: 2,
+                    px: 3,
+                    borderBottom: "1px solid #eee",
+                    backgroundColor:
+                      expandedTreatment === treatment._id ? "#f0f7ff" : "white",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      backgroundColor: "#f5faff",
+                    },
                   }}
                 >
-                  {header}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {treatments.map((treatment) => (
-              <TableRow
-                key={treatment._id}
-                hover
-                sx={{
-                  "&:nth-of-type(even)": {
-                    backgroundColor: alpha("#f5f5f5", 0.4),
-                  },
-                  "&:hover": {
-                    backgroundColor: alpha("#f0f0f0", 0.7),
-                  },
-                  transition: "background-color 0.2s ease-in-out",
-                  textAlign: "center",
-                }}
-              >
-                <TableCell sx={{ textAlign: "center" }}>
-                  {capitalizeFirstLetter(treatment.name)}
-                </TableCell>
-                <TableCell sx={{ textAlign: "center" }}>
-                  {/* Eye icon to trigger modal */}
-                  <Visibility
-                    sx={{ cursor: "pointer" }}
-                    onClick={() =>
-                      handleOpenDescriptionModal(treatment.description)
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <DiagnosisIcon
+                          fontSize="medium"
+                          sx={{
+                            color: "primary.main",
+                            mr: 1.5,
+                            fontSize: "1.8rem",
+                          }}
+                        />
+                        <Typography
+                          fontWeight={600}
+                          fontSize="1.1rem"
+                          color="text.primary"
+                        >
+                          {getDiagnosis(treatment)}
+                        </Typography>
+                      </Box>
                     }
                   />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    width: 150,
-                    textAlign: "center",
-                    verticalAlign: "middle",
-                  }}
-                >
-                  <Select
-                    value={treatment.status}
-                    onChange={(e) =>
-                      handleStatusChange(treatment._id, e.target.value)
-                    }
-                    variant="outlined"
-                    size="small"
-                    displayEmpty
-                    sx={{
-                      borderRadius: "20px",
-                      width: "100%",
-                      height: "36px",
-                      textAlign: "center",
-                      backgroundColor: () => {
-                        switch (treatment.status.toLowerCase()) {
-                          case "in progress":
-                            return "#cce5ff";
-                          case "completed":
-                            return "#d4edda";
-                          default:
-                            return "#f8f9fa";
-                        }
-                      },
-                      color: () => {
-                        switch (treatment.status.toLowerCase()) {
-                          case "in progress":
-                            return "#0056b3";
-                          case "completed":
-                            return "#2D9735";
-                          default:
-                            return "#000";
-                        }
-                      },
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        border: "none",
-                      },
-                      "& .MuiSelect-select": {
-                        borderRadius: "20px",
-                        padding: "6px 14px !important",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.875rem",
-                        fontWeight: 500,
-                        boxSizing: "border-box",
-                        overflow: "hidden",
-                        whiteSpace: "nowrap",
-                        paddingRight: "28px !important",
-                      },
-                      "& .MuiSelect-icon": {
-                        fontSize: "1.2rem",
-                        right: 4,
-                      },
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          width: 150,
-                          borderRadius: 2,
-                          boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.08)",
-                          mt: 1,
-                          "& .MuiMenuItem-root": {
-                            padding: "8px 14px",
-                            borderRadius: "8px",
-                            margin: "2px 4px",
-                            fontSize: "0.875rem",
-                            "&:hover": {
-                              backgroundColor: "#F5F5F5",
-                            },
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    {/* Replace static status chip with dropdown status */}
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <Select
+                        value={treatment.status}
+                        onChange={(e) => {
+                          handleStatusChange(treatment._id, e.target.value); // Call the status change handler
+                        }}
+                        IconComponent={KeyboardArrowDown} // Dropdown icon
+                        sx={{
+                          borderRadius: "20px",
+                          fontWeight: 600,
+                          backgroundColor:
+                            treatment.status.toLowerCase() === "completed"
+                              ? "#d4edda"
+                              : treatment.status.toLowerCase() === "in progress"
+                                ? "#cce5ff"
+                                : "#f8f9fa",
+                          color:
+                            treatment.status.toLowerCase() === "completed"
+                              ? "#2D9735"
+                              : treatment.status.toLowerCase() === "in progress"
+                                ? "#0056b3"
+                                : "#333",
+                          height: "30px", // Reduced height
+                          padding: "0 12px", // Adjust padding for compactness
+                          "& .MuiSelect-icon": {
+                            color:
+                              treatment.status.toLowerCase() === "completed"
+                                ? "#2D9735"
+                                : treatment.status.toLowerCase() ===
+                                    "in progress"
+                                  ? "#0056b3"
+                                  : "#333",
                           },
+                        }}
+                      >
+                        <MenuItem value="in progress">In Progress</MenuItem>
+                        <MenuItem value="completed">Completed</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <IconButton
+                      size="medium"
+                      edge="end"
+                      sx={{
+                        backgroundColor:
+                          expandedTreatment === treatment._id
+                            ? "rgba(25, 118, 210, 0.1)"
+                            : "transparent",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          backgroundColor: "rgba(25, 118, 210, 0.2)",
                         },
-                      },
-                    }}
-                  >
-                    <MenuItem value="in progress">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1.5,
-                          color: "#0056b3",
-                        }}
-                      >
-                        <HourglassEmpty fontSize="small" />
-                        In Progress
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="completed">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1.5,
-                          color: "#2D9735",
-                        }}
-                      >
-                        <CheckCircle fontSize="small" />
-                        Completed
-                      </Box>
-                    </MenuItem>
-                  </Select>
-                </TableCell>
-
-                <TableCell sx={{ textAlign: "center" }}>
-                  {capitalizeFirstLetter(treatment.type)}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    textAlign: "center",
-                    minWidth: 120,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {treatment.followUpDate
-                    ? dayjs(treatment.followUpDate).format("DD MMM YYYY")
-                    : "No Follow Up"}
-                </TableCell>
-
-                <TableCell sx={{ textAlign: "center" }}>
-                  {treatment.photo ? (
-                    <Box sx={{ position: "relative", display: "inline-block" }}>
-                      <img
-                        src={treatment.photo}
-                        alt={treatment.name}
-                        style={{
-                          width: "50px",
-                          height: "50px",
-                          objectFit: "cover",
-                          borderRadius: "4px",
-                          display: "block",
-                          margin: "0 auto",
-                        }}
-                      />
-                      <IconButton
-                        sx={{
-                          position: "absolute",
-                          top: 0,
-                          right: 0,
-                        }}
-                        onClick={() =>
-                          handleOpenViewImageModal(treatment.photo)
-                        }
-                      >
-                        <Visibility sx={{ color: "#20ADA0" }} />
-                      </IconButton>
-                    </Box>
-                  ) : (
-                    <Button
-                      onClick={() => handleOpenModal(treatment._id)}
-                      sx={{ display: "block", margin: "0 auto" }}
+                      }}
                     >
-                      Upload
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
+                      {expandedTreatment === treatment._id ? (
+                        <KeyboardArrowUp fontSize="medium" />
+                      ) : (
+                        <KeyboardArrowDown fontSize="medium" />
+                      )}
+                    </IconButton>
+                  </Box>
+                </ListItem>
+
+                <Collapse
+                  in={expandedTreatment === treatment._id}
+                  timeout="auto"
+                  unmountOnExit
+                >
+                  <Box sx={{ p: 1, bgcolor: "#f9fbff" }}>
+                    {/* Diagnosis, Type, Follow Up, Prescription as column list */}
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)", // 4 columns side by side
+                        gap: 3,
+                        p: 2,
+                        borderTop: "1px solid #eee",
+                        mt: -1,
+                      }}
+                    >
+                      {/* Medications */}
+                      <Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            mb: 0.5,
+                          }}
+                        >
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            Medications
+                          </Typography>
+                        </Box>
+
+                        {Array.isArray(treatment.treatments) &&
+                        treatment.treatments.length > 0 ? (
+                          <Box>
+                            {treatment.treatments.map((med, index) => (
+                              <Box
+                                key={index}
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  flexWrap: "wrap",
+                                  py: 0.5,
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={600}
+                                  sx={{ mr: 1, minWidth: "70px" }}
+                                >
+                                  {med.name}:
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ color: "text.secondary" }}
+                                >
+                                  {med.dose && `${med.frequency}`}
+                                  {med.dose && med.frequency && " - "}
+                                  {med.frequency && `${med.frequency}`}
+                                  {med.quantity && ` (${med.quantity})`}
+                                  {!med.dose &&
+                                    !med.frequency &&
+                                    med.description}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography variant="body1">
+                            {treatment.name}
+                          </Typography>
+                        )}
+                      </Box>
+
+                      {/* Type */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight="bold"
+                          color="text.primary"
+                          mb={1}
+                        >
+                          Type
+                        </Typography>
+                        <Chip
+                          label={capitalizeFirstLetter(treatment.type)}
+                          size="small"
+                          sx={{
+                            backgroundColor: "rgba(25, 118, 210, 0.1)",
+                            color: "primary.dark",
+                            fontWeight: 500,
+                          }}
+                        />
+                      </Box>
+
+                      {/* Follow Up Date */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight="bold"
+                          color="text.primary"
+                          mb={1}
+                        >
+                          Follow Up Date
+                        </Typography>
+                        <Typography variant="body2">
+                          {treatment.followUpDate
+                            ? dayjs(treatment.followUpDate).format(
+                                "DD-MMM-YYYY"
+                              )
+                            : "No Follow Up Scheduled"}
+                        </Typography>
+                      </Box>
+
+                      {/* Prescription Photo */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight="bold"
+                          color="text.primary"
+                          mb={1}
+                        >
+                          Prescription
+                        </Typography>
+                        {treatment.photo ? (
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <img
+                              src={treatment.photo}
+                              alt="Prescription"
+                              style={{
+                                width: 50,
+                                height: 50,
+                                borderRadius: 6,
+                                objectFit: "cover",
+                                cursor: "pointer",
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenViewImageModal(treatment.photo);
+                              }}
+                            />
+                          </Box>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenModal(treatment._id);
+                            }}
+                            startIcon={<PhotoIcon />}
+                            sx={{ borderRadius: "20px", px: 2 }}
+                          >
+                            Upload
+                          </Button>
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+                </Collapse>
+                <Divider />
+              </React.Fragment>
             ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={totalCount}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          sx={{
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-select": {
-              fontWeight: 500,
-            },
-          }}
-        />
-      </TableContainer>
+          </List>
+        </Paper>
+      )}
+
+      {/* Description Modal */}
       <Modal open={descriptionModalOpen} onClose={handleCloseDescriptionModal}>
         <Box
           sx={{
@@ -526,28 +763,80 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
             transform: "translate(-50%, -50%)",
             backgroundColor: "white",
             padding: 4,
-            borderRadius: 2,
-            boxShadow: 3,
-            width: "80%",
-            maxWidth: 500,
+            borderRadius: 3,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            width: "90%",
+            maxWidth: 550,
+            maxHeight: "85vh",
+            overflow: "auto",
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
-            Treatment Description
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: "bold", mb: 3, color: "primary.main" }}
+          >
+            Treatment Details
           </Typography>
-          <Typography variant="body1">{currentDescription}</Typography>
+
+          {currentTreatment ? (
+            <Box sx={{ mb: 2 }}>
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                color="text.secondary"
+              >
+                Diagnosis:
+              </Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {getDiagnosis(currentTreatment)}
+              </Typography>
+            </Box>
+          ) : null}
+
+          {currentTreatment &&
+          Array.isArray(currentTreatment.treatments) &&
+          currentTreatment.treatments.length > 0 ? (
+            currentTreatment.treatments.map((t, index) => (
+              <Box key={index} sx={{ mb: 3 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontWeight: "bold", color: "primary.main" }}
+                >
+                  {t.name}
+                </Typography>
+                <Typography variant="body1" sx={{ mt: 1 }}>
+                  {t.description}
+                </Typography>
+                {index < currentTreatment.treatments.length - 1 && (
+                  <Divider sx={{ my: 2 }} />
+                )}
+              </Box>
+            ))
+          ) : currentTreatment ? (
+            <Typography variant="body1">
+              {currentTreatment.description}
+            </Typography>
+          ) : null}
+
           <Button
             variant="contained"
             color="primary"
             onClick={handleCloseDescriptionModal}
-            sx={{ mt: 2 }}
+            sx={{
+              mt: 3,
+              borderRadius: "24px",
+              px: 4,
+              py: 1,
+              boxShadow: "0 4px 12px rgba(33, 150, 243, 0.3)",
+            }}
           >
             Close
           </Button>
         </Box>
       </Modal>
 
-      {openModal && selectedTreatmentId && (
+      {/* Image Upload Modal */}
+      {openModal && selectedTreatmentId ? (
         <ImagePicker
           open={openModal}
           onClose={handleCloseModal}
@@ -561,12 +850,14 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
           imagePreview={treatmentImagePreview}
           setImagePreview={setTreatmentImagePreview}
         />
-      )}
+      ) : null}
 
+      {/* Image Preview Modal */}
       <Modal
         open={viewImageModal}
         onClose={(event, reason) => {
           if (reason === "backdropClick") return;
+          // @ts-ignore - Event handling
           handleCloseViewImageModal(event);
         }}
       >
@@ -595,29 +886,27 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
             }}
           >
             {/* Close Button */}
-            <Button
-              onClick={handleCloseViewImageModal}
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCloseViewImageModal(e);
+              }}
               sx={{
                 position: "absolute",
-                top: 10,
-                right: 10,
-                backgroundColor: "white",
+                top: 8,
+                right: 8,
                 color: "black",
+                backgroundColor: "rgba(255, 255, 255, 0.6)",
                 borderRadius: "50%",
-                minWidth: "40px",
-                minHeight: "40px",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
                 "&:hover": {
-                  backgroundColor: "#f0f0f0",
+                  backgroundColor: "rgba(255, 255, 255, 0.8)",
                 },
               }}
             >
-              ✕
-            </Button>
+              <CloseIcon />
+            </IconButton>
 
-            {viewImageUrl && (
+            {viewImageUrl ? (
               <img
                 src={viewImageUrl}
                 alt="Preview"
@@ -628,7 +917,7 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
-            )}
+            ) : null}
           </Box>
         </Box>
       </Modal>
