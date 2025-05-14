@@ -15,6 +15,7 @@ import {
   styled,
   Select,
   MenuItem,
+  Collapse,
 } from "@mui/material";
 import {
   Info as InfoIcon,
@@ -43,6 +44,8 @@ import {
   HourglassEmpty,
   CheckCircle,
   Cancel,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
 
@@ -95,6 +98,7 @@ const statusOptions = [
 // eslint-disable-next-line react/function-component-definition
 const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState("info");
+  const [showVideo, setShowVideo] = useState(false);
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const router = useRouter();
@@ -129,6 +133,26 @@ const AppointmentDetails = () => {
     },
   }));
 
+  // Modified toggle button with smoother transition
+  const VideoToggleButton = styled(IconButton)(({ theme }) => ({
+    position: "absolute",
+    right: 0,
+    top: "50%",
+    transform: "translateY(-50%)",
+    backgroundColor: theme.palette.primary.main,
+    color: "white",
+    zIndex: 10,
+    width: 20,
+    height: 70,
+    borderRadius: "6px 0 0 6px", // Always keep the same border radius
+    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      backgroundColor: theme.palette.primary.dark,
+      width: 25,
+    },
+  }));
+
   const getInitial = (name: string) => {
     return name ? name.charAt(0).toUpperCase() : "P";
   };
@@ -155,6 +179,10 @@ const AppointmentDetails = () => {
       refetch();
     }
   }, [appointmentData]);
+
+  const toggleVideo = () => {
+    setShowVideo(!showVideo);
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     try {
@@ -409,7 +437,8 @@ const AppointmentDetails = () => {
               </Box>
             </Box>
 
-            <Grid container spacing={0.5} sx={{ marginTop: -0.5 }}>
+            {/* Grid container with increased padding-left for better spacing */}
+            <Grid container spacing={0.5} sx={{ marginTop: -0.5, pl: 2 }}>
               {[
                 {
                   icon: <GenderIcon color="primary" />,
@@ -554,233 +583,258 @@ const AppointmentDetails = () => {
   ];
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isSmallScreen ? "column" : "row",
-        height: "100vh",
-      }}
-    >
-      <div
-        style={{
-          width: isSmallScreen ? "100%" : "62%",
-          padding: 8,
-          boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-          borderRight: isSmallScreen ? "none" : "1px solid rgba(0,0,0,0.1)",
+    <Box sx={{ display: "flex", position: "relative", height: "100vh" }}>
+      {/* Main content section - will resize when video is shown */}
+      <Box
+        sx={{
+          flex: showVideo ? "0 0 65%" : 1,
+          transition: "all 0.00003s ease", // Smoother transition
+          padding: isSmallScreen ? 0.5 : 1, // Reduced padding
+          overflow: "hidden",
         }}
       >
-        {/* Heading and Back Button in the same row */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: 2,
-          }}
-        >
-          {/* Back Button */}
-          <IconButton
-            onClick={() => router.back()}
-            sx={{
-              marginRight: 2,
-            }}
-          >
-            <ArrowBackIcon sx={{ color: "primary.main" }} />
-          </IconButton>
-
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 600,
-              marginBottom: 0,
-            }}
-          >
-            Appointment Details
-          </Typography>
-        </Box>
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 8,
-            marginBottom: 16,
-            backgroundColor: "#f0f4f8",
-            borderRadius: 8,
-            padding: 8,
+            padding: 0, // Removed additional padding
           }}
         >
-          {tabs.map((tab) => (
-            <Button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              variant={activeTab === tab.key ? "contained" : "text"}
-              color="primary"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                textTransform: "none",
-                padding: "10px 15px",
-                minWidth: "100px",
-                color: activeTab === tab.key ? "blue" : "black",
-                bgcolor: activeTab === tab.key ? "rgba(63,81,181,0.1)" : "none",
-                "&:hover": {
-                  bgcolor: "rgba(63,81,181,0.05)",
-                },
-              }}
-            >
-              {tab.icon}
-              <Typography variant="body1" fontWeight="medium">
-                {tab.name}
-              </Typography>
-            </Button>
-          ))}
-        </div>
-
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            borderRadius: 2,
-            maxHeight: isSmallScreen ? "auto" : "calc(100vh - 150px)",
-            overflowY: "auto",
-          }}
-        >
-          {tabs.find((tab) => tab.key === activeTab)?.content}
-        </Paper>
-      </div>
-
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          padding: isSmallScreen ? "15px" : "30px",
-          marginTop: -12,
-          justifyContent: "center",
-          alignItems: "center",
-          background:
-            "linear-gradient(to bottom right, #f0f4f8 0%, #e1e5eb 100%)",
-        }}
-      >
-        <Paper
-          elevation={6}
-          sx={{
-            maxWidth: 800,
-            width: "100%",
-            borderRadius: 3,
-            overflow: "hidden",
-            position: "relative",
-            boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
-            marginTop: "-90px",
-          }}
-        >
-          {/* Header with icon and title */}
+          {/* Heading and Back Button in the same row */}
           <Box
             sx={{
-              padding: "16px 20px",
               display: "flex",
               alignItems: "center",
-              gap: 2,
-              borderBottom: "1px solid rgba(0,0,0,0.08)",
-              backgroundColor: theme.palette.primary.main,
-              color: "white",
+              marginBottom: 1, // Reduced margin
             }}
           >
-            <PlayIcon />
-            <Typography variant="h6" fontWeight="500">
-              Patient Symptom Video
-            </Typography>
-          </Box>
-
-          {/* Video thumbnail container with overlay */}
-          <Box sx={{ position: "relative", backgroundColor: "#000" }}>
-            <video
-              controls
-              autoPlay
-              muted
-              poster="/api/placeholder/800/450"
-              style={{
-                width: "100%",
-                height: "auto",
-                maxHeight: "450px",
-                objectFit: "cover",
-                opacity: 0.7,
-              }}
-            >
-              <source
-                src={appointmentData?.data?.videoUrl || ""}
-                type="video/mp4"
-              />
-              Your browser does not support the video tag.
-            </video>
-
-            {/* Play button overlay */}
-            {/* <Box
+            {/* Back Button */}
+            <IconButton
+              onClick={() => router.back()}
               sx={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 2,
+                marginRight: 1, // Reduced margin
               }}
             >
-              <IconButton
-                sx={{
-                  bgcolor: "#FE4F2D",
-                  color: "white",
-                  "&:hover": {
-                    transform: "scale(1.1)",
-                  },
-                  width: 70,
-                  height: 70,
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
-                }}
-              >
-                <PlayIcon fontSize="large" />
-              </IconButton>
-              <Typography
-                variant="body1"
-                sx={{
-                  color: "white",
-                  fontWeight: "500",
-                  textShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                }}
-              >
-                Click to play video
-              </Typography>
-            </Box> */}
-          </Box>
+              <ArrowBackIcon sx={{ color: "primary.main" }} />
+            </IconButton>
 
-          {/* Video details and description */}
-          <Box sx={{ padding: "16px 20px" }}>
             <Typography
-              variant="h6"
-              color="primary"
-              gutterBottom
-              sx={{ fontWeight: 500 }}
+              variant="h4"
+              sx={{
+                fontWeight: 600,
+                marginBottom: 0,
+              }}
             >
-              Symptom Analysis
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary" paragraph>
-              This video provides a detailed overview of the patient's described
-              symptoms, helping with visual diagnosis and treatment planning.
+              Appointment Details
             </Typography>
           </Box>
-        </Paper>
-      </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 4, // Reduced gap
+              marginBottom: 12,
+              backgroundColor: "#f0f4f8",
+              borderRadius: 6, // Slightly reduced radius
+              padding: 6, // Reduced padding
+            }}
+          >
+            {tabs.map((tab) => (
+              <Button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                variant={activeTab === tab.key ? "contained" : "text"}
+                color="primary"
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  textTransform: "none",
+                  padding: "8px 12px", // Reduced padding
+                  minWidth: "90px", // Reduced width
+                  color: activeTab === tab.key ? "blue" : "black",
+                  bgcolor:
+                    activeTab === tab.key ? "rgba(63,81,181,0.1)" : "none",
+                  "&:hover": {
+                    bgcolor: "rgba(63,81,181,0.05)",
+                  },
+                }}
+              >
+                {tab.icon}
+                <Typography variant="body1" fontWeight="medium">
+                  {tab.name}
+                </Typography>
+              </Button>
+            ))}
+          </div>
+
+          {/* Removed Paper component and now content is displayed directly */}
+          <Box
+            sx={{
+              maxHeight: isSmallScreen ? "auto" : "calc(100vh - 120px)", // Adjusted height
+              overflowY: "auto",
+              mt: 1, // Small margin top
+            }}
+          >
+            {tabs.find((tab) => tab.key === activeTab)?.content}
+          </Box>
+        </div>
+      </Box>
+
+      {/* Video toggle button - positioned at the joint when video is shown */}
+      <VideoToggleButton onClick={toggleVideo}>
+        {showVideo ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+      </VideoToggleButton>
+
+      {/* Video section - slides in from the right, now takes full available width */}
+      <Collapse
+        in={showVideo}
+        orientation="horizontal"
+        sx={{
+          flex: showVideo ? "0 0 35%" : "0 0 0%", // Increased width to fill available space
+          position: "relative",
+          overflowY: "auto",
+          borderLeft: "1px solid rgba(0,0,0,0.12)",
+          transition: "transition: all 0.3s spring", // Smooth transition
+          mt: 7,
+        }}
+      >
+        <Box
+          sx={{
+            height: "100%",
+            width: "100%", // Ensure full width within the allocated space
+            padding: 2, // Increased padding
+            display: "flex",
+            flexDirection: "column",
+            background:
+              "linear-gradient(to bottom right, #f0f4f8 0%, #e1e5eb 100%)",
+          }}
+        >
+          <Paper
+            elevation={6}
+            sx={{
+              width: "100%",
+              borderRadius: 2, // Reduced border radius
+              overflow: "hidden",
+              position: "relative",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.15)", // Reduced shadow
+            }}
+          >
+            {/* Header with icon and title */}
+            <Box
+              sx={{
+                padding: "12px 16px", // Reduced padding
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5, // Reduced gap
+                borderBottom: "1px solid rgba(0,0,0,0.08)",
+                backgroundColor: theme.palette.primary.main,
+                color: "white",
+              }}
+            >
+              <PlayIcon />
+              <Typography variant="h6" fontWeight="500">
+                Patient Symptom Video
+              </Typography>
+            </Box>
+
+            {/* Video container with overlay - takes full width */}
+            <Box
+              sx={{
+                position: "relative",
+                backgroundColor: "#000",
+                width: "100%",
+              }}
+            >
+              <video
+                controls
+                autoPlay
+                muted
+                poster="/api/placeholder/800/450"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  maxHeight: "450px",
+                  objectFit: "cover",
+                  opacity: 0.7,
+                }}
+              >
+                <source
+                  src={appointmentData?.data?.videoUrl || ""}
+                  type="video/mp4"
+                />
+                Your browser does not support the video tag.
+              </video>
+
+              {/* Play button overlay */}
+              {/* <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <IconButton
+                  sx={{
+                    bgcolor: "#FE4F2D",
+                    color: "white",
+                    "&:hover": {
+                      transform: "scale(1.1)",
+                    },
+                    width: 70,
+                    height: 70,
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  <PlayIcon fontSize="large" />
+                </IconButton>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: "white",
+                    fontWeight: "500",
+                    textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  Click to play video
+                </Typography>
+              </Box> */}
+            </Box>
+
+            {/* Video details and description */}
+            <Box sx={{ padding: "16px 20px" }}>
+              {" "}
+              {/* Increased padding */}
+              <Typography
+                variant="h6"
+                color="primary"
+                gutterBottom
+                sx={{ fontWeight: 500 }}
+              >
+                Symptom Analysis
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                This video provides a detailed overview of the patient's
+                described symptoms, helping with visual diagnosis and treatment 
+                planning.
+              </Typography>
+            </Box>
+          </Paper>
+        </Box>
+      </Collapse>
       <Toast
         alerting={toast.toastAlert}
         severity={toast.toastSeverity}
         message={toast.toastMessage}
       />
-    </div>
+    </Box>
   );
 };
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -13,6 +13,8 @@ import {
   Autocomplete,
   IconButton,
   Typography,
+  Paper,
+  Box,
 } from "@mui/material";
 import {
   Image as ImageIcon,
@@ -20,8 +22,9 @@ import {
   Close,
   Description,
   ListAlt,
+  Add,
 } from "@mui/icons-material";
-import { Box, styled } from "@mui/system";
+import { styled } from "@mui/system";
 import { creator } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 import { useDispatch, useSelector } from "react-redux";
@@ -29,22 +32,12 @@ import { AppDispatch, RootState } from "@/redux/store";
 import Toast from "@/components/common/Toast";
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
-  "& label": {
-    color: "black",
-  },
-  "& label.Mui-focused": {
-    color: theme.palette.primary.main,
-  },
+  "& label": { color: "black" },
+  "& label.Mui-focused": { color: theme.palette.primary.main },
   "& .MuiOutlinedInput-root": {
-    "& fieldset": {
-      borderColor: "black", // Black border initially
-    },
-    "&:hover fieldset": {
-      borderColor: theme.palette.primary.main,
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: theme.palette.primary.main, // Primary border color on focus
-    },
+    "& fieldset": { borderColor: "black" },
+    "&:hover fieldset": { borderColor: theme.palette.primary.main },
+    "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
   },
 }));
 
@@ -65,339 +58,451 @@ const optionsType = [
   { label: "Doctor", value: "doctor" },
 ];
 
+interface TestItem {
+  name: string;
+  description: string;
+  category: string;
+  isEmptyStomach: boolean;
+}
+
 interface CreateTestDialogProps {
   open: boolean;
   onClose: () => void;
   fetchTests: () => void;
+  patientId: string;
+  doctorId?: string;
 }
 
+// eslint-disable-next-line react/function-component-definition
 const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
   open,
   onClose,
   fetchTests,
   patientId,
+  doctorId,
 }) => {
   const dispatch: AppDispatch = useDispatch();
   const { toast } = useSelector((state: RootState) => state.toast);
   const { toastAndNavigate } = Utility();
 
-  const [formData, setFormData] = useState({
+  const initialTestItem: TestItem = {
     name: "",
     description: "",
     category: "blood_test",
-    emptyStomach: false,
-    status: "scheduled",
-    type: null,
-    photo: null,
-  });
+    isEmptyStomach: false,
+  };
 
-  console.log("patientId of dialog:", patientId);
-  const [errors, setErrors] = useState({
-    name: "",
-    description: "",
-    category: "blood_test",
-    emptyStomach: false,
+  const initialFormData = {
     status: "scheduled",
     type: null,
     photo: null,
-  });
+  };
+
+  const initialErrors = {
+    name: "",
+    description: "",
+    category: "",
+    status: "",
+    type: "",
+  };
+
+  const [testItems, setTestItems] = useState<TestItem[]>([
+    { ...initialTestItem },
+  ]);
+  const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState(initialErrors);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
+
+  // Function to reset the form to initial state
+  const resetForm = () => {
+    setTestItems([{ ...initialTestItem }]);
+    setFormData({ ...initialFormData });
+    setErrors({ ...initialErrors });
+  };
+
+  // Modified onClose handler to reset form
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const validateForm = () => {
-    let valid = true;
     const newErrors = {
-      name: formData.name ? "" : "Name is required",
-      description: formData.description ? "" : "Description is required",
-      category: formData.category ? "" : "Category is required",
+      name: testItems.some((item) => !item.name) ? "Name is required" : "",
+      description: testItems.some((item) => !item.description)
+        ? "Description is required"
+        : "",
+      category: testItems.some((item) => !item.category)
+        ? "Category is required"
+        : "",
       status: formData.status ? "" : "Status is required",
       type: formData.type ? "" : "Type is required",
     };
 
     setErrors(newErrors);
-    valid = !Object.values(newErrors).some((error) => error !== "");
-    return valid;
+    return !Object.values(newErrors).some((e) => e !== "");
   };
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
-      setFormData((prevData) => ({
-        ...prevData,
-        photo: file,
-      }));
+      setFormData((prev) => ({ ...prev, photo: file }));
     }
   };
 
-  const handleCheckboxChange = (e) => {
-    setFormData({ ...formData, emptyStomach: e.target.checked });
+  const handleTestItemChange = (
+    index: number,
+    field: keyof TestItem,
+    value: any
+  ) => {
+    const updatedItems = [...testItems];
+    updatedItems[index][field] = value;
+    setTestItems(updatedItems);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const handleAddTest = () =>
+    setTestItems([...testItems, { ...initialTestItem }]);
+
+  const handleRemoveTest = (index: number) => {
+    if (testItems.length > 1) {
+      setTestItems(testItems.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
     try {
-      const headers = {
-        "Content-Type": "multipart/form-data",
+      const payload = {
+        patientId,
+        doctorId,
+        tests: testItems.map(
+          ({ name, description, category, isEmptyStomach }) => ({
+            name,
+            description,
+            category,
+            isEmptyStomach,
+          })
+        ),
+        status: formData.status,
+        type: formData.type,
       };
-      const response = await creator(
-        "test",
-        "create-test",
-        {
-          ...formData,
-          patientId,
-        },
-        headers
-      );
-      if (response.statusCode == 201) {
-        toastAndNavigate(dispatch, true, "success", "Created successfully");
-        fetchTests();
-        onClose();
+
+      const formDataInstance = new FormData();
+      formDataInstance.append("payload", JSON.stringify(payload));
+      if (formData.photo) {
+        formDataInstance.append("photo", formData.photo);
       }
-    } catch (error) {
+
+      // Debug log (optional)
+      for (let pair of formDataInstance.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+
+      const response = await creator("test", "create-test", formDataInstance, {
+        "Content-Type": "multipart/form-data",
+      });
+
+      if (response.statusCode === 201) {
+        toastAndNavigate(
+          dispatch,
+          true,
+          "success",
+          "Test created successfully"
+        );
+        fetchTests();
+        handleClose(); // Use handleClose instead of onClose to reset form
+      }
+    } catch (err) {
+      console.error("Submit Error:", err);
       toastAndNavigate(dispatch, true, "error", "Failed to create test");
     }
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="lg"
-      sx={{ borderRadius: "50px" }}
-    >
-      <DialogTitle>
-        <Typography variant="h6">Create Test</Typography>
-        <IconButton
-          onClick={onClose}
-          sx={{ position: "absolute", top: 6, right: 0 }}
-        >
-          <Close />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ padding: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={4}>
-            <StyledTextField
-              label="Name"
-              name="name"
-              fullWidth
-              margin="dense"
-              value={formData.name}
-              onChange={handleChange}
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              placeholder="Enter test name"
-              InputProps={{
-                startAdornment: <ListAlt sx={{ color: "#3f51b5", mr: 2 }} />,
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <StyledTextField
-              label="Description"
-              name="description"
-              fullWidth
-              margin="dense"
-              value={formData.description}
-              onChange={handleChange}
-              error={!!errors.description}
-              helperText={errors.description}
-              placeholder="Enter description"
-              InputProps={{
-                startAdornment: (
-                  <Description sx={{ color: "#3f51b5", mr: 2 }} />
-                ),
-              }}
-            />
-          </Grid>
-          <Grid
-            item
-            xs={12}
-            sm={4}
-            sx={{ display: "flex", alignItems: "center" }}
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg">
+      <Box sx={{ backgroundColor: "#f5f5f5", borderRadius: 4, padding: 2 }}>
+        <DialogTitle>
+          <Typography variant="h6">Create Test</Typography>
+          <IconButton
+            onClick={handleClose}
+            sx={{ position: "absolute", top: 6, right: 0 }}
           >
-            <Autocomplete
-              options={optionsCategory}
-              getOptionLabel={(option) => option.label}
-              value={optionsCategory.find(
-                (option) => option.value === formData.category
-              )}
-              onChange={(event, newValue) => {
-                setFormData({
-                  ...formData,
-                  category: newValue ? newValue.value : "",
-                });
-              }}
-              fullWidth
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Category"
-                  variant="outlined"
-                  fullWidth
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Autocomplete
-              options={optionsStatus}
-              getOptionLabel={(option) => option.label}
-              value={optionsStatus.find(
-                (option) => option.value === formData.status
-              )}
-              onChange={(event, newValue) => {
-                setFormData({
-                  ...formData,
-                  status: newValue ? newValue.value : "",
-                });
-              }}
-              fullWidth
-              renderInput={(params) => (
-                <TextField {...params} label="Status" variant="outlined" />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Autocomplete
-              options={optionsType}
-              getOptionLabel={(option) => option.label}
-              value={optionsType.find(
-                (option) => option.value === formData.type
-              )}
-              onChange={(event, newValue) => {
-                setFormData({
-                  ...formData,
-                  type: newValue ? newValue.value : null,
-                });
-              }}
-              fullWidth
-              renderInput={(params) => <TextField {...params} label="Type" />}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.emptyStomach}
-                  onChange={handleCheckboxChange}
-                  sx={{
-                    color: formData.emptyStomach ? "#20ADA0" : "default",
-                    "&.Mui-checked": { color: "#20ADA0" },
-                  }}
-                />
-              }
-              label="Empty Stomach"
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ padding: 3 }}>
+          {/* Tests Section */}
+          <Paper elevation={3} sx={{ padding: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Test Details
+            </Typography>
+
+            {testItems.map((item, index) => (
+              <Box key={index} sx={{ mb: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <StyledTextField
+                      label="Name"
+                      fullWidth
+                      value={item.name}
+                      onChange={(e) =>
+                        handleTestItemChange(index, "name", e.target.value)
+                      }
+                      error={!!errors.name && !item.name}
+                      helperText={!item.name && errors.name}
+                      required
+                      placeholder="Enter test name"
+                      InputProps={{
+                        startAdornment: (
+                          <ListAlt sx={{ color: "#3f51b5", mr: 2 }} />
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <StyledTextField
+                      label="Description"
+                      fullWidth
+                      value={item.description}
+                      onChange={(e) =>
+                        handleTestItemChange(
+                          index,
+                          "description",
+                          e.target.value
+                        )
+                      }
+                      error={!!errors.description && !item.description}
+                      helperText={!item.description && errors.description}
+                      placeholder="Enter description"
+                      InputProps={{
+                        startAdornment: (
+                          <Description sx={{ color: "#3f51b5", mr: 2 }} />
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Autocomplete
+                      options={optionsCategory}
+                      getOptionLabel={(o) => o.label}
+                      value={
+                        optionsCategory.find(
+                          (opt) => opt.value === item.category
+                        ) || null
+                      }
+                      onChange={(_, newValue) =>
+                        handleTestItemChange(
+                          index,
+                          "category",
+                          newValue?.value || ""
+                        )
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Category"
+                          error={!!errors.category && !item.category}
+                          helperText={!item.category && errors.category}
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid
+                    item
+                    xs={12}
+                    sm={4}
+                    sx={{ mt: 1, display: "flex", gap: 2 }}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={item.isEmptyStomach}
+                          onChange={(e) =>
+                            handleTestItemChange(
+                              index,
+                              "isEmptyStomach",
+                              e.target.checked
+                            )
+                          }
+                          sx={{
+                            color: "#3f51b5",
+                            "&.Mui-checked": { color: "#3f51b5" },
+                          }}
+                        />
+                      }
+                      label="Empty Stomach"
+                    />
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleRemoveTest(index)}
+                      disabled={testItems.length === 1}
+                    >
+                      Remove
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+            ))}
+
             <Button
-              component="label"
-              variant="contained"
-              startIcon={<ImageIcon />}
-              sx={{
-                borderRadius: "12px",
-                padding: "10px",
-                textAlign: "center",
-                background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
-                cursor: "pointer",
-                width: "100%",
-                marginTop: 0.6,
-                "&:hover": {
-                  background:
-                    "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
-                  boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-                },
-              }}
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={handleAddTest}
             >
-              Choose File
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
+              Add More Test
             </Button>
-            {formData.photo && (
-              <Box
+          </Paper>
+
+          {/* Status, Type, File Upload */}
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={4}>
+              <Autocomplete
+                options={optionsStatus}
+                getOptionLabel={(o) => o.label}
+                value={
+                  optionsStatus.find((opt) => opt.value === formData.status) ||
+                  null
+                }
+                onChange={(_, newValue) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    status: newValue?.value || "",
+                  }))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Status"
+                    error={!!errors.status}
+                    helperText={errors.status}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Autocomplete
+                options={optionsType}
+                getOptionLabel={(o) => o.label}
+                value={
+                  optionsType.find((opt) => opt.value === formData.type) || null
+                }
+                onChange={(_, newValue) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    type: newValue?.value || null,
+                  }))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Type"
+                    error={!!errors.type}
+                    helperText={errors.type}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Button
+                component="label"
+                variant="contained"
+                startIcon={<ImageIcon />}
                 sx={{
-                  position: "relative",
+                  borderRadius: "12px",
+                  padding: "10px",
                   width: "100%",
-                  maxHeight: "200px",
-                  marginTop: 2,
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
+                  mt: 0.6,
+                  background:
+                    "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+                  "&:hover": {
+                    background:
+                      "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
+                    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+                  },
                 }}
               >
-                <img
-                  src={URL.createObjectURL(formData.photo)}
-                  alt="Uploaded"
-                  style={{
-                    width: "100%",
-                    maxHeight: "200px",
-                    objectFit: "cover",
-                    borderRadius: 8,
-                  }}
+                Choose File
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={handleImageUpload}
                 />
-
-                {/* Close Button */}
-                <IconButton
-                  onClick={() => setFormData({ ...formData, photo: null })}
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 8,
-
-                    color: "#20ADA0",
-                  }}
-                >
-                  <Close />
-                </IconButton>
-              </Box>
-            )}
+              </Button>
+              {formData.photo && (
+                <Box sx={{ position: "relative", mt: 2 }}>
+                  <img
+                    src={URL.createObjectURL(formData.photo)}
+                    alt="Uploaded"
+                    style={{
+                      width: "100%",
+                      borderRadius: 8,
+                      maxHeight: 200,
+                      objectFit: "cover",
+                    }}
+                  />
+                  <IconButton
+                    onClick={() => setFormData({ ...formData, photo: null })}
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 8,
+                      color: "#20ADA0",
+                    }}
+                  >
+                    <Close />
+                  </IconButton>
+                </Box>
+              )}
+            </Grid>
           </Grid>
-        </Grid>
-      </DialogContent>
-      <DialogActions sx={{ justifyContent: "center" }}>
-        <Button
-          onClick={onClose}
-          variant="outlined"
-          color="error"
-          sx={{ borderRadius: 50, padding: "8px 20px" }}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          color="primary"
-          startIcon={<AddCircle />}
-          sx={{
-            borderRadius: 50,
-            padding: "8px 20px",
-            background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
-            "&:hover": {
-              background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
-              boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            },
-          }}
-        >
-          Create
-        </Button>
-      </DialogActions>
-      <Toast
-        alerting={toast.toastAlert}
-        severity={toast.toastSeverity}
-        message={toast.toastMessage}
-      />
+        </DialogContent>
+
+        <DialogActions sx={{ justifyContent: "center" }}>
+          <Button
+            onClick={handleClose}
+            variant="outlined"
+            color="error"
+            sx={{ borderRadius: 50 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            startIcon={<AddCircle />}
+            sx={{
+              borderRadius: 50,
+              background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
+              "&:hover": {
+                background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
+                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+              },
+            }}
+          >
+            Create
+          </Button>
+        </DialogActions>
+
+        <Toast
+          alerting={toast.toastAlert}
+          severity={toast.toastSeverity}
+          message={toast.toastMessage}
+        />
+      </Box>
     </Dialog>
   );
 };

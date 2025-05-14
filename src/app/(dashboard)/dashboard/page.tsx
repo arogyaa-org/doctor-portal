@@ -272,7 +272,7 @@ export default function Page(): React.JSX.Element {
   ];
 
   // Calculate column width for stat cards based on number of cards
-  const getStatCardWidth = (cardsInRow) => {
+  const getStatCardWidth = (cardsInRow: string | any[]) => {
     // For small screens, always use full width
     // For medium screens, use half width
     // For large screens, distribute evenly
