@@ -22,6 +22,7 @@ import {
   MenuItem,
   Menu,
   FormControl,
+  TablePagination,
 } from "@mui/material";
 import {
   CheckCircle,
@@ -76,6 +77,9 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [totalCount, setTotalCount] = useState(0);
   const [expandedTreatment, setExpandedTreatment] = useState<string | null>(
     null
   );
@@ -118,7 +122,7 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
         setLoading(true);
         const response = await fetcher(
           "treatment",
-          `get-treatments-by-patientId/${patientId}`
+          `get-treatments-by-patientId/${patientId}?page=${page + 1}&limit=${rowsPerPage}`
         );
 
         if (!response) {
@@ -126,21 +130,35 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
         }
 
         const allTreatments = response.results || [];
+        const count = response.count || 0;
         setTreatments(allTreatments);
+        setTotalCount(count);
         setError(null);
       } catch (error) {
         console.error("Error fetching treatments:", error);
         setError(error instanceof Error ? error.message : String(error));
         setTreatments([]);
+        setTotalCount(0);
       } finally {
         setLoading(false);
       }
     }
-  }, [patientId]);
+  }, [patientId, page, rowsPerPage]);
 
   useEffect(() => {
     fetchTreatments();
   }, [fetchTreatments]);
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   const handleToggleExpand = (treatmentId: string) => {
     setExpandedTreatment(
@@ -206,7 +224,13 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedTreatmentId, treatmentImage, toastAndNavigate, dispatch, fetchTreatments]);
+  }, [
+    selectedTreatmentId,
+    treatmentImage,
+    toastAndNavigate,
+    dispatch,
+    fetchTreatments,
+  ]);
 
   // Open image viewer modal
   const handleOpenViewImageModal = (imageUrl: string) => {
@@ -690,7 +714,7 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
                             ? dayjs(treatment.followUpDate).format(
                                 "DD-MMM-YYYY"
                               )
-                            : "No Follow Up Scheduled"}
+                            : "No Follow Up"}
                         </Typography>
                       </Box>
 
@@ -750,6 +774,21 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
               </React.Fragment>
             ))}
           </List>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={totalCount}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            sx={{
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-select":
+                {
+                  fontWeight: 500,
+                },
+            }}
+          />
         </Paper>
       )}
 
