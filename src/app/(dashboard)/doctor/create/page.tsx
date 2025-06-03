@@ -42,6 +42,9 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PinDrop from "@mui/icons-material/PinDrop";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 
 import Loader from "@/components/common/Loader";
 import Toast from "@/components/common/Toast";
@@ -388,21 +391,44 @@ const DoctorForm: React.FC = () => {
                 error={touched.contact && Boolean(errors.contact)}
                 helperText={touched.contact && errors.contact}
               />
-              <Field
-                fullWidth
-                as={MuiTextField}
-                label="Date of Birth *"
-                name="dob"
-                type="date"
-                value={values.dob ? dayjs(values.dob).format("YYYY-MM-DD") : ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const formattedDate = e.target.value;
-                  setFieldValue("dob", formattedDate);
-                }}
-                InputLabelProps={{ shrink: true }}
-                error={touched.dob && Boolean(errors.dob)}
-                helperText={touched.dob && errors.dob}
-              />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  label="Date of Birth *"
+                  value={values.dob ? dayjs(values.dob) : null}
+                  onChange={(newValue) => {
+                    setFieldValue(
+                      "dob",
+                      newValue ? newValue.format("YYYY-MM-DD") : ""
+                    );
+                  }}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: touched.dob && Boolean(errors.dob),
+                      helperText: touched.dob && errors.dob,
+                    },
+                    inputAdornment: {
+                      position: "start",
+                    },
+                  }}
+                  slots={{
+                    openPickerIcon: CalendarMonthIcon,
+                  }}
+                  sx={{
+                    "& .MuiIconButton-root": {
+                      color: (theme) => theme.palette.primary.main,
+                      marginRight: "-16px", // Pulls icon closer to text
+                    },
+                    "& .MuiInputBase-input": {
+                      paddingLeft: "32px !important", // Reduced from 40px
+                      marginLeft: "-4px", // Shifts text closer to icon
+                    },
+                    "& .MuiInputAdornment-positionStart": {
+                      marginRight: "0px", // Adjusts icon container spacing
+                    },
+                  }}
+                />
+              </LocalizationProvider>
 
               <FormControl
                 fullWidth
@@ -724,30 +750,13 @@ const DoctorForm: React.FC = () => {
               />
               <Field
                 as={MuiTextField}
-                label="Bio "
-                name="bio"
-                fullWidth
-                multiline
-                minRows={3}
-                sx={{ gridColumn: "span 2" }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <AssignmentIcon color="primary" />
-                    </InputAdornment>
-                  ),
-                }}
-                error={touched.bio && Boolean(errors.bio)}
-                helperText={touched.bio && errors.bio}
-              />
-              <Field
-                as={MuiTextField}
                 label="Tags"
                 name="tags"
                 fullWidth
                 multiline
-                minRows={3} // Set the initial height of the textarea
+                minRows={1} // Set the initial height of the textarea
                 maxRows={10} // Set a maximum number of rows to prevent it from growing indefinitely
+                sx={{ gridColumn: "span 2" }}
                 value={values.tags?.join(",")}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFieldValue(
@@ -765,29 +774,29 @@ const DoctorForm: React.FC = () => {
                 error={touched.tags && Boolean(errors.tags)}
                 helperText={touched.tags && errors.tags}
               />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={values.isVerified}
-                    onChange={(event) =>
-                      setFieldValue("isVerified", event.target.checked)
-                    }
-                    sx={{
-                      color: values.isVerified ? "#3f51b5" : "default",
-                      "&.Mui-checked": {
-                        color: "#3f51b5",
-                      },
-                    }}
-                  />
-                }
-                label="Is Verified"
+              <Field
+                as={MuiTextField}
+                label="Bio "
+                name="bio"
+                fullWidth
+                multiline
+                minRows={3}
+                sx={{ gridColumn: "span 2" }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <AssignmentIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                error={touched.bio && Boolean(errors.bio)}
+                helperText={touched.bio && errors.bio}
               />
 
-              {/* File input and display */}
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "1fr auto",
+                  gridTemplateColumns: "1fr auto auto",
                   gap: "16px",
                   alignItems: "center",
                 }}
@@ -801,15 +810,15 @@ const DoctorForm: React.FC = () => {
                     justifyContent: "center",
                     border: "1px solid #ccc",
                     borderRadius: "8%",
-                    width: "146px",
-                    height: "104px",
+                    width: "150px",
+                    height: "103px",
                     cursor: "pointer",
                     textAlign: "center",
                     transition: "border-color 0.3s ease, color 0.3s ease",
                     "&:hover": {
                       borderColor: "rgb(33, 38, 54)",
                       "& svg": {
-                        color: "rgb(33, 38, 54)", // Darker icon color on hover
+                        color: "rgb(33, 38, 54)",
                       },
                     },
                   }}
@@ -907,6 +916,28 @@ const DoctorForm: React.FC = () => {
                     )}
                   </Box>
                 )}
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    whiteSpace: "nowrap",
+                    ml: 1,
+                  }}
+                >
+                  <Checkbox
+                    checked={values.isVerified}
+                    onChange={(event) =>
+                      setFieldValue("isVerified", event.target.checked)
+                    }
+                    sx={{
+                      color: values.isVerified ? "#3f51b5" : "default",
+                      "&.Mui-checked": { color: "#3f51b5" },
+                      padding: "4px 4px 4px 0", // Tighter padding
+                    }}
+                  />
+                  <Typography variant="body2">Is Verified</Typography>
+                </Box>
               </Box>
             </Box>
 
@@ -933,7 +964,7 @@ const DoctorForm: React.FC = () => {
                     <Grid item xs={4}>
                       <Field
                         as={MuiTextField}
-                        label="Hospital Name"
+                        label="Hospital / Clinic Name"
                         name={`availability[${index}].hospital.name`}
                         fullWidth
                         value={slot.hospital?.name || ""}
@@ -1178,7 +1209,7 @@ const DoctorForm: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                disabled={!dirty || isSubmitting || !isValid}
+                // disabled={!dirty || isSubmitting || !isValid}
                 color={title === "Edit Doctor" ? "info" : "success"}
               >
                 Submit

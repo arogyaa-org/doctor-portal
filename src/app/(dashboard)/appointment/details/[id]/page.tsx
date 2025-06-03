@@ -48,6 +48,8 @@ import {
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
+import ReactPlayer from "react-player";
 
 import Toast from "@/components/common/Toast";
 import TreatmentHistory from "./treatmentHistory";
@@ -99,6 +101,7 @@ const statusOptions = [
 const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState("info");
   const [showVideo, setShowVideo] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const router = useRouter();
@@ -133,7 +136,6 @@ const AppointmentDetails = () => {
     },
   }));
 
-  // Modified toggle button with smoother transition
   const VideoToggleButton = styled(IconButton)(({ theme }) => ({
     position: "absolute",
     right: 0,
@@ -144,7 +146,7 @@ const AppointmentDetails = () => {
     zIndex: 10,
     width: 20,
     height: 70,
-    borderRadius: "6px 0 0 6px", // Always keep the same border radius
+    borderRadius: "6px 0 0 6px",
     boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
     transition: "all 0.3s ease",
     "&:hover": {
@@ -182,6 +184,9 @@ const AppointmentDetails = () => {
 
   const toggleVideo = () => {
     setShowVideo(!showVideo);
+    if (!showVideo) {
+      setIsHovering(false);
+    }
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -191,7 +196,6 @@ const AppointmentDetails = () => {
         status: newStatus,
       });
 
-      // Ensure you do not mutate the existing appointmentData.
       const updatedResults = appointmentData?.data?.results?.map(
         (appointment) =>
           appointment._id === appointmentId
@@ -204,14 +208,13 @@ const AppointmentDetails = () => {
         results: updatedResults,
       };
 
-      // Dispatch the updated appointment to Redux
       dispatch(setAppointment(updatedAppointment));
 
       toastAndNavigate(
         dispatch,
         true,
         "success",
-        "Status updated successfully"
+        "Status updated sucessfully"
       );
     } catch (error) {
       console.error("Error updating status:", error);
@@ -311,15 +314,14 @@ const AppointmentDetails = () => {
                     variant="h5"
                     fontWeight="bold"
                     sx={{
-                      ml: 4, // Matches chip icon+spacing (EventIcon + margins)
-                      mb: 1, // Space between name and chip
+                      ml: 4,
+                      mb: 1,
                       marginLeft: "-7px",
                     }}
                   >
                     {patientData?.data?.username}
                   </Typography>
 
-                  {/* Date and Time Chip */}
                   <AppointmentInfoChip
                     sx={{
                       display: "flex",
@@ -680,21 +682,100 @@ const AppointmentDetails = () => {
         </div>
       </Box>
 
-      {/* Video toggle button - positioned at the joint when video is shown */}
-      <VideoToggleButton onClick={toggleVideo}>
-        {showVideo ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-      </VideoToggleButton>
+      <Box position="relative">
+        <motion.div
+          initial={{ x: "100vw" }}
+          animate={{ x: 0 }}
+          transition={{
+            type: "spring",
+            stiffness: 50,
+            damping: 20,
+            duration: 0.8,
+          }}
+        >
+          <VideoToggleButton
+            onClick={toggleVideo}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+          >
+            {showVideo ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </VideoToggleButton>
+        </motion.div>
 
-      {/* Video section - slides in from the right, now takes full available width */}
+        {isHovering && !showVideo && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: "absolute",
+              top: "90px",
+              right: "30px",
+              zIndex: 1000,
+            }}
+          >
+            <Box
+              sx={{
+                backgroundColor: "white",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                padding: "8px",
+                width: "200px",
+                height: "120px",
+                position: "relative",
+              }}
+            >
+              <ReactPlayer
+                url={appointmentData?.data?.videoUrl || ""}
+                width="100%"
+                height="100%"
+                playing={isHovering && !showVideo}
+                controls={false}
+                muted
+                loop
+              />
+              {/* Overlay message when no video is available */}
+              {!appointmentData?.data?.videoUrl && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "rgba(0, 0, 0, 0.8)", // Dark overlay
+                    color: "white",
+                  }}
+                >
+                  <Typography variant="caption" textAlign="center">
+                    No video available
+                  </Typography>
+                </Box>
+              )}
+              <Typography
+                variant="caption"
+                sx={{ mt: 1, display: "block", textAlign: "center" }}
+              >
+                Symptom Video Preview
+              </Typography>
+            </Box>
+          </motion.div>
+        )}
+      </Box>
+
       <Collapse
         in={showVideo}
         orientation="horizontal"
         sx={{
-          flex: showVideo ? "0 0 35%" : "0 0 0%", // Increased width to fill available space
+          flex: showVideo ? "0 0 35%" : "0 0 0%",
           position: "relative",
           overflowY: "auto",
           borderLeft: "1px solid rgba(0,0,0,0.12)",
-          transition: "transition: all 0.3s spring", // Smooth transition
+          transition: "transition: all 0.3s spring",
           mt: 7,
         }}
       >
@@ -716,16 +797,15 @@ const AppointmentDetails = () => {
               borderRadius: 2, // Reduced border radius
               overflow: "hidden",
               position: "relative",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.15)", // Reduced shadow
+              boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
             }}
           >
-            {/* Header with icon and title */}
             <Box
               sx={{
-                padding: "12px 16px", // Reduced padding
+                padding: "12px 16px",
                 display: "flex",
                 alignItems: "center",
-                gap: 1.5, // Reduced gap
+                gap: 1.5,
                 borderBottom: "1px solid rgba(0,0,0,0.08)",
                 backgroundColor: theme.palette.primary.main,
                 color: "white",
@@ -764,54 +844,30 @@ const AppointmentDetails = () => {
                 />
                 Your browser does not support the video tag.
               </video>
-
-              {/* Play button overlay */}
-              {/* <Box
-                sx={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <IconButton
+              {/* Overlay message when no video is available */}
+              {!appointmentData?.data?.videoUrl && (
+                <Box
                   sx={{
-                    bgcolor: "#FE4F2D",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "rgba(0, 0, 0, 0.8)", // Dark overlay
                     color: "white",
-                    "&:hover": {
-                      transform: "scale(1.1)",
-                    },
-                    width: 70,
-                    height: 70,
-                    transition: "all 0.2s ease",
-                    boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
                   }}
                 >
-                  <PlayIcon fontSize="large" />
-                </IconButton>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: "white",
-                    fontWeight: "500",
-                    textShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  Click to play video
-                </Typography>
-              </Box> */}
+                  <Typography variant="body2" textAlign="center">
+                    No video available
+                  </Typography>
+                </Box>
+              )}
             </Box>
 
-            {/* Video details and description */}
             <Box sx={{ padding: "16px 20px" }}>
-              {" "}
-              {/* Increased padding */}
               <Typography
                 variant="h6"
                 color="primary"
@@ -822,7 +878,7 @@ const AppointmentDetails = () => {
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
                 This video provides a detailed overview of the patient's
-                described symptoms, helping with visual diagnosis and treatment 
+                described symptoms, helping with visual diagnosis and treatment
                 planning.
               </Typography>
             </Box>

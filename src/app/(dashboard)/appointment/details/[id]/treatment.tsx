@@ -26,6 +26,8 @@ import {
   Repeat,
   Timer,
   Add,
+  LocalHospital,
+  CalendarToday,
 } from "@mui/icons-material";
 import { styled } from "@mui/system";
 import { creator } from "@/apis/apiClient";
@@ -49,7 +51,7 @@ const StyledTextField = styled(TextField)({
       borderColor: "#black",
     },
     "&.Mui-focused fieldset": {
-      borderColor: "balck",
+      borderColor: "black",
     },
   },
 });
@@ -93,6 +95,9 @@ interface TreatmentItem {
   frequency?: string;
   duration?: string;
   isEmptyStomach?: boolean;
+  routeOfAdministration?: string;
+  startDate?: string;
+  isSubstitutionAllowed?: boolean;
   type?: string;
   status: string;
   diagnosis: string;
@@ -120,6 +125,9 @@ const initialTreatmentItem: TreatmentItem = {
   frequency: "",
   duration: "",
   isEmptyStomach: false,
+  routeOfAdministration: "",
+  startDate: "",
+  isSubstitutionAllowed: false,
 };
 
 const initialFormData = {
@@ -139,6 +147,8 @@ const initialErrors = {
   duration: "",
   type: "",
   diagnosis: "",
+  routeOfAdministration: "",
+  startDate: "",
 };
 
 // eslint-disable-next-line react/function-component-definition
@@ -161,7 +171,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
   // Reset form when modal opens or closes
   useEffect(() => {
     if (open) {
-      // Reset form state when modal opens
       resetForm();
     }
   }, [open]);
@@ -195,6 +204,14 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
         : "",
       duration: treatmentItems.some((item) => !item.duration)
         ? "Duration is required"
+        : "",
+      routeOfAdministration: treatmentItems.some(
+        (item) => !item.routeOfAdministration
+      )
+        ? "Route of Administration is required"
+        : "",
+      startDate: treatmentItems.some((item) => !item.startDate)
+        ? "Start Date is required"
         : "",
       type: formData.type ? "" : "Type is required",
       diagnosis: formData.diagnosis ? "" : "Diagnosis is required",
@@ -247,7 +264,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
     try {
-      // Rename your state variable to avoid conflict (e.g., formState instead of formData)
       const payload = {
         patientId,
         treatments: treatmentItems.map((item) => ({
@@ -257,15 +273,17 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
           frequency: item.frequency,
           duration: item.duration,
           isEmptyStomach: item.isEmptyStomach,
+          routeOfAdministration: item.routeOfAdministration,
+          startDate: item.startDate,
+          isSubstitutionAllowed: item.isSubstitutionAllowed, // Fixed capitalization
         })),
-        type: formData.type, // Now using your state variable
+        type: formData.type,
         diagnosis: formData.diagnosis,
         isFollowUp: formData.isFollowUp,
         followUpDate: formData.followUpDate,
         status: formData.status,
       };
 
-      // Create FormData instance with a different variable name
       const formDataInstance = new FormData();
       formDataInstance.append("payload", JSON.stringify(payload));
 
@@ -313,7 +331,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
               onClose();
             }}
             sx={{
-              color: "balck",
+              color: "black",
               position: "absolute",
               top: 6,
               right: 0,
@@ -323,7 +341,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ padding: 3 }}>
-          {/* Treatment Items Box */}
           <Paper elevation={3} sx={{ padding: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Treatment Details
@@ -332,7 +349,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
             {treatmentItems.map((item, index) => (
               <Box key={index} sx={{ mb: 3 }}>
                 <Grid container spacing={2}>
-                  {/* Name Field */}
                   <Grid item xs={12} sm={4}>
                     <StyledTextField
                       label="Medication Name"
@@ -354,7 +370,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                     />
                   </Grid>
 
-                  {/* Description Field */}
                   <Grid item xs={12} sm={4}>
                     <StyledTextField
                       label="Description"
@@ -379,7 +394,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                     />
                   </Grid>
 
-                  {/* Dose Field */}
                   <Grid item xs={12} sm={4}>
                     <StyledTextField
                       label="Dose"
@@ -404,7 +418,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                     />
                   </Grid>
 
-                  {/* Frequency Field */}
                   <Grid item xs={12} sm={4}>
                     <StyledTextField
                       label="Frequency"
@@ -429,7 +442,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                     />
                   </Grid>
 
-                  {/* Duration Field */}
                   <Grid item xs={12} sm={4}>
                     <StyledTextField
                       label="Duration"
@@ -454,7 +466,61 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                     />
                   </Grid>
 
-                  {/* Empty Stomach and Remove Button */}
+                  <Grid item xs={12} sm={4}>
+                    <StyledTextField
+                      label="Route of Administration"
+                      fullWidth
+                      margin="dense"
+                      value={item.routeOfAdministration}
+                      onChange={(e) =>
+                        handleTreatmentItemChange(
+                          index,
+                          "routeOfAdministration",
+                          e.target.value
+                        )
+                      }
+                      error={
+                        !!errors.routeOfAdministration &&
+                        !item.routeOfAdministration
+                      }
+                      helperText={
+                        !item.routeOfAdministration &&
+                        errors.routeOfAdministration
+                      }
+                      placeholder="Enter route (e.g., Oral)"
+                      InputProps={{
+                        startAdornment: (
+                          <LocalHospital sx={{ color: "#3f51b5", mr: 2 }} />
+                        ),
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={4}>
+                    <StyledTextField
+                      label="Start Date"
+                      type="date"
+                      fullWidth
+                      margin="dense"
+                      InputLabelProps={{ shrink: true }}
+                      value={item.startDate}
+                      onChange={(e) =>
+                        handleTreatmentItemChange(
+                          index,
+                          "startDate",
+                          e.target.value
+                        )
+                      }
+                      error={!!errors.startDate && !item.startDate}
+                      helperText={!item.startDate && errors.startDate}
+                      InputProps={{
+                        startAdornment: (
+                          <CalendarToday sx={{ color: "#3f51b5", mr: 2 }} />
+                        ),
+                      }}
+                    />
+                  </Grid>
+
                   <Grid
                     item
                     xs={12}
@@ -487,7 +553,29 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                       }
                       label="Empty Stomach"
                     />
-
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={item.isSubstitutionAllowed}
+                          onChange={(e) =>
+                            handleTreatmentItemChange(
+                              index,
+                              "isSubstitutionAllowed",
+                              e.target.checked
+                            )
+                          }
+                          sx={{
+                            color: item.isSubstitutionAllowed
+                              ? "#3f51b5"
+                              : "default",
+                            "&.Mui-checked": {
+                              color: "#3f51b5",
+                            },
+                          }}
+                        />
+                      }
+                      label="Substitution Allowed"
+                    />
                     <Button
                       variant="outlined"
                       color="error"
@@ -517,7 +605,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
             </Button>
           </Paper>
 
-          {/* Other Fields */}
           <Grid container spacing={3}>
             <Grid item xs={12} sm={4}>
               <StyledAutocomplete
@@ -584,7 +671,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
               />
             </Grid>
 
-            {/* Image Upload Grid */}
             <Grid item xs={12} sm={4} sx={{ mt: 0 }}>
               <Button
                 component="label"
@@ -641,7 +727,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
                     }}
                   />
 
-                  {/* Close Button */}
                   <IconButton
                     onClick={() => setFormData({ ...formData, photo: null })}
                     sx={{
