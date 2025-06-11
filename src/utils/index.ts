@@ -6,10 +6,10 @@ import { setToast } from "@/redux/features/toastSlice";
 
 export const Utility = () => {
   /**
- * Function to capitalize 1st letter of a string
- * @param str - The string whose 1st letter is to be capitalized
- * @returns 
- */
+   * Function to capitalize 1st letter of a string
+   * @param str - The string whose 1st letter is to be capitalized
+   * @returns
+   */
   const capitalizeFirstLetter = (str: string | undefined) => {
     if (str) {
       return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -38,7 +38,7 @@ export const Utility = () => {
     return await response.json();
   };
 
-  /** 
+  /**
    * Finds multiple objects in a collection by their IDs.
    * @param {Array} ids - The array of IDs to search for.
    * @param {Array} model - The collection (array of objects) to search within.
@@ -51,7 +51,9 @@ export const Utility = () => {
     if (!ids || !model) {
       return [];
     }
-    return model.filter(obj => ids.split(',').indexOf(obj.id.toString()) > -1);
+    return model.filter(
+      (obj) => ids.split(",").indexOf(obj.id.toString()) > -1
+    );
   };
 
   /**
@@ -66,11 +68,12 @@ export const Utility = () => {
       symptom: process.env.NEXT_PUBLIC_SYMPTOM_URL as string,
       qualification: process.env.NEXT_PUBLIC_QUALIFICATION_URL as string,
       doctor: process.env.NEXT_PUBLIC_DOCTOR_URL as string,
+      notification: process.env.NEXT_PUBLIC_NOTIFICATION_URL as string,
       patient: process.env.NEXT_PUBLIC_PATIENT_URL as string,
       payment: process.env.NEXT_PUBLIC_PAYMENT_URL as string,
       user: process.env.NEXT_PUBLIC_USER_URL as string,
-      treatment:process.env.NEXT_PUBLIC_TREATMENT_URL as string,
-      test:process.env.NEXT_PUBLIC_TESTS_URL as string,
+      treatment: process.env.NEXT_PUBLIC_TREATMENT_URL as string,
+      test: process.env.NEXT_PUBLIC_TESTS_URL as string,
     };
 
     return urls[serviceName] || "";
@@ -139,7 +142,7 @@ export const Utility = () => {
   const remLocalStorage = (key: string): void => {
     try {
       localStorage.removeItem(key);
-    } catch (err) { }
+    } catch (err) {}
   };
 
   /**
@@ -151,7 +154,7 @@ export const Utility = () => {
   const setLocalStorage = (key: string, value: any): void => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch (err) { }
+    } catch (err) {}
   };
 
   /**

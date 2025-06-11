@@ -7,6 +7,7 @@ import specialityReducer from './features/specialitySlice'
 import symptomsReducer from './features/symptomsSlice'
 import qualifuicationReducer from './features/qualificationSlice'
 import toastReducer from "./features/toastSlice";
+import notificationReducer from "./features/notificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -17,6 +18,7 @@ export const store = configureStore({
     symptoms: symptomsReducer,
     qualification: qualifuicationReducer,
     toast: toastReducer,
+    notifications: notificationReducer,
   },
 });
 
