@@ -37,10 +37,11 @@ const orderStatusMap: StatusConfigType = {
 // Default status map for appointments
 export const appointmentStatusMap: StatusConfigType = {
   scheduled: { label: "Scheduled", color: "info" },
-  ongoing: { label: "Ongoing", color: "warning" },
+  approved: { label: "Approved", color: "success" },
   completed: { label: "Completed", color: "success" },
-  cancelled: { label: "Cancelled", color: "error" },
-  noShow: { label: "No Show", color: "error" },
+  cancelled: { label: "Rejected", color: "error" },
+  pending: { label: "Pending", color: "info" },
+  rescheduled: { label: "Rescheduled", color: "warning" },
 };
 
 // Column definition type
@@ -173,6 +174,10 @@ export function ReusableTable({
                     {visibleColumns.map((column) => {
                       // Handle status column with chips
                       if (column.id === statusKey && item[statusKey]) {
+                        console.log(
+                          `Status for item ${item.id}:`,
+                          item[statusKey]
+                        );
                         const { label, color } = statusMap[item[statusKey]] || {
                           label: "Unknown",
                           color: "default",
@@ -190,6 +195,10 @@ export function ReusableTable({
                                 fontWeight: "medium",
                                 minWidth: 80,
                                 textAlign: "center",
+                                ...(color === "default" && {
+                                  backgroundColor: theme.palette.grey[300],
+                                  color: theme.palette.text.primary,
+                                }),
                               }}
                             />
                           </TableCell>
