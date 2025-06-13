@@ -169,6 +169,12 @@ export const datagridColumns = ({
             color: "#f39c12",
             icon: <PendingIcon fontSize="small" />,
           },
+          {
+            value: "completed",
+            label: "Completed",
+            color: "#28a745",
+            icon: <CheckCircle fontSize="small" />,
+          },
         ];
 
         const selectedStatus = statusOptions.find(
