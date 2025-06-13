@@ -201,23 +201,23 @@ export default function Page(): React.JSX.Element {
     ...(isDoctor
       ? []
       : [
-          {
-            value: "360",
-            diff: 12,
-            trend: "up",
-            Icon: VaccinesIcon,
-            title: "DOCTORS",
-            iconColor: cardColors.doctors,
-          },
-          {
-            value: "200",
-            diff: 16,
-            trend: "down",
-            Icon: PersonIcon,
-            title: "PATIENTS",
-            iconColor: cardColors.patients,
-          },
-        ]),
+        {
+          value: "360",
+          diff: 12,
+          trend: "up",
+          Icon: VaccinesIcon,
+          title: "DOCTORS",
+          iconColor: cardColors.doctors,
+        },
+        {
+          value: "200",
+          diff: 16,
+          trend: "down",
+          Icon: PersonIcon,
+          title: "PATIENTS",
+          iconColor: cardColors.patients,
+        },
+      ]),
     {
       value: "15000",
       diff: 16,
