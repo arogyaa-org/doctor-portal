@@ -257,6 +257,7 @@ export const Utility = () => {
     }
     if (token) {
       try {
+        console.log("jwtDecode(token)>", jwtDecode(token));
         return jwtDecode(token);
       } catch (error) {
         console.log("Error decoding token (client-side):", error);
