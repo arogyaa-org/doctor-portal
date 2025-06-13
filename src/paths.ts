@@ -16,6 +16,7 @@ export const paths = {
     symptom: '/symptom',
     integrations: '/integrations',
     settings: '/settings',
+    activeRooms: '/activeRooms',
   },
   errors: { notFound: '/not-found' },
 } as const;
