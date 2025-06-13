@@ -1,56 +1,200 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardActions from '@mui/material/CardActions';
-import CardContent from '@mui/material/CardContent';
-import CardHeader from '@mui/material/CardHeader';
-import Checkbox from '@mui/material/Checkbox';
-import Divider from '@mui/material/Divider';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormGroup from '@mui/material/FormGroup';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Unstable_Grid2';
+import { Box, Typography, Tabs, Tab, Button, Popover } from "@mui/material";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Utility } from "@/utils";
+import { fetcher, modifier } from "@/apis/apiClient";
+import { RootState } from "@/redux/store";
+import { setNotifications } from "@/redux/features/notificationSlice";
 
-export function Notifications(): React.JSX.Element {
+interface Notification {
+  _id: string;
+  message: string;
+  status: "read" | "unread";
+}
+
+interface NotificationPopoverProps {
+  open: boolean;
+  anchorEl: HTMLButtonElement | null;
+  onClose: () => void;
+  setUnreadCount?: (count: number) => void;
+}
+
+export default function DoctorNotificationPopover({
+  open,
+  anchorEl,
+  onClose,
+  setUnreadCount,
+}: NotificationPopoverProps) {
+  const [tabValue, setTabValue] = useState(0);
+  const [visibleNotifications, setVisibleNotifications] = useState(5);
+
+  const dispatch = useDispatch();
+  const notifications = useSelector(
+    (state: RootState) => state.notifications.notifications
+  );
+
+  const { decodedToken } = Utility();
+  const token = decodedToken();
+  console.log("Decoded Token:", token);
+  const doctorId = decodedToken()?.id;
+  console.log("Doctor ID:", doctorId);
+
+  const unreadCount = useSelector(
+    (state: RootState) =>
+      (state.notifications.notifications || []).filter(
+        (n) => n.status === "unread"
+      ).length
+  );
+
+  const fetchNotifications = async () => {
+    if (!doctorId) return;
+
+    try {
+      const response = await fetcher(
+        "notification",
+        `get-notifications/${doctorId}`
+      );
+      console.log("Fetched Notifications:", response);
+      dispatch(setNotifications(Array.isArray(response) ? response : []));
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (setUnreadCount) {
+      setUnreadCount(unreadCount);
+    }
+  }, [unreadCount, setUnreadCount]);
+
+  const markAsRead = async (id: string) => {
+    try {
+      await modifier("notification", `update-notification/${id}`, {
+        status: "read",
+      });
+      const updated = notifications.map((n) =>
+        n._id === id ? { ...n, status: "read" } : n
+      );
+      dispatch(setNotifications(updated));
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const filteredNotifications = notifications.filter((n) =>
+    tabValue === 0 ? n.status === "unread" : n.status === "read"
+  );
+
+  const displayedNotifications = filteredNotifications.slice(
+    0,
+    visibleNotifications
+  );
+
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
+    <Popover
+      open={open}
+      anchorEl={anchorEl}
+      onClose={onClose}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "right" }}
+      PaperProps={{
+        sx: {
+          width: 360,
+          mt: 0.5,
+          ml: 10,
+          borderRadius: 2,
+          boxShadow: "0px 4px 12px rgba(0,0,0,0.1)",
+          backgroundColor: "#fff",
+        },
       }}
     >
-      <Card>
-        <CardHeader subheader="Manage the notifications" title="Notifications" />
-        <Divider />
-        <CardContent>
-          <Grid container spacing={6} wrap="wrap">
-            <Grid md={4} sm={6} xs={12}>
-              <Stack spacing={1}>
-                <Typography variant="h6">Email</Typography>
-                <FormGroup>
-                  <FormControlLabel control={<Checkbox defaultChecked />} label="Product updates" />
-                  <FormControlLabel control={<Checkbox />} label="Security updates" />
-                </FormGroup>
-              </Stack>
-            </Grid>
-            <Grid md={4} sm={6} xs={12}>
-              <Stack spacing={1}>
-                <Typography variant="h6">Phone</Typography>
-                <FormGroup>
-                  <FormControlLabel control={<Checkbox defaultChecked />} label="Email" />
-                  <FormControlLabel control={<Checkbox />} label="Security updates" />
-                </FormGroup>
-              </Stack>
-            </Grid>
-          </Grid>
-        </CardContent>
-        <Divider />
-        <CardActions sx={{ justifyContent: 'flex-end' }}>
-          <Button variant="contained">Save changes</Button>
-        </CardActions>
-      </Card>
-    </form>
+      <Tabs
+        value={tabValue}
+        onChange={(_, newValue) => setTabValue(newValue)}
+        variant="fullWidth"
+        textColor="primary"
+        indicatorColor="primary"
+        sx={{
+          borderBottom: "1px solid #eee",
+          backgroundColor: "#f9f9f9",
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
+        }}
+      >
+        <Tab label={`Unread (${unreadCount})`} />
+        <Tab label="Read" />
+      </Tabs>
+
+      <Box sx={{ maxHeight: 400, overflowY: "auto", px: 2, py: 1 }}>
+        {filteredNotifications.length === 0 ? (
+          <Box
+            sx={{
+              textAlign: "center",
+              py: 5,
+              opacity: 0.6,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <NotificationsNoneIcon sx={{ fontSize: 40, color: "#b0b0b0" }} />
+            <Typography variant="body1">
+              {tabValue === 0
+                ? "No unread notifications"
+                : "No read notifications"}
+            </Typography>
+          </Box>
+        ) : (
+          <>
+            {displayedNotifications.map((notification) => (
+              <Box
+                key={notification._id}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderBottom: "1px solid #f0f0f0",
+                  py: 1,
+                  gap: 1,
+                  cursor: "pointer",
+                }}
+                onClick={() =>
+                  notification.status === "unread" &&
+                  markAsRead(notification._id)
+                }
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: notification.status === "unread" ? "#111" : "#666",
+                    fontWeight: notification.status === "unread" ? 600 : 400,
+                  }}
+                >
+                  {notification.message}
+                </Typography>
+              </Box>
+            ))}
+            {filteredNotifications.length > visibleNotifications && (
+              <Box sx={{ mt: 1, textAlign: "center" }}>
+                <Button
+                  variant="text"
+                  onClick={() => setVisibleNotifications((prev) => prev + 5)}
+                >
+                  View More
+                </Button>
+              </Box>
+            )}
+          </>
+        )}
+      </Box>
+    </Popover>
   );
 }

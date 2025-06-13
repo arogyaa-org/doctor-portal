@@ -12,18 +12,37 @@ import { List as ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
 import { usePopover } from '@/hooks/use-popover';
-
 import { MobileNav } from './mobile-nav';
 import { UserPopover } from './user-popover';
 import { Utility } from '@/utils';
 
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
+import DoctorNotificationPopover from '../settings/notifications';
 export function MainNav(): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState<boolean>(false);
-  const { decodedToken } = Utility();
 
   const userPopover = usePopover<HTMLDivElement>();
+  const { decodedToken } = Utility();
   const { role, userName, doctorName } = decodedToken() || {};
-  const displayName = role === "admin" ? userName : doctorName;
+  const displayName = role === 'admin' ? userName : doctorName;
+
+  // Notification popover state
+  const [notificationAnchorEl, setNotificationAnchorEl] =
+    React.useState<null | HTMLElement>(null);
+  const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+  const handleNotificationClose = () => {
+    setNotificationAnchorEl(null);
+  };
+  const isNotificationOpen = Boolean(notificationAnchorEl);
+
+  // Get unread notification count from redux
+  const unreadCount = useSelector(
+    (state: RootState) =>
+      state.notifications.notifications.filter((n) => n.status === 'unread').length
+  );
 
   return (
     <React.Fragment>
@@ -40,7 +59,12 @@ export function MainNav(): React.JSX.Element {
         <Stack
           direction="row"
           spacing={2}
-          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: '64px', px: 2 }}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: '64px',
+            px: 2,
+          }}
         >
           <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
             <IconButton
@@ -59,8 +83,12 @@ export function MainNav(): React.JSX.Element {
               </IconButton>
             </Tooltip>
             <Tooltip title="Notifications">
-              <Badge badgeContent={4} color="success" variant="dot">
-                <IconButton>
+              <Badge
+                badgeContent={unreadCount}
+                color="success"
+                variant={unreadCount > 0 ? 'dot' : 'standard'}
+              >
+                <IconButton onClick={handleNotificationOpen}>
                   <BellIcon />
                 </IconButton>
               </Badge>
@@ -75,7 +103,22 @@ export function MainNav(): React.JSX.Element {
           </Stack>
         </Stack>
       </Box>
-      <UserPopover anchorEl={userPopover.anchorRef.current} onClose={userPopover.handleClose} open={userPopover.open} />
+
+      {/* User Dropdown */}
+      <UserPopover
+        anchorEl={userPopover.anchorRef.current}
+        onClose={userPopover.handleClose}
+        open={userPopover.open}
+      />
+
+      {/* Doctor Notifications */}
+      <DoctorNotificationPopover
+        open={isNotificationOpen}
+        anchorEl={notificationAnchorEl}
+        onClose={handleNotificationClose}
+      />
+
+      {/* Mobile Navigation */}
       <MobileNav
         onClose={() => {
           setOpenNav(false);
