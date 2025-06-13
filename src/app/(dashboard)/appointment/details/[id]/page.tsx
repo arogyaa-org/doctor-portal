@@ -46,6 +46,7 @@ import {
   Cancel,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  CheckCircle as CompletedIcon,
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -94,6 +95,12 @@ const statusOptions = [
     label: "Pending",
     color: "#f39c12",
     icon: <HourglassEmpty fontSize="small" />,
+  },
+  {
+    value: "completed",
+    label: "Completed",
+    icon: <CompletedIcon fontSize="small" color="success" />,
+    color: "success",
   },
 ];
 
@@ -210,12 +217,7 @@ const AppointmentDetails = () => {
 
       dispatch(setAppointment(updatedAppointment));
 
-      toastAndNavigate(
-        dispatch,
-        true,
-        "success",
-        "Status updated sucessfully"
-      );
+      toastAndNavigate(dispatch, true, "success", "Status updated sucessfully");
     } catch (error) {
       console.error("Error updating status:", error);
       toastAndNavigate(dispatch, true, "error", "Failed to update status");

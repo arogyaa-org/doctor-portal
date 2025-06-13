@@ -39,18 +39,46 @@ export function StatCard({
       }}
     >
       <CardContent sx={{ padding: 3 }}>
-        <Typography
-          color="text.secondary"
-          variant="subtitle2"
-          sx={{
-            fontWeight: 500,
-            mb: 1,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-          }}
-        >
-          {title}
-        </Typography>
+        {title === "PENDING APPOINTMENTS" ? (
+          <>
+            <Typography
+              color="text.secondary"
+              variant="subtitle2"
+              sx={{
+                fontWeight: 500,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              PENDING
+            </Typography>
+            <Typography
+              color="text.secondary"
+              variant="subtitle2"
+              sx={{
+                fontWeight: 500,
+                mb: 1, // Maintain margin-bottom for spacing below the title
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              APPOINTMENTS
+            </Typography>
+          </>
+        ) : (
+          <Typography
+            color="text.secondary"
+            variant="subtitle2"
+            sx={{
+              fontWeight: 500,
+              mb: 1,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {title}
+          </Typography>
+        )}
 
         <Box
           sx={{

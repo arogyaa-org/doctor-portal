@@ -28,6 +28,7 @@ import {
   PendingActions as PendingActionsIcon,
   AllInclusive,
   History as HistoryIcon,
+  CheckCircle as CompletedIcon,
 } from "@mui/icons-material";
 
 import Toast from "@/components/common/Toast";
@@ -52,7 +53,7 @@ const statusOptions = [
   {
     value: "scheduled",
     label: "Scheduled",
-    icon: <AllDatesIcon fontSize="small" color="primary" />,
+    icon: <ScheduledIcon fontSize="small" color="primary" />,
     color: "primary",
   },
   {
@@ -78,6 +79,12 @@ const statusOptions = [
     label: "Pending",
     icon: <PendingIcon fontSize="small" color="warning" />,
     color: "warning",
+  },
+  {
+    value: "completed",
+    label: "Completed",
+    icon: <CompletedIcon fontSize="small" color="success" />,
+    color: "success",
   },
 ];
 
