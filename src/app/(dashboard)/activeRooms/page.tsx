@@ -41,7 +41,7 @@ const DoctorDashboard = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    const newSocket = io("http://localhost:4009/doctor-notifications", {
+    const newSocket = io(`${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`, {
       transports: ["websocket"],
       autoConnect: true,
     })
