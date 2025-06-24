@@ -147,6 +147,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
     defaultValues: {
       ...editFields,
       dob: editFields.dob ? dayjs(editFields.dob).format("YYYY-MM-DD") : "",
+      password: undefined, // Explicitly exclude password
     },
   });
 
@@ -205,35 +206,38 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
 
   const handleSaveChanges = async (data: DoctorData) => {
     try {
+      // Exclude password from payload
+      const { password, ...dataWithoutPassword } = data;
+
       // Normalize qualificationIds, specializationIds, and symptomIds to arrays of strings
       const normalizedQualificationIds =
         role === "doctor"
-          ? data.qualificationIds.map((qual) =>
+          ? dataWithoutPassword.qualificationIds.map((qual) =>
               typeof qual === "object" && qual._id ? qual._id : qual
             )
           : [];
       const normalizedSpecializationIds =
         role === "doctor"
-          ? data.specializationIds.map((spec) =>
+          ? dataWithoutPassword.specializationIds.map((spec) =>
               typeof spec === "object" && spec._id ? spec._id : spec
             )
           : [];
       const normalizedSymptomIds =
         role === "doctor"
-          ? data.symptomIds.map((sym) =>
+          ? dataWithoutPassword.symptomIds.map((sym) =>
               typeof sym === "object" && sym._id ? sym._id : sym
             )
           : [];
 
       // Map availability to backend format
       const payload = {
-        ...data,
+        ...dataWithoutPassword,
         qualificationIds: normalizedQualificationIds,
         specializationIds: normalizedSpecializationIds,
         symptomIds: normalizedSymptomIds,
         availability:
-          role === "doctor" && data.availability
-            ? data.availability.map((slot) => ({
+          role === "doctor" && dataWithoutPassword.availability
+            ? dataWithoutPassword.availability.map((slot) => ({
                 day: slot.day,
                 startTime: slot.startTime,
                 endTime: slot.endTime,
@@ -253,7 +257,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       console.log("Payload being sent to backend:", payload);
 
       await modifyDoctor(payload);
-      setDoctorProfileData(data);
+      setDoctorProfileData(dataWithoutPassword);
       setIsEditOpen(false);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -348,7 +352,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
           )}
         </Box>
 
-        {(role === "doctor" || role === "admin")&& (
+        {(role === "doctor" || role === "admin") && (
           <Box
             sx={{
               textAlign: "center",
@@ -1222,14 +1226,14 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
           variant="contained"
           color="success"
           onClick={handleSubmit(handleSaveChanges)}
-          sx={{ mb: 1, width: "15" }}
+          sx={{ mb: 1, width: "100px" }}
         >
           Save
         </Button>
         <Button
           color="error"
           variant="contained"
-          sx={{ mb: 1, width: "20" }}
+          sx={{ mb: 1, width: "100px" }}
           onClick={handleCancelChanges}
         >
           Cancel
