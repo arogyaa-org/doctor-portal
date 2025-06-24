@@ -18,7 +18,7 @@ export const SpecialityDatagridColumns = (handleActionEdit): GridColDef[] => {
       headerName: "Description",
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
-      align: "left",
+      align: "center",
       flex: 2,
       renderCell: (params) => {
         const [expanded, setExpanded] = useState(false);
@@ -35,6 +35,8 @@ export const SpecialityDatagridColumns = (handleActionEdit): GridColDef[] => {
             sx={{
               display: "flex",
               flexDirection: "column",
+              alignItems: 'center',
+              justifyContent: 'center',
               width: "100%",
               whiteSpace: "normal",
               minHeight: 47,
@@ -47,6 +49,7 @@ export const SpecialityDatagridColumns = (handleActionEdit): GridColDef[] => {
                 textOverflow: expanded ? "clip" : "ellipsis",
                 width: "100%",
                 fontSize: "14px",
+                textAlign: 'center'
               }}
             >
               {content}

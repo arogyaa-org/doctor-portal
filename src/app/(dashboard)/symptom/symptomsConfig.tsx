@@ -39,9 +39,11 @@ export const symptomDatagridColumns = (handleOpenDialog): GridColDef[] => {
             sx={{
               display: "flex",
               flexDirection: "column",
+              justifyContent: "center",
+              alignItems: 'center',
               width: "100%",
               whiteSpace: "normal",
-              minHeight:47
+              minHeight: 47
             }}
           >
             <Typography
@@ -51,6 +53,7 @@ export const symptomDatagridColumns = (handleOpenDialog): GridColDef[] => {
                 textOverflow: expanded ? "clip" : "ellipsis",
                 width: "100%",
                 fontSize: "14px",
+                textAlign: 'center'
               }}
             >
               {content}

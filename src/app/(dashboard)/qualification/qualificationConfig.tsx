@@ -41,9 +41,11 @@ export const qualificationDatagridColumns = (
             sx={{
               display: "flex",
               flexDirection: "column",
+              alignItems: 'center',
+              justifyContent: 'center',
               width: "100%",
               whiteSpace: "normal",
-              minHeight:47
+              minHeight: 47
             }}
           >
             <Typography
@@ -53,6 +55,7 @@ export const qualificationDatagridColumns = (
                 textOverflow: expanded ? "clip" : "ellipsis",
                 width: "100%",
                 fontSize: "14px",
+                textAlign: 'center'
               }}
             >
               {content}
