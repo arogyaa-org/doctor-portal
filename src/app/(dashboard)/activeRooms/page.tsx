@@ -1,126 +1,196 @@
-"use client"
-import { useState, useEffect, useCallback } from "react"
-import { Bell, Video, Calendar, Clock, CheckCircle, AlertCircle, Activity, Users } from "lucide-react"
-import io from "socket.io-client"
-import { Utility } from "@/utils"
-import { Pulse } from "@phosphor-icons/react"
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Bell,
+  Video,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Activity,
+  Users,
+} from "lucide-react";
+import io from "socket.io-client";
+import { Utility } from "@/utils";
+import { Pulse } from "@phosphor-icons/react";
+import {
+  Container,
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Chip,
+  Button,
+  Stack,
+  Divider,
+  Badge,
+  IconButton,
+  CircularProgress,
+  Paper,
+  Tooltip,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+
+// Custom styled components
+const GradientCard = styled(Card)(({ theme, gradient }) => ({
+  background: gradient,
+  borderRadius: theme.shape.borderRadius * 2,
+  transition: "transform 0.3s, box-shadow 0.3s",
+  "&:hover": {
+    transform: "scale(1.02)",
+    boxShadow: theme.shadows[8],
+  },
+}));
+
+const StatusChip = styled(Chip)(({ theme, status }) => {
+  const colors = {
+    active: {
+      bg: theme.palette.success.light,
+      text: theme.palette.success.dark,
+    },
+    scheduled: { bg: theme.palette.info.light, text: theme.palette.info.dark },
+    completed: { bg: theme.palette.grey[100], text: theme.palette.grey[700] },
+    expired: { bg: theme.palette.error.light, text: theme.palette.error.dark },
+  };
+  return {
+    backgroundColor: colors[status]?.bg || theme.palette.grey[100],
+    color: colors[status]?.text || theme.palette.grey[700],
+    border: `1px solid ${colors[status]?.bg || theme.palette.grey[200]}`,
+    fontWeight: 600,
+  };
+});
+
+const GradientButton = styled(Button)(({ theme, gradient }) => ({
+  background: gradient,
+  color: theme.palette.common.white,
+  fontWeight: 600,
+  borderRadius: theme.shape.borderRadius * 2,
+  padding: theme.spacing(1.5, 3),
+  "&:hover": {
+    background: gradient.replace("500", "600").replace("600", "700"),
+    transform: "scale(1.05)",
+  },
+}));
 
 const DoctorDashboard = () => {
-  const { decodedToken } = Utility()
-  // const [doctorId] = useState('doctor123'); // This would come from auth context
-  const [doctorId, setDocterId] = useState("")
-  const [socket, setSocket] = useState(null)
-  const [isConnected, setIsConnected] = useState(false)
+  const { decodedToken } = Utility();
+  const [doctorId, setDocterId] = useState("");
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [rooms, setRooms] = useState({
     activeRooms: [],
     scheduledRooms: [],
     recentRooms: [],
     summary: { totalActive: 0, totalScheduled: 0, totalRecent: 0 },
-  })
-  const [notifications, setNotifications] = useState([])
-  const [notificationPermission, setNotificationPermission] = useState("default")
+  });
+  const [notifications, setNotifications] = useState([]);
+  const [notificationPermission, setNotificationPermission] =
+    useState("default");
 
   useEffect(() => {
     if (!doctorId) {
-      setDocterId(decodedToken().id)
+      setDocterId(decodedToken().id);
     }
-  }, [decodedToken, doctorId])
+  }, [decodedToken, doctorId]);
 
   // Request notification permission
   useEffect(() => {
     if ("Notification" in window) {
       if (Notification.permission === "default") {
         Notification.requestPermission().then((permission) => {
-          setNotificationPermission(permission)
-        })
+          setNotificationPermission(permission);
+        });
       } else {
-        setNotificationPermission(Notification.permission)
+        setNotificationPermission(Notification.permission);
       }
     }
-  }, [])
+  }, []);
 
   // Initialize socket connection
   useEffect(() => {
     const newSocket = io(`${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`, {
       transports: ["websocket"],
       autoConnect: true,
-    })
+    });
 
     newSocket.on("connect", () => {
-      console.log("Connected to WebSocket")
-      setIsConnected(true)
-
-      // Join doctor-specific room
-      newSocket.emit("joinDoctorRoom", { doctorId })
-    })
+      console.log("Connected to WebSocket");
+      setIsConnected(true);
+      newSocket.emit("joinDoctorRoom", { doctorId });
+    });
 
     newSocket.on("disconnect", () => {
-      console.log("Disconnected from WebSocket")
-      setIsConnected(false)
-    })
+      console.log("Disconnected from WebSocket");
+      setIsConnected(false);
+    });
 
     newSocket.on("joinedDoctorRoom", (data) => {
-      console.log("Joined doctor room:", data)
-    })
+      console.log("Joined doctor room:", data);
+    });
 
     newSocket.on("roomStatusUpdate", (data) => {
-      console.log("Room status update:", data)
-      setRooms(data)
-    })
+      console.log("Room status update:", data);
+      setRooms(data);
+    });
 
     newSocket.on("roomNotification", (notification) => {
-      console.log("Room notification:", notification)
-      handleRoomNotification(notification)
-    })
+      console.log("Room notification:", notification);
+      handleRoomNotification(notification);
+    });
 
     newSocket.on("roomCreated", (data) => {
-      console.log("New room created:", data)
-      showBrowserNotification("New Video Call", `New ${data.type} call created for patient ${data.patientId}`)
-      fetchRooms()
-    })
+      console.log("New room created:", data);
+      showBrowserNotification(
+        "New Video Call",
+        `New ${data.type} call created for patient ${data.patientId}`
+      );
+      fetchRooms();
+    });
 
     newSocket.on("roomScheduled", (data) => {
-      console.log("Room scheduled:", data)
+      console.log("Room scheduled:", data);
       showBrowserNotification(
         "Appointment Scheduled",
-        `${data.type} call scheduled for ${new Date(data.scheduledAt).toLocaleString()}`,
-      )
-      fetchRooms()
-    })
+        `${data.type} call scheduled for ${new Date(data.scheduledAt).toLocaleString()}`
+      );
+      fetchRooms();
+    });
 
     newSocket.on("roomCompleted", (data) => {
-      console.log("Room completed:", data)
-      fetchRooms()
-    })
+      console.log("Room completed:", data);
+      fetchRooms();
+    });
 
-    setSocket(newSocket)
+    setSocket(newSocket);
 
-    // Initial room fetch
     setTimeout(() => {
-      fetchRooms()
-    }, 1000)
+      fetchRooms();
+    }, 1000);
 
     return () => {
-      newSocket.close()
-    }
-  }, [doctorId])
+      newSocket.close();
+    };
+  }, [doctorId]);
 
   const handleRoomNotification = useCallback(
     (notification) => {
-      const { data } = notification
+      const { data } = notification;
 
       if (data.upcomingRooms.length > 0) {
         data.upcomingRooms.forEach((room) => {
-          const timeUntil = new Date(room.scheduledAt).getTime() - new Date().getTime()
-          const minutesUntil = Math.round(timeUntil / (1000 * 60))
+          const timeUntil =
+            new Date(room.scheduledAt).getTime() - new Date().getTime();
+          const minutesUntil = Math.round(timeUntil / (1000 * 60));
 
           if (minutesUntil <= 5 && minutesUntil > 0) {
             showBrowserNotification(
               "Upcoming Appointment",
-              `You have a ${room.type} call in ${minutesUntil} minutes with patient ${room.patientId}`,
-            )
+              `You have a ${room.type} call in ${minutesUntil} minutes with patient ${room.patientId}`
+            );
           }
-        })
+        });
       }
 
       setNotifications((prev) => [
@@ -131,7 +201,7 @@ const DoctorDashboard = () => {
           message: `${data.activeRooms.length} active rooms, ${data.upcomingRooms.length} upcoming`,
           timestamp: new Date(),
         },
-      ])
+      ]);
 
       setRooms({
         activeRooms: data.activeRooms,
@@ -142,423 +212,681 @@ const DoctorDashboard = () => {
           totalScheduled: data.upcomingRooms.length,
           totalRecent: rooms.summary.totalRecent,
         },
-      })
+      });
     },
-    [rooms.recentRooms, rooms.summary.totalRecent],
-  )
+    [rooms.recentRooms, rooms.summary.totalRecent]
+  );
 
   const showBrowserNotification = useCallback(
     (title, body) => {
       if (notificationPermission === "granted") {
         const notification = new Notification(title, {
           body,
-          icon: "/assets/f2Fintechlogo.png", // Add your icon path
-          badge: "/assets/logo-dropbox.png", // Add your badge path
+          icon: "/assets/f2Fintechlogo.png",
+          badge: "/assets/logo-dropbox.png",
           tag: "doctor-notification",
           requireInteraction: true,
-        })
+        });
 
         notification.onclick = () => {
-          window.focus()
-          notification.close()
-        }
+          window.focus();
+          notification.close();
+        };
 
-        // Auto close after 10 seconds
         setTimeout(() => {
-          notification.close()
-        }, 10000)
+          notification.close();
+        }, 10000);
       }
     },
-    [notificationPermission],
-  )
+    [notificationPermission]
+  );
 
   const fetchRooms = useCallback(async () => {
     try {
-      const response = await fetch(`http://localhost:4009/api/v1/chat-service/doctor/${doctorId}/rooms`)
-      const result = await response.json()
+      const response = await fetch(
+        `http://localhost:4009/api/v1/chat-service/doctor/${doctorId}/rooms`
+      );
+      const result = await response.json();
 
       if (result.success) {
-        setRooms(result.data)
+        setRooms(result.data);
       }
     } catch (error) {
-      console.error("Error fetching rooms:", error)
+      console.error("Error fetching rooms:", error);
     }
-  }, [doctorId])
+  }, [doctorId]);
 
   const joinRoom = (roomId, url) => {
     if (url) {
-      window.open(url, "_blank")
+      window.open(url, "_blank");
     } else {
-      alert("Room URL not available")
+      alert("Room URL not available");
     }
-  }
+  };
 
   const completeRoom = async (roomId) => {
     try {
-      const response = await fetch(`http://localhost:4009/api/v1/chat-service/room/${roomId}/complete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+      const response = await fetch(
+        `http://localhost:4009/api/v1/chat-service/room/${roomId}/complete`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
-        showBrowserNotification("Room Completed", "Video call has been marked as completed")
-        fetchRooms()
+        showBrowserNotification(
+          "Room Completed",
+          "Video call has been marked as completed"
+        );
+        fetchRooms();
       }
     } catch (error) {
-      console.error("Error completing room:", error)
-      alert("Failed to complete room")
+      console.error("Error completing room:", error);
+      alert("Failed to complete room");
     }
-  }
+  };
 
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
-    })
-  }
+    });
+  };
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
-    })
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "active":
-        return "bg-emerald-50 text-emerald-700 border border-emerald-200"
-      case "scheduled":
-        return "bg-blue-50 text-blue-700 border border-blue-200"
-      case "completed":
-        return "bg-slate-50 text-slate-700 border border-slate-200"
-      case "expired":
-        return "bg-red-50 text-red-700 border border-red-200"
-      default:
-        return "bg-gray-50 text-gray-700 border border-gray-200"
-    }
-  }
+    });
+  };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case "active":
-        return <Video className="w-4 h-4" />
+        return <Video size={16} />;
       case "scheduled":
-        return <Calendar className="w-4 h-4" />
+        return <Calendar size={16} />;
       case "completed":
-        return <CheckCircle className="w-4 h-4" />
+        return <CheckCircle size={16} />;
       case "expired":
-        return <AlertCircle className="w-4 h-4" />
+        return <AlertCircle size={16} />;
       default:
-        return <Clock className="w-4 h-4" />
+        return <Clock size={16} />;
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <Box sx={{ minHeight: "100vh", bgcolor: "grey.50", p: 4 }}>
+      <Container maxWidth="xl">
         {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900">Doctor Dashboard</h1>
-          </div>
-          <p className="text-slate-600 flex items-center gap-2 text-lg mb-6">
-            <Pulse className="w-5 h-5 text-blue-500" />
-            Manage your video consultations with precision and care
-          </p>
+        <Box mb={6}>
+          <Stack direction="row" alignItems="center" spacing={2} mb={2}>
+            <Box
+              sx={{
+                p: 1.5,
+                bgcolor: "primary.main",
+                borderRadius: 2,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Activity size={24} color="white" />
+            </Box>
+            <Typography variant="h4" fontWeight="bold" color="text.primary">
+              Active Rooms
+            </Typography>
+          </Stack>
+          <Stack direction="row" alignItems="center" spacing={1} mb={4}>
+            <Pulse size={20} color="primary.main" />
+            <Typography variant="body1" color="text.secondary">
+              Manage your video consultations with precision and care
+            </Typography>
+          </Stack>
 
           {/* Status and Notifications */}
-          <div className="flex items-center gap-6">
-            <div
-              className={`flex items-center gap-3 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                isConnected
-                  ? "bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm"
-                  : "bg-red-100 text-red-700 border border-red-200 shadow-sm"
-              }`}
+          <Stack direction="row" alignItems="center" spacing={3}>
+            <Tooltip
+              title={
+                isConnected ? "Connected to server" : "Disconnected from server"
+              }
             >
-              <div
-                className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}
-              ></div>
-              {isConnected ? "Connected" : "Disconnected"}
-            </div>
-            <div className="relative group">
-              <div className="p-3 bg-white rounded-xl shadow-md border border-slate-200 hover:shadow-lg transition-all cursor-pointer group-hover:border-blue-300">
-                <Bell className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
-                {notifications.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-bounce">
-                    {notifications.length}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="p-3 bg-white rounded-xl shadow-md border border-slate-200">
-              <Video className="w-5 h-5 text-slate-600" />
-            </div>
-          </div>
-        </div>
+              <Chip
+                icon={
+                  <FiberManualRecordIcon
+                    sx={{
+                      color: isConnected ? "success.main" : "error.main",
+                      animation: isConnected ? "pulse 1.5s infinite" : "none",
+                      "@keyframes pulse": {
+                        "0%": { opacity: 0.4 },
+                        "50%": { opacity: 1 },
+                        "100%": { opacity: 0.4 },
+                      },
+                    }}
+                  />
+                }
+                label={isConnected ? "Connected" : "Disconnected"}
+                color={isConnected ? "success" : "error"}
+                variant="outlined"
+                sx={{ fontWeight: 500 }}
+              />
+            </Tooltip>
+            <Badge
+              badgeContent={notifications.length}
+              color="error"
+              overlap="circular"
+            >
+              <IconButton
+                sx={{
+                  bgcolor: "white",
+                  border: 1,
+                  borderColor: "grey.200",
+                  "&:hover": { borderColor: "primary.main" },
+                }}
+              >
+                <Bell size={20} />
+              </IconButton>
+            </Badge>
+            <IconButton
+              sx={{ bgcolor: "white", border: 1, borderColor: "grey.200" }}
+            >
+              <Video size={20} />
+            </IconButton>
+          </Stack>
+        </Box>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <Grid container spacing={3} mb={6}>
           {/* Active Rooms Card */}
-          <div className="group bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg">
-                <Video className="w-6 h-6 text-white" />
-              </div>
-              <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Active Rooms</p>
-              <p className="text-3xl font-bold text-slate-900">{rooms.summary.totalActive}</p>
-              <p className="text-sm text-emerald-600 font-medium">Live consultations</p>
-            </div>
-          </div>
+          <Grid item xs={12} md={4}>
+            <GradientCard gradient="linear-gradient(to right, #f0fdf4, #dcfce7)">
+              <CardContent>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={2}
+                >
+                  <Box
+                    sx={{ p: 1.5, bgcolor: "success.main", borderRadius: 2 }}
+                  >
+                    <Video size={24} color="white" />
+                  </Box>
+                  <FiberManualRecordIcon
+                    sx={{
+                      color: "success.main",
+                      animation: "pulse 1.5s infinite",
+                    }}
+                  />
+                </Stack>
+                <Typography
+                  variant="overline"
+                  color="text.secondary"
+                  fontWeight="bold"
+                >
+                  Active Rooms
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" color="text.primary">
+                  {rooms.summary.totalActive}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="success.main"
+                  fontWeight="medium"
+                >
+                  Live consultations
+                </Typography>
+              </CardContent>
+            </GradientCard>
+          </Grid>
 
           {/* Scheduled Card */}
-          <div className="group bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <Clock className="w-5 h-5 text-blue-500" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Scheduled</p>
-              <p className="text-3xl font-bold text-slate-900">{rooms.summary.totalScheduled}</p>
-              <p className="text-sm text-blue-600 font-medium">Upcoming appointments</p>
-            </div>
-          </div>
+          <Grid item xs={12} md={4}>
+            <GradientCard gradient="linear-gradient(to right, #eff6ff, #dbeafe)">
+              <CardContent>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={2}
+                >
+                  <Box sx={{ p: 1.5, bgcolor: "info.main", borderRadius: 2 }}>
+                    <Calendar size={24} color="white" />
+                  </Box>
+                  <Clock size={20} color="info.main" />
+                </Stack>
+                <Typography
+                  variant="overline"
+                  color="text.secondary"
+                  fontWeight="bold"
+                >
+                  Scheduled
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" color="text.primary">
+                  {rooms.summary.totalScheduled}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="info.main"
+                  fontWeight="medium"
+                >
+                  Upcoming appointments
+                </Typography>
+              </CardContent>
+            </GradientCard>
+          </Grid>
 
           {/* Recent Calls Card */}
-          <div className="group bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl shadow-lg">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <CheckCircle className="w-5 h-5 text-slate-500" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Recent Calls</p>
-              <p className="text-3xl font-bold text-slate-900">{rooms.summary.totalRecent}</p>
-              <p className="text-sm text-slate-600 font-medium">Completed sessions</p>
-            </div>
-          </div>
-        </div>
+          <Grid item xs={12} md={4}>
+            <GradientCard gradient="linear-gradient(to right, #f7f7f7, #e5e5e5)">
+              <CardContent>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={2}
+                >
+                  <Box sx={{ p: 1.5, bgcolor: "grey.600", borderRadius: 2 }}>
+                    <Users size={24} color="white" />
+                  </Box>
+                  <CheckCircle size={20} color="grey.600" />
+                </Stack>
+                <Typography
+                  variant="overline"
+                  color="text.secondary"
+                  fontWeight="bold"
+                >
+                  Recent Calls
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" color="text.primary">
+                  {rooms.summary.totalRecent}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="grey.600"
+                  fontWeight="medium"
+                >
+                  Completed sessions
+                </Typography>
+              </CardContent>
+            </GradientCard>
+          </Grid>
+        </Grid>
 
         {/* Active Rooms */}
         {rooms.activeRooms.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 mb-8 overflow-hidden">
-            <div className="px-8 py-6 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-emerald-100">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-emerald-500 rounded-lg shadow-md">
-                  <Video className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-                    Active Video Calls
-                    <span className="bg-emerald-500 text-white text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                      {rooms.activeRooms.length} Live
-                    </span>
-                  </h2>
-                  <p className="text-emerald-700 text-sm mt-1">Ongoing consultations requiring your attention</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-8">
-              <div className="space-y-4">
+          <Paper
+            elevation={3}
+            sx={{ mb: 4, borderRadius: 4, overflow: "hidden" }}
+          >
+            <Box
+              sx={{
+                p: 4,
+                bgcolor: "success.light",
+                borderBottom: 1,
+                borderColor: "success.main",
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Box sx={{ p: 1, bgcolor: "success.main", borderRadius: 2 }}>
+                  <Video size={20} color="white" />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Typography
+                      variant="h5"
+                      fontWeight="bold"
+                      color="text.primary"
+                    >
+                      Active Video Calls
+                    </Typography>
+                    <Chip
+                      label={`${rooms.activeRooms.length} Live`}
+                      color="success"
+                      size="small"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  </Stack>
+                  <Typography variant="body2" color="success.dark">
+                    Ongoing consultations requiring your attention
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+            <Box sx={{ p: 4 }}>
+              <Stack spacing={2}>
                 {rooms.activeRooms.map((room) => (
-                  <div
+                  <GradientCard
                     key={room._id}
-                    className="group bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-6 hover:shadow-lg transition-all duration-300"
+                    gradient="linear-gradient(to right, #f0fdf4, #dcfce7)"
+                    sx={{ p: 3 }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-emerald-100 rounded-lg">{getStatusIcon(room.status)}</div>
-                          <span
-                            className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(room.status)}`}
+                    <CardContent sx={{ p: 0 }}>
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        justifyContent="space-between"
+                        spacing={2}
+                      >
+                        <Stack direction="row" spacing={3}>
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={2}
                           >
-                            {room.status}
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="font-bold text-slate-900 text-lg">Patient: {room.patientId}</p>
-                          <p className="text-sm text-slate-600 font-medium">
-                            Type: <span className="text-emerald-700 font-semibold">{room.type}</span> | Duration:{" "}
-                            <span className="text-emerald-700 font-semibold">{room.duration} min</span>
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            Expires: <span className="font-semibold text-red-600">{formatTime(room.expiresAt)}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => joinRoom(room.roomId, `https://baseerah.daily.co/${room.roomId}`)}
-                          className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                            <Box
+                              sx={{
+                                p: 1,
+                                bgcolor: "success.light",
+                                borderRadius: 2,
+                              }}
+                            >
+                              {getStatusIcon(room.status)}
+                            </Box>
+                            <StatusChip
+                              label={room.status}
+                              status={room.status}
+                              size="small"
+                            />
+                          </Stack>
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              fontWeight="bold"
+                              color="text.primary"
+                            >
+                              Patient: {room.patientId}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Type: <strong>{room.type}</strong> | Duration:{" "}
+                              <strong>{room.duration} min</strong>
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Expires:{" "}
+                              <strong style={{ color: "#dc2626" }}>
+                                {formatTime(room.expiresAt)}
+                              </strong>
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        <Stack
+                          direction={{ xs: "column", sm: "row" }}
+                          spacing={2}
                         >
-                          Join Call
-                        </button>
-                        <button
-                          onClick={() => completeRoom(room.roomId)}
-                          className="px-6 py-3 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-xl font-semibold hover:from-slate-600 hover:to-slate-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                        >
-                          Complete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                          <GradientButton
+                            gradient="linear-gradient(to right, #10b981, #059669)"
+                            onClick={() =>
+                              joinRoom(
+                                room.roomId,
+                                `https://baseerah.daily.co/${room.roomId}`
+                              )
+                            }
+                          >
+                            Join Call
+                          </GradientButton>
+                          <GradientButton
+                            gradient="linear-gradient(to right, #64748b, #475569)"
+                            onClick={() => completeRoom(room.roomId)}
+                          >
+                            Complete
+                          </GradientButton>
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </GradientCard>
                 ))}
-              </div>
-            </div>
-          </div>
+              </Stack>
+            </Box>
+          </Paper>
         )}
 
         {/* Scheduled Rooms */}
         {rooms.scheduledRooms.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 mb-8 overflow-hidden">
-            <div className="px-8 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-blue-500 rounded-lg shadow-md">
-                  <Calendar className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-                    Scheduled Appointments
-                    <span className="bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                      {rooms.scheduledRooms.length} Upcoming
-                    </span>
-                  </h2>
-                  <p className="text-blue-700 text-sm mt-1">Your upcoming patient consultations</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-8">
-              <div className="space-y-4">
+          <Paper
+            elevation={3}
+            sx={{ mb: 4, borderRadius: 4, overflow: "hidden" }}
+          >
+            <Box
+              sx={{
+                p: 4,
+                bgcolor: "info.light",
+                borderBottom: 1,
+                borderColor: "info.main",
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Box sx={{ p: 1, bgcolor: "info.main", borderRadius: 2 }}>
+                  <Calendar size={20} color="white" />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Typography
+                      variant="h5"
+                      fontWeight="bold"
+                      color="text.primary"
+                    >
+                      Scheduled Appointments
+                    </Typography>
+                    <Chip
+                      label={`${rooms.scheduledRooms.length} Upcoming`}
+                      color="info"
+                      size="small"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  </Stack>
+                  <Typography variant="body2" color="info.dark">
+                    Your upcoming patient consultations
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+            <Box sx={{ p: 4 }}>
+              <Stack spacing={2}>
                 {rooms.scheduledRooms.map((room) => (
-                  <div
+                  <GradientCard
                     key={room._id}
-                    className="group bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6 hover:shadow-lg transition-all duration-300"
+                    gradient="linear-gradient(to right, #eff6ff, #dbeafe)"
+                    sx={{ p: 3 }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-lg">{getStatusIcon(room.status)}</div>
-                          <span
-                            className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(room.status)}`}
+                    <CardContent sx={{ p: 0 }}>
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        justifyContent="space-between"
+                        spacing={2}
+                      >
+                        <Stack direction="row" spacing={3}>
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={2}
                           >
-                            {room.status}
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="font-bold text-slate-900 text-lg">Patient: {room.patientId}</p>
-                          <p className="text-sm text-slate-600 font-medium">
-                            Type: <span className="text-blue-700 font-semibold">{room.type}</span> | Duration:{" "}
-                            <span className="text-blue-700 font-semibold">{room.duration} min</span>
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            Scheduled:{" "}
-                            <span className="font-semibold text-blue-700">
-                              {formatDate(room.scheduledAt)} at {formatTime(room.scheduledAt)}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      <div className="px-4 py-2 bg-blue-100 text-blue-800 rounded-xl font-semibold border border-blue-200">
-                        {Math.max(0, Math.round((new Date(room.scheduledAt) - new Date()) / (1000 * 60)))} min
-                      </div>
-                    </div>
-                  </div>
+                            <Box
+                              sx={{
+                                p: 1,
+                                bgcolor: "info.light",
+                                borderRadius: 2,
+                              }}
+                            >
+                              {getStatusIcon(room.status)}
+                            </Box>
+                            <StatusChip
+                              label={room.status}
+                              status={room.status}
+                              size="small"
+                            />
+                          </Stack>
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              fontWeight="bold"
+                              color="text.primary"
+                            >
+                              Patient: {room.patientId}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Type: <strong>{room.type}</strong> | Duration:{" "}
+                              <strong>{room.duration} min</strong>
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Scheduled:{" "}
+                              <strong>{`${formatDate(room.scheduledAt)} at ${formatTime(room.scheduledAt)}`}</strong>
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        <Chip
+                          label={`${Math.max(0, Math.round((new Date(room.scheduledAt) - new Date()) / (1000 * 60)))} min`}
+                          color="info"
+                          variant="outlined"
+                          sx={{ fontWeight: 600 }}
+                        />
+                      </Stack>
+                    </CardContent>
+                  </GradientCard>
                 ))}
-              </div>
-            </div>
-          </div>
+              </Stack>
+            </Box>
+          </Paper>
         )}
 
         {/* Recent Rooms */}
         {rooms.recentRooms.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 mb-8 overflow-hidden">
-            <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-slate-100">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-slate-500 rounded-lg shadow-md">
-                  <CheckCircle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-                    Recent Calls
-                    <span className="bg-slate-500 text-white text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                      {rooms.recentRooms.length} Completed
-                    </span>
-                  </h2>
-                  <p className="text-slate-700 text-sm mt-1">Your recently completed consultations</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-8">
-              <div className="space-y-4">
+          <Paper
+            elevation={3}
+            sx={{ mb: 4, borderRadius: 4, overflow: "hidden" }}
+          >
+            <Box
+              sx={{
+                p: 4,
+                bgcolor: "grey.100",
+                borderBottom: 1,
+                borderColor: "grey.300",
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Box sx={{ p: 1, bgcolor: "grey.600", borderRadius: 2 }}>
+                  <CheckCircle size={20} color="white" />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Typography
+                      variant="h5"
+                      fontWeight="bold"
+                      color="text.primary"
+                    >
+                      Recent Calls
+                    </Typography>
+                    <Chip
+                      label={`${rooms.recentRooms.length} Completed`}
+                      color="default"
+                      size="small"
+                      sx={{
+                        fontWeight: 600,
+                        bgcolor: "grey.600",
+                        color: "white",
+                      }}
+                    />
+                  </Stack>
+                  <Typography variant="body2" color="grey.700">
+                    Your recently completed consultations
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+            <Box sx={{ p: 4 }}>
+              <Stack spacing={2}>
                 {rooms.recentRooms.map((room) => (
-                  <div
+                  <GradientCard
                     key={room._id}
-                    className="group bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-300"
+                    gradient="linear-gradient(to right, #f7f7f7, #e5e5e5)"
+                    sx={{ p: 3 }}
                   >
-                    <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-100 rounded-lg">{getStatusIcon(room.status)}</div>
-                        <span
-                          className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(room.status)}`}
-                        >
-                          {room.status}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-bold text-slate-900 text-lg">Patient: {room.patientId}</p>
-                        <p className="text-sm text-slate-600 font-medium">
-                          Type: <span className="text-slate-700 font-semibold">{room.type}</span> | Duration:{" "}
-                          <span className="text-slate-700 font-semibold">{room.duration} min</span>
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {room.completedAt ? "Completed" : "Created"}:{" "}
-                          <span className="font-semibold text-slate-700">
-                            {formatDate(room.completedAt || room.createAt)} at{" "}
-                            {formatTime(room.completedAt || room.createAt)}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    <CardContent sx={{ p: 0 }}>
+                      <Stack direction="row" spacing={3}>
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                          <Box
+                            sx={{ p: 1, bgcolor: "grey.200", borderRadius: 2 }}
+                          >
+                            {getStatusIcon(room.status)}
+                          </Box>
+                          <StatusChip
+                            label={room.status}
+                            status={room.status}
+                            size="small"
+                          />
+                        </Stack>
+                        <Box>
+                          <Typography
+                            variant="h6"
+                            fontWeight="bold"
+                            color="text.primary"
+                          >
+                            Patient: {room.patientId}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Type: <strong>{room.type}</strong> | Duration:{" "}
+                            <strong>{room.duration} min</strong>
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {room.completedAt ? "Completed" : "Created"}:{" "}
+                            <strong>{`${formatDate(room.completedAt || room.createAt)} at ${formatTime(room.completedAt || room.createAt)}`}</strong>
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </GradientCard>
                 ))}
-              </div>
-            </div>
-          </div>
+              </Stack>
+            </Box>
+          </Paper>
         )}
 
         {/* No rooms message */}
-        {rooms.activeRooms.length === 0 && rooms.scheduledRooms.length === 0 && rooms.recentRooms.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-16 text-center">
-            <div className="max-w-md mx-auto">
-              <div className="p-6 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl w-20 h-20 mx-auto mb-6 flex items-center justify-center shadow-lg">
-                <Video className="w-10 h-10 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">No video calls found</h3>
-              <p className="text-slate-600 text-lg leading-relaxed">
-                Your upcoming and active video consultations will appear here. Ready to connect with your patients
-                whenever they need you.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+        {rooms.activeRooms.length === 0 &&
+          rooms.scheduledRooms.length === 0 &&
+          rooms.recentRooms.length === 0 && (
+            <Paper
+              elevation={3}
+              sx={{ p: 6, textAlign: "center", borderRadius: 4 }}
+            >
+              <Box sx={{ maxWidth: 400, mx: "auto" }}>
+                <Box
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    bgcolor: "primary.light",
+                    borderRadius: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mx: "auto",
+                    mb: 3,
+                  }}
+                >
+                  <Video size={40} color="white" />
+                </Box>
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                  color="text.primary"
+                  mb={2}
+                >
+                  No Appointment Calls Found
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Your upcoming and active video consultations will appear here.
+                  Ready to connect with your patients whenever they need you.
+                </Typography>
+              </Box>
+            </Paper>
+          )}
+      </Container>
+    </Box>
+  );
+};
 
-export default DoctorDashboard
+export default DoctorDashboard;

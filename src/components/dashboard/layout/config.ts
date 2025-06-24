@@ -12,7 +12,7 @@ export const navItems = [
   { key: 'qualification', title: 'Qualification', href: paths.dashboard.qualification, icon: 'graduation-cap' },
   { key: 'symptoms', title: 'Symptom', href: paths.dashboard.symptom, icon: 'medical-services' },
   { key: 'settings', title: 'Settings', href: paths.dashboard.settings, icon: 'gear-six' },
-  { key: 'activeRooms', title: 'Active Rooms', href: paths.dashboard.activeRooms, icon: 'gear-six' },
+  { key: 'activeRooms', title: 'Active Rooms', href: paths.dashboard.activeRooms, icon: 'Video' },
 ] satisfies NavItemConfig[];
 
 const getNavItemsByRole = (): NavItemConfig[] => {

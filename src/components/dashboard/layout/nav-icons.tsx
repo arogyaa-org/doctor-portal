@@ -8,6 +8,8 @@ import { XSquare } from '@phosphor-icons/react/dist/ssr/XSquare';
 import LocalPharmacyIcon from '@mui/icons-material/LocalPharmacy';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import { GraduationCap, Stethoscope } from '@phosphor-icons/react/dist/ssr';
+import {Video} from "lucide-react";
+
 
 type CombinedIcon = Icon | typeof LocalPharmacyIcon | typeof MedicalServicesIcon;
 
@@ -22,4 +24,5 @@ export const navIcons = {
   'medical-services': MedicalServicesIcon,
   'graduation-cap': GraduationCap,
   'stethoscope': Stethoscope,
+  'Video':Video,
 } as Record<string, CombinedIcon>;
