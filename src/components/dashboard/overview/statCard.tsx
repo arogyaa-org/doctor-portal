@@ -14,7 +14,7 @@ interface StatCardProps {
   trend: "up" | "down";
   Icon: React.ComponentType;
   title: string;
-  iconColor?: string; // Color for icon background
+  iconColor?: string;
   sx?: SxProps;
 }
 
@@ -24,11 +24,11 @@ export function StatCard({
   trend,
   Icon,
   title,
-  iconColor = "#14B8A6", // Default teal color for icon background
+  iconColor = "#14B8A6",
   sx,
 }: StatCardProps): React.JSX.Element {
-  // Dynamically set arrow color based on trend
-  const arrowColor = trend === "up" ? "rgb(84, 214, 44)" : "rgb(255, 69, 58)"; // Green for up, Red for down
+  const arrowColor = trend === "up" ? "rgb(84, 214, 44)" : "rgb(255, 69, 58)";
+  const isDoctor = (sx as any)?.isDoctor || false;
 
   return (
     <Card
@@ -36,10 +36,34 @@ export function StatCard({
         ...sx,
         borderRadius: 3,
         boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
+        transition: "all 0.3s ease",
+        "&:hover": {
+          transform: "scale(1.05)",
+          boxShadow: "0px 8px 25px rgba(0, 0, 0, 0.1)",
+          zIndex: 10,
+        },
       }}
     >
       <CardContent sx={{ padding: 3 }}>
-        {title === "PENDING APPOINTMENTS" ? (
+        {title === "PENDING APPOINTMENTS" && isDoctor ? (
+          <Typography
+            color="text.secondary"
+            variant="subtitle2"
+            sx={{
+              fontWeight: 500,
+              mb: 1,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            Pending Appointments
+          </Typography>
+        ) : title === "PENDING APPOINTMENTS" ? (
           <>
             <Typography
               color="text.secondary"
@@ -57,7 +81,7 @@ export function StatCard({
               variant="subtitle2"
               sx={{
                 fontWeight: 500,
-                mb: 1, // Maintain margin-bottom for spacing below the title
+                mb: 1,
                 textTransform: "uppercase",
                 letterSpacing: "0.5px",
               }}

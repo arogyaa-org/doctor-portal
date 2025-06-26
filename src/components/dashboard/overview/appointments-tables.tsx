@@ -1,5 +1,4 @@
 import * as React from "react";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
@@ -18,23 +17,19 @@ import { alpha, useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import TableContainer from "@mui/material/TableContainer";
 
-// Utility function to get token (can be used in the component)
 import { Utility } from "@/utils";
 
-// Define generic status map type
 type StatusConfigType = Record<
   string,
   { label: string; color: "warning" | "success" | "error" | "info" | "default" }
 >;
 
-// Default status map for orders
 const orderStatusMap: StatusConfigType = {
   pending: { label: "Pending", color: "warning" },
   delivered: { label: "Delivered", color: "success" },
   refunded: { label: "Refunded", color: "error" },
 };
 
-// Default status map for appointments
 export const appointmentStatusMap: StatusConfigType = {
   scheduled: { label: "Scheduled", color: "info" },
   approved: { label: "Approved", color: "success" },
@@ -51,8 +46,8 @@ export interface ColumnConfig {
   format?: (value: any, rowData: any) => React.ReactNode;
   sortable?: boolean;
   sortDirection?: "asc" | "desc";
-  hideForRoles?: string[]; // New property to hide column for specific roles
-  width?: string; // Column width control
+  hideForRoles?: string[]; 
+  width?: string; 
 }
 
 // Generic data item interface
@@ -97,7 +92,6 @@ export function ReusableTable({
     (column) => !column.hideForRoles?.includes(userRole)
   );
 
-  // Strip the border with border-radius to avoid visual issues
   const cardSx = {
     ...sx,
     borderRadius: 2,
@@ -109,8 +103,7 @@ export function ReusableTable({
     },
   };
 
-  // Calculate table layout based on visible columns
-  const tableLayout = "fixed"; // Use fixed layout to honor column widths
+  const tableLayout = "fixed";
 
   return (
     <Card sx={cardSx}>
@@ -172,12 +165,7 @@ export function ReusableTable({
                     }}
                   >
                     {visibleColumns.map((column) => {
-                      // Handle status column with chips
                       if (column.id === statusKey && item[statusKey]) {
-                        console.log(
-                          `Status for item ${item.id}:`,
-                          item[statusKey]
-                        );
                         const { label, color } = statusMap[item[statusKey]] || {
                           label: "Unknown",
                           color: "default",
@@ -345,7 +333,6 @@ export function LatestOrders({
   orders = [],
   sx,
 }: LatestOrdersProps): React.JSX.Element {
-  // Transform original orders to the format expected by ReusableTable
   const transformedOrders = orders.map((order) => ({
     id: order.id,
     customer: { name: order.customer.name },

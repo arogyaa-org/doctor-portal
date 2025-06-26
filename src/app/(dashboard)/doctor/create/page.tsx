@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
 import { Formik, Form, Field } from "formik";
 import dayjs from "dayjs";
+
 import {
   Box,
   Button,
@@ -17,10 +18,8 @@ import {
   FormControl,
   InputLabel,
   Paper,
-  CircularProgress,
   IconButton,
   Autocomplete,
-  FormControlLabel,
   Checkbox,
 } from "@mui/material";
 import {
@@ -83,7 +82,14 @@ const initialValues: DoctorData = {
   qualificationIds: [],
   specializationIds: [],
   symptomIds: [],
-  availability: [],
+  availability: [
+    {
+      day: "",
+      startTime: "",
+      endTime: "",
+      hospital: { name: "", location: "" },
+    },
+  ],
   isVerified: false,
 };
 let editFormValues: DoctorData;
@@ -164,63 +170,67 @@ const DoctorForm: React.FC = () => {
     }
   }, [doctorId]);
 
-  const create = useCallback(async (values: DoctorData) => {
-    setLoading(true);
-    try {
-      const response = await createDoctor({
-        ...values,
-        gender: values.gender || null,
-        status: values.status || null,
-        profilePicture: values?.profilePicture?.file || null,
-        qualificationIds: getIdsFromObject(values?.qualificationIds),
-        specializationIds: getIdsFromObject(values?.specializationIds),
-        symptomIds: getIdsFromObject(values?.symptomIds),
-      });
-      if (response?.statusCode === 409) {
-        toastAndNavigate(dispatch, true, "error", "Email already exists", () =>
-          location.reload()
-        );
-      }
-      if (response?.statusCode === 201) {
-        toastAndNavigate(
-          dispatch,
-          true,
-          "success",
-          "Created Successfully",
-          () => router.back()
-        );
-      }
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message ||
-        "Error creating Doctor, please try again.";
-      toastAndNavigate(dispatch, true, "error", errorMessage, () =>
-        location.reload()
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const populateData = useCallback(
-    async (doctorId: string | string[]) => {
+  const create = useCallback(
+    async (values: DoctorData) => {
       setLoading(true);
       try {
-        const response: DoctorResponse = await fetcher(
-          "doctor",
-          `get-doctor-by-id/${doctorId}`
-        );
-        if (response?.statusCode === 200) {
-          setFormValues(response.data);
+        const response = await createDoctor({
+          ...values,
+          gender: values.gender || null,
+          status: values.status || null,
+          profilePicture: values?.profilePicture?.file || null,
+          qualificationIds: getIdsFromObject(values?.qualificationIds),
+          specializationIds: getIdsFromObject(values?.specializationIds),
+          symptomIds: getIdsFromObject(values?.symptomIds),
+        });
+        if (response?.statusCode === 409) {
+          toastAndNavigate(
+            dispatch,
+            true,
+            "error",
+            "Email already exists",
+            () => location.reload()
+          );
         }
-      } catch (err) {
-        console.error("Error fetching data:", err);
+        if (response?.statusCode === 201) {
+          toastAndNavigate(
+            dispatch,
+            true,
+            "success",
+            "Created Successfully",
+            () => router.back()
+          );
+        }
+      } catch (error: any) {
+        const errorMessage =
+          error?.response?.data?.message ||
+          "Error creating Doctor, please try again.";
+        toastAndNavigate(dispatch, true, "error", errorMessage, () =>
+          location.reload()
+        );
       } finally {
         setLoading(false);
       }
     },
-    [doctorId]
+    [createDoctor, dispatch, getIdsFromObject, router, toastAndNavigate]
   );
+
+  const populateData = useCallback(async (doctorId: string | string[]) => {
+    setLoading(true);
+    try {
+      const response: DoctorResponse = await fetcher(
+        "doctor",
+        `get-doctor-by-id/${doctorId}`
+      );
+      if (response?.statusCode === 200) {
+        setFormValues(response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const update = useCallback(
     async (values: any) => {
@@ -255,12 +265,19 @@ const DoctorForm: React.FC = () => {
         setLoading(false);
       }
     },
-    [updatePassword, formValues]
+    [
+      getIdsFromObject,
+      updatePassword,
+      modifyDoctor,
+      toastAndNavigate,
+      dispatch,
+      router,
+    ]
   );
 
   return (
     <Box margin="0 10px 10px 10px">
-      {doctorId && (
+      {doctorId ? (
         <Button
           type="button"
           color={updatePassword ? "error" : "info"}
@@ -273,7 +290,7 @@ const DoctorForm: React.FC = () => {
         >
           {updatePassword ? "Cancel Update Password" : "Update Password"}
         </Button>
-      )}
+      ) : null}
       <Typography
         variant="h4"
         gutterBottom
@@ -299,7 +316,6 @@ const DoctorForm: React.FC = () => {
           resetForm,
           setFieldValue,
           isSubmitting,
-          isValid,
         }) => (
           <Form encType="multipart/form-data">
             <Box
@@ -323,8 +339,8 @@ const DoctorForm: React.FC = () => {
                 InputLabelProps={{
                   shrink: true,
                 }}
-                error={touched.username && Boolean(errors.username)}
-                helperText={touched.username && errors.username}
+                error={touched.username ? Boolean(errors.username) : null}
+                helperText={touched.username ? errors.username : null}
               />
               <Field
                 as={MuiTextField}
@@ -338,10 +354,10 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.email && Boolean(errors.email)}
-                helperText={touched.email && errors.email}
+                error={touched.email ? Boolean(errors.email) : null}
+                helperText={touched.email ? errors.email : null}
               />
-              {(title === "Create Doctor" || updatePassword) && (
+              {title === "Create Doctor" || updatePassword ? (
                 <Field
                   fullWidth
                   as={MuiTextField}
@@ -372,10 +388,10 @@ const DoctorForm: React.FC = () => {
                       </InputAdornment>
                     ),
                   }}
-                  error={touched.password && Boolean(errors.password)}
-                  helperText={touched.password && errors.password}
+                  error={touched.password ? Boolean(errors.password) : null}
+                  helperText={touched.password ? errors.password : null}
                 />
-              )}
+              ) : null}
               <Field
                 as={MuiTextField}
                 label="Contact *"
@@ -388,8 +404,8 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.contact && Boolean(errors.contact)}
-                helperText={touched.contact && errors.contact}
+                error={touched.contact ? Boolean(errors.contact) : null}
+                helperText={touched.contact ? errors.contact : null}
               />
               <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <DatePicker
@@ -401,6 +417,7 @@ const DoctorForm: React.FC = () => {
                       newValue ? newValue.format("YYYY-MM-DD") : ""
                     );
                   }}
+                  maxDate={dayjs().subtract(20, "year")}
                   slotProps={{
                     textField: {
                       fullWidth: true,
@@ -417,14 +434,14 @@ const DoctorForm: React.FC = () => {
                   sx={{
                     "& .MuiIconButton-root": {
                       color: (theme) => theme.palette.primary.main,
-                      marginRight: "-16px", // Pulls icon closer to text
+                      marginRight: "-16px",
                     },
                     "& .MuiInputBase-input": {
-                      paddingLeft: "32px !important", // Reduced from 40px
-                      marginLeft: "-4px", // Shifts text closer to icon
+                      paddingLeft: "32px !important",
+                      marginLeft: "-4px",
                     },
                     "& .MuiInputAdornment-positionStart": {
-                      marginRight: "0px", // Adjusts icon container spacing
+                      marginRight: "0px",
                     },
                   }}
                 />
@@ -432,7 +449,7 @@ const DoctorForm: React.FC = () => {
 
               <FormControl
                 fullWidth
-                error={touched.gender && Boolean(errors.gender)}
+                error={touched.gender ? Boolean(errors.gender) : null}
               >
                 <InputLabel>Gender</InputLabel>
                 <Select
@@ -442,7 +459,7 @@ const DoctorForm: React.FC = () => {
                   onChange={(e) => setFieldValue("gender", e.target.value)}
                   startAdornment={
                     <InputAdornment position="start">
-                      <WcIcon color="primary" />{" "}
+                      <WcIcon color="primary" />
                     </InputAdornment>
                   }
                 >
@@ -450,11 +467,11 @@ const DoctorForm: React.FC = () => {
                   <MenuItem value="female">Female</MenuItem>
                   <MenuItem value="other">Other</MenuItem>
                 </Select>
-                {touched.gender && errors.gender && (
+                {touched.gender && errors.gender ? (
                   <Typography color="error" variant="body2">
                     {errors.gender}
                   </Typography>
-                )}
+                ) : null}
               </FormControl>
               <Field
                 as={MuiTextField}
@@ -469,8 +486,8 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.experience && Boolean(errors.experience)}
-                helperText={touched.experience && errors.experience}
+                error={touched.experience ? Boolean(errors.experience) : null}
+                helperText={touched.experience ? errors.experience : null}
               />
               <Field
                 as={MuiTextField}
@@ -493,9 +510,13 @@ const DoctorForm: React.FC = () => {
                   ),
                 }}
                 error={
-                  touched.languagesSpoken && Boolean(errors.languagesSpoken)
+                  touched.languagesSpoken
+                    ? Boolean(errors.languagesSpoken)
+                    : null
                 }
-                helperText={touched.languagesSpoken && errors.languagesSpoken}
+                helperText={
+                  touched.languagesSpoken ? errors.languagesSpoken : null
+                }
               />
               <Field
                 as={MuiTextField}
@@ -513,13 +534,17 @@ const DoctorForm: React.FC = () => {
                   ),
                 }}
                 error={
-                  touched.consultationFee && Boolean(errors.consultationFee)
+                  touched.consultationFee
+                    ? Boolean(errors.consultationFee)
+                    : null
                 }
-                helperText={touched.consultationFee && errors.consultationFee}
+                helperText={
+                  touched.consultationFee ? errors.consultationFee : null
+                }
               />
               <FormControl
                 fullWidth
-                error={touched.status && Boolean(errors.status)}
+                error={touched.status ? Boolean(errors.status) : null}
               >
                 <InputLabel> Status </InputLabel>
                 <Select
@@ -537,11 +562,11 @@ const DoctorForm: React.FC = () => {
                   <MenuItem value="inactive">Inactive</MenuItem>
                   <MenuItem value="on leave">On Leave</MenuItem>
                 </Select>
-                {touched.status && errors.status && (
+                {touched.status && errors.status ? (
                   <Typography color="error" variant="body2">
                     {errors.status}
                   </Typography>
-                )}
+                ) : null}
               </FormControl>
 
               <Field
@@ -556,8 +581,10 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.clinicAddress && Boolean(errors.clinicAddress)}
-                helperText={touched.clinicAddress && errors.clinicAddress}
+                error={
+                  touched.clinicAddress ? Boolean(errors.clinicAddress) : null
+                }
+                helperText={touched.clinicAddress ? errors.clinicAddress : null}
               />
               <Field
                 as={MuiTextField}
@@ -571,8 +598,8 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.pincode && Boolean(errors.pincode)}
-                helperText={touched.pincode && errors.pincode}
+                error={touched.pincode ? Boolean(errors.pincode) : null}
+                helperText={touched.pincode ? errors.pincode : null}
               />
               <Autocomplete
                 multiple
@@ -595,9 +622,9 @@ const DoctorForm: React.FC = () => {
                   const updatedTags = [
                     ...new Set([
                       ...values.tags.filter(
-                        (tag) => !selectedSpecializationTags.includes(tag) // Remove existing selected tags
+                        (tag) => !selectedSpecializationTags.includes(tag)
                       ),
-                      ...selectedSpecializationTags, // Add newly selected tags
+                      ...selectedSpecializationTags,
                     ]),
                   ];
 
@@ -642,23 +669,18 @@ const DoctorForm: React.FC = () => {
                 isOptionEqualToValue={(option, value) =>
                   option._id === value._id
                 }
-                value={values.symptomIds || undefined}
+                value={values.symptomIds || []}
                 onChange={(event, value) => {
                   setFieldValue("symptomIds", value);
-
-                  // Extract selected symptom names
                   const selectedSymptomTags = value.map((item) => item.name);
-
-                  // Update tags by adding/removing the selected symptom tags
                   const updatedTags = [
                     ...new Set([
                       ...values.tags.filter(
-                        (tag) => !selectedSymptomTags.includes(tag) // Remove existing selected tags
+                        (tag) => !selectedSymptomTags.includes(tag)
                       ),
-                      ...selectedSymptomTags, // Add newly selected tags
+                      ...selectedSymptomTags,
                     ]),
                   ];
-
                   setFieldValue("tags", updatedTags);
                 }}
                 sx={{ gridColumn: "span 2" }}
@@ -700,22 +722,17 @@ const DoctorForm: React.FC = () => {
                 value={values.qualificationIds || []}
                 onChange={(event, value) => {
                   setFieldValue("qualificationIds", value);
-
-                  // Extract selected qualification names
                   const selectedQualificationTags = value.map(
                     (item) => item.name
                   );
-
-                  // Update tags by adding/removing the selected qualification tags
                   const updatedTags = [
                     ...new Set([
                       ...values.tags.filter(
-                        (tag) => !selectedQualificationTags.includes(tag) // Remove existing selected tags
+                        (tag) => !selectedQualificationTags.includes(tag)
                       ),
-                      ...selectedQualificationTags, // Add newly selected tags
+                      ...selectedQualificationTags,
                     ]),
                   ];
-
                   setFieldValue("tags", updatedTags);
                 }}
                 sx={{ gridColumn: "span 2" }}
@@ -754,8 +771,8 @@ const DoctorForm: React.FC = () => {
                 name="tags"
                 fullWidth
                 multiline
-                minRows={1} // Set the initial height of the textarea
-                maxRows={10} // Set a maximum number of rows to prevent it from growing indefinitely
+                minRows={1}
+                maxRows={10}
                 sx={{ gridColumn: "span 2" }}
                 value={values.tags?.join(",")}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -771,8 +788,8 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.tags && Boolean(errors.tags)}
-                helperText={touched.tags && errors.tags}
+                error={touched.tags ? Boolean(errors.tags) : null}
+                helperText={touched.tags ? errors.tags : null}
               />
               <Field
                 as={MuiTextField}
@@ -789,8 +806,8 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.bio && Boolean(errors.bio)}
-                helperText={touched.bio && errors.bio}
+                error={touched.bio ? Boolean(errors.bio) : null}
+                helperText={touched.bio ? errors.bio : null}
               />
 
               <Box
@@ -801,7 +818,6 @@ const DoctorForm: React.FC = () => {
                   alignItems: "center",
                 }}
               >
-                {/* Upload Icon with Label */}
                 <Box
                   sx={{
                     display: "flex",
@@ -817,9 +833,7 @@ const DoctorForm: React.FC = () => {
                     transition: "border-color 0.3s ease, color 0.3s ease",
                     "&:hover": {
                       borderColor: "rgb(33, 38, 54)",
-                      "& svg": {
-                        color: "rgb(33, 38, 54)",
-                      },
+                      "& svg": { color: "rgb(33, 38, 54)" },
                     },
                   }}
                   component="label"
@@ -842,7 +856,6 @@ const DoctorForm: React.FC = () => {
                       if (imgfiles && imgfiles[0]) {
                         const file = imgfiles[0];
                         if (file.size > 1048576) {
-                          // Check file size (1MB = 1,048,576 bytes)
                           toastAndNavigate(
                             dispatch,
                             true,
@@ -851,7 +864,6 @@ const DoctorForm: React.FC = () => {
                           );
                           return;
                         }
-                        // Set file to Formik field and create a preview
                         const fileUrl = URL.createObjectURL(file);
                         setFieldValue("profilePicture", {
                           file,
@@ -861,9 +873,7 @@ const DoctorForm: React.FC = () => {
                     }}
                   />
                 </Box>
-
-                {/* Display Selected File Preview */}
-                {(values.profilePicture?.file || values.profilePicture) && (
+                {values.profilePicture?.file || values.profilePicture ? (
                   <Box
                     sx={{
                       position: "relative",
@@ -871,10 +881,8 @@ const DoctorForm: React.FC = () => {
                       height: "106px",
                     }}
                   >
-                    {/* Delete Icon */}
                     <IconButton
                       onClick={() => {
-                        // Clean up preview URL only if it exists
                         if (values.profilePicture?.preview) {
                           URL.revokeObjectURL(values.profilePicture.preview);
                         }
@@ -887,23 +895,19 @@ const DoctorForm: React.FC = () => {
                         backgroundColor: "white",
                         zIndex: 1,
                         p: "4px",
-                        "&:hover": {
-                          color: "rgb(255, 102, 94)",
-                        },
+                        "&:hover": { color: "rgb(255, 102, 94)" },
                       }}
                     >
                       <DeleteIcon sx={{ fontSize: "18px" }} />
                     </IconButton>
-
-                    {/* Image Preview */}
-                    {(values.profilePicture?.preview ||
-                      typeof values.profilePicture === "string") && (
+                    {values.profilePicture?.preview ||
+                    typeof values.profilePicture === "string" ? (
                       <Box
                         component="img"
                         src={
                           typeof values.profilePicture === "string"
-                            ? values.profilePicture // value From database
-                            : values.profilePicture.preview // From file upload
+                            ? values.profilePicture
+                            : values.profilePicture.preview
                         }
                         alt="Profile Preview"
                         sx={{
@@ -913,9 +917,9 @@ const DoctorForm: React.FC = () => {
                           border: "1px solid #aaa",
                         }}
                       />
-                    )}
+                    ) : null}
                   </Box>
-                )}
+                ) : null}
 
                 <Box
                   sx={{
@@ -933,15 +937,13 @@ const DoctorForm: React.FC = () => {
                     sx={{
                       color: values.isVerified ? "#3f51b5" : "default",
                       "&.Mui-checked": { color: "#3f51b5" },
-                      padding: "4px 4px 4px 0", // Tighter padding
+                      padding: "4px 4px 4px 0",
                     }}
                   />
                   <Typography variant="body2">Is Verified</Typography>
                 </Box>
               </Box>
             </Box>
-
-            {/* Availability Section */}
             <Box
               component="fieldset"
               sx={{
@@ -955,7 +957,6 @@ const DoctorForm: React.FC = () => {
                 component="legend"
                 sx={{ color: "rgb(102, 112, 133)", fontSize: "1rem", mb: 1 }}
               >
-                {" "}
                 Availability
               </Typography>
               {values.availability.map((slot, index) => (
@@ -968,13 +969,11 @@ const DoctorForm: React.FC = () => {
                         name={`availability[${index}].hospital.name`}
                         fullWidth
                         value={slot.hospital?.name || ""}
-                        onChange={(
-                          event: React.ChangeEvent<HTMLInputElement>
-                        ) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const updatedAvailability = [...values.availability];
                           updatedAvailability[index].hospital = {
                             ...updatedAvailability[index].hospital,
-                            name: event.target.value,
+                            name: e.target.value,
                           };
                           setFieldValue("availability", updatedAvailability);
                           setFieldValue("dirty", true);
@@ -1209,21 +1208,20 @@ const DoctorForm: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                // disabled={!dirty || isSubmitting || !isValid}
                 color={title === "Edit Doctor" ? "info" : "success"}
               >
                 Submit
               </Button>
             </Box>
             {loading === true ? <Loader /> : null}
+            <Toast
+              alerting={toast.toastAlert}
+              severity={toast.toastSeverity}
+              message={toast.toastMessage}
+            />
           </Form>
         )}
       </Formik>
-      <Toast
-        alerting={toast.toastAlert}
-        severity={toast.toastSeverity}
-        message={toast.toastMessage}
-      />
     </Box>
   );
 };

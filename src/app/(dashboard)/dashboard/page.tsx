@@ -1,40 +1,9 @@
 "use client";
 
 import * as React from "react";
-import Grid from "@mui/material/Unstable_Grid2";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-dayjs.extend(utc);
-import {
-  Vaccines as VaccinesIcon,
-  Person as PersonIcon,
-  CurrencyRupee as CurrencyRupeeIcon,
-  BookOnline as BookOnlineIcon,
-  CalendarMonth as CalendarMonthIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  HourglassEmpty as HourglassEmptyIcon,
-  FilterList as FilterListIcon,
-  DateRange as DateRangeIcon,
-  CalendarToday as CalendarTodayIcon,
-  AllInclusive as AllInclusiveIcon,
-  Schedule as ScheduleIcon,
-} from "@mui/icons-material";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { config } from "@/config";
-import {
-  ReusableTable,
-  todayAppointmentColumns,
-  upcomingAppointmentColumns,
-  appointmentStatusMap,
-} from "@/components/dashboard/overview/appointments-tables";
-import { Sales } from "@/components/dashboard/overview/graph";
-import { StatCard } from "@/components/dashboard/overview/statCard";
-import { Utility } from "@/utils";
-import { useGetDashboard } from "@/hooks/dashboard";
-import { DashboardStatData } from "@/types/dashboard";
+
 import {
   CircularProgress,
   Typography,
@@ -48,6 +17,39 @@ import {
   Badge,
   Stack,
 } from "@mui/material";
+import Grid from "@mui/material/Unstable_Grid2";
+import {
+  Vaccines as VaccinesIcon,
+  Person as PersonIcon,
+  CurrencyRupee as CurrencyRupeeIcon,
+  BookOnline as BookOnlineIcon,
+  CalendarMonth as CalendarMonthIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  HourglassEmpty as HourglassEmptyIcon,
+  DateRange as DateRangeIcon,
+  CalendarToday as CalendarTodayIcon,
+  AllInclusive as AllInclusiveIcon,
+} from "@mui/icons-material";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
+import { Utility } from "@/utils";
+import { useGetDashboard } from "@/hooks/dashboard";
+import { useGetDoctor } from "@/hooks/doctor";
+import {
+  ReusableTable,
+  todayAppointmentColumns,
+  upcomingAppointmentColumns,
+  appointmentStatusMap,
+} from "@/components/dashboard/overview/appointments-tables";
+import { Sales } from "@/components/dashboard/overview/graph";
+import { StatCard } from "@/components/dashboard/overview/statCard";
+
+import { DashboardStatData } from "@/types/dashboard";
+
+dayjs.extend(utc);
 
 const cardStyle = {
   height: "100%",
@@ -215,7 +217,41 @@ const Page = React.memo(function Page(): React.JSX.Element {
     return Array.from({ length: ticksCount }, (_, i) => i * step);
   };
 
-  if (todayAppointmentLoading || upcomingAppointmentLoading) {
+  const currentDate = dayjs().add(6, "hour").add(30, "minute");
+  const currentYear = currentDate.year();
+  const currentMonth = currentDate.month();
+
+  const getMaxDate = () => {
+    const maxYear = currentYear;
+    if (filterType === "year-only") {
+      return dayjs(`${maxYear}-12-31`);
+    } else if (filterType === "month-year") {
+      if (selectedDate && selectedDate.year() === currentYear) {
+        return selectedDate.endOf("month").isBefore(currentDate)
+          ? currentDate
+          : selectedDate.endOf("month");
+      }
+      return dayjs(`${maxYear}-12-31`);
+    }
+    return dayjs(`${maxYear}-12-31`);
+  };
+
+  const getMinDate = () => {
+    return dayjs("1900-01-01");
+  };
+
+  const {
+    value: doctorData,
+    swrLoading: doctorLoading,
+    error: doctorError,
+  } = useGetDoctor(null, `/get-doctor-by-id/${doctorId}`, 1, 1);
+  const profilePicture =
+    doctorData?.data?.profilePicture ||
+    (doctorData?.data?.gender === "male"
+      ? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop&crop=face"
+      : "https://media.istockphoto.com/id/2132087076/photo/asian-woman-doctor-and-happy-in-hospital-with-tablet-for-prescriptions-research-and-results.jpg?s=1024x1024&w=is&k=20&c=yBHF5huhIG9hJUXfyrUfiMz4FCUpCYAezWWXv7DTIzc=");
+
+  if (todayAppointmentLoading || upcomingAppointmentLoading || doctorLoading) {
     return (
       <Grid container spacing={3} justifyContent="center">
         <CircularProgress />
@@ -223,22 +259,13 @@ const Page = React.memo(function Page(): React.JSX.Element {
     );
   }
 
-  if (todayAppointmentError) {
+  if (todayAppointmentError || upcomingAppointmentError || doctorError) {
     return (
       <Grid container spacing={3}>
         <Typography color="error">
-          Failed to load today's appointments: {todayAppointmentError.message}
-        </Typography>
-      </Grid>
-    );
-  }
-
-  if (upcomingAppointmentError) {
-    return (
-      <Grid container spacing={3}>
-        <Typography color="error">
-          Failed to load upcoming appointments:{" "}
-          {upcomingAppointmentError.message}
+          {todayAppointmentError?.message ||
+            upcomingAppointmentError?.message ||
+            doctorError?.message}
         </Typography>
       </Grid>
     );
@@ -310,7 +337,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
               alignItems="center"
               sx={{ position: "relative", zIndex: 1 }}
             >
-              {isDoctor && (
+              {isDoctor ? (
                 <Grid
                   xs={12}
                   sm={6}
@@ -362,11 +389,11 @@ const Page = React.memo(function Page(): React.JSX.Element {
                       }
                     >
                       <Avatar
-                        src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop&crop=face"
+                        src={profilePicture}
                         alt={doctorName}
                         sx={{
-                          width: 80,
-                          height: 80,
+                          width: 85,
+                          height: 85,
                           border: "3px solid white",
                           boxShadow:
                             "0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.05)",
@@ -387,6 +414,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
                         variant="h6"
                         sx={{
                           fontWeight: 700,
+                          fontSize: 27,
                           background:
                             "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                           backgroundClip: "text",
@@ -400,6 +428,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
                         variant="h6"
                         sx={{
                           fontWeight: 700,
+                          fontSize: 22,
                           background:
                             "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                           backgroundClip: "text",
@@ -408,7 +437,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          maxWidth: "150px",
+                          maxWidth: "220px",
                         }}
                       >
                         {doctorName}
@@ -416,7 +445,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
                     </Stack>
                   </Box>
                 </Grid>
-              )}
+              ) : null}
               <Grid
                 xs={12}
                 sm={isDoctor ? 6 : 12}
@@ -617,11 +646,21 @@ const Page = React.memo(function Page(): React.JSX.Element {
                             if (newValue) {
                               if (filterType === "year-only") {
                                 setSelectedDate(newValue.startOf("year"));
-                              } else {
-                                setSelectedDate(newValue.startOf("month"));
+                              } else if (filterType === "month-year") {
+                                // Check if the year has changed, reset to start of the new year
+                                if (
+                                  selectedDate &&
+                                  newValue.year() !== selectedDate.year()
+                                ) {
+                                  setSelectedDate(newValue.startOf("year"));
+                                } else {
+                                  setSelectedDate(newValue.startOf("month"));
+                                }
                               }
                             }
                           }}
+                          minDate={getMinDate()}
+                          maxDate={getMaxDate()}
                           slotProps={{
                             textField: {
                               fullWidth: true,
@@ -766,7 +805,6 @@ const Page = React.memo(function Page(): React.JSX.Element {
   );
 });
 
-// StatCards Component
 const StatCards = React.memo(function StatCards({
   role,
   doctorId,
@@ -858,7 +896,11 @@ const StatCards = React.memo(function StatCards({
   const statCardsRow1 = stats
     .filter((stat) =>
       isDoctor
-        ? ["TOTAL PAYMENTS", "BOOKED APPOINTMENTS"].includes(stat.title)
+        ? [
+            "TOTAL PAYMENTS",
+            "BOOKED APPOINTMENTS",
+            "COMPLETED APPOINTMENTS",
+          ].includes(stat.title)
         : [
             "DOCTORS",
             "PATIENTS",
@@ -870,12 +912,18 @@ const StatCards = React.memo(function StatCards({
 
   const statCardsRow2 = stats
     .filter((stat) =>
-      [
-        "COMPLETED APPOINTMENTS",
-        "CANCELLED APPOINTMENTS",
-        "PENDING APPOINTMENTS",
-        "APPOINTMENTS THIS MONTH",
-      ].includes(stat.title)
+      isDoctor
+        ? [
+            "CANCELLED APPOINTMENTS",
+            "PENDING APPOINTMENTS",
+            "APPOINTMENTS THIS MONTH",
+          ].includes(stat.title)
+        : [
+            "COMPLETED APPOINTMENTS",
+            "CANCELLED APPOINTMENTS",
+            "PENDING APPOINTMENTS",
+            "APPOINTMENTS THIS MONTH",
+          ].includes(stat.title)
     )
     .map(mapStatToCard);
 
@@ -883,8 +931,8 @@ const StatCards = React.memo(function StatCards({
     xs: 12,
     sm: 6,
     md: 6,
-    lg: 12 / Math.min(cardsInRow.length, 4),
-    xl: 12 / Math.min(cardsInRow.length, 4),
+    lg: isDoctor ? 4 : 12 / Math.min(cardsInRow.length, 4),
+    xl: isDoctor ? 4 : 12 / Math.min(cardsInRow.length, 4),
   });
 
   if (statsLoading) {
@@ -916,7 +964,7 @@ const StatCards = React.memo(function StatCards({
           <Grid
             key={`stat-card-1-${index}`}
             {...getStatCardWidth(statCardsRow1)}
-            sx={{ mt: -4 }}
+            sx={{ mt: -4, position: "relative" }}
           >
             <StatCard
               value={card.value}
@@ -925,7 +973,7 @@ const StatCards = React.memo(function StatCards({
               Icon={card.Icon}
               title={card.title}
               iconColor={card.iconColor}
-              sx={cardStyle}
+              sx={{ position: "relative" }}
             />
           </Grid>
         ))
@@ -940,7 +988,7 @@ const StatCards = React.memo(function StatCards({
           <Grid
             key={`stat-card-2-${index}`}
             {...getStatCardWidth(statCardsRow2)}
-            sx={{ mt: 1 }}
+            sx={{ mt: 1, position: "relative" }}
           >
             <StatCard
               value={card.value}
@@ -949,7 +997,11 @@ const StatCards = React.memo(function StatCards({
               Icon={card.Icon}
               title={card.title}
               iconColor={card.iconColor}
-              sx={cardStyle}
+              sx={
+                card.title === "PENDING APPOINTMENTS" && isDoctor
+                  ? { isDoctor: true, position: "relative" }
+                  : { position: "relative" }
+              }
             />
           </Grid>
         ))
