@@ -46,8 +46,8 @@ export interface ColumnConfig {
   format?: (value: any, rowData: any) => React.ReactNode;
   sortable?: boolean;
   sortDirection?: "asc" | "desc";
-  hideForRoles?: string[]; 
-  width?: string; 
+  hideForRoles?: string[];
+  width?: string;
 }
 
 // Generic data item interface
@@ -193,7 +193,7 @@ export function ReusableTable({
                         );
                       }
 
-                      // Handle date formatting
+                      // Handle date formatting only if format is provided
                       if (column.format) {
                         return (
                           <TableCell
@@ -205,7 +205,7 @@ export function ReusableTable({
                         );
                       }
 
-                      // Default rendering
+                      // Default rendering for time and other fields
                       return (
                         <TableCell
                           key={column.id}
@@ -285,8 +285,7 @@ export const todayAppointmentColumns: ColumnConfig[] = [
   {
     id: "time",
     label: "Time",
-    format: (value) => dayjs(value).format("h:mm A"),
-    width: "25%",
+    width: "25%", // Removed format to show raw time
   },
   { id: "status", label: "Status", width: "25%" },
 ];
@@ -309,8 +308,7 @@ export const upcomingAppointmentColumns: ColumnConfig[] = [
   {
     id: "time",
     label: "Time",
-    format: (value) => dayjs(value).format("h:mm A"),
-    width: "20%",
+    width: "20%", // Removed format to show raw time
   },
   { id: "status", label: "Status", width: "20%" },
 ];
