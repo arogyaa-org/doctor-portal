@@ -135,7 +135,7 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
           }}
         >
           <Avatar
-            src={doctorProfileData?.profilePicture?.preview || ""}
+            src={doctorProfileData?.profilePicture || ""}
             sx={{
               width: "100%",
               height: "100%",
@@ -535,7 +535,7 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
           </IconButton>
           <Avatar
             alt="Doctor"
-            src={doctorProfileData?.profilePicture?.preview || ""}
+            src={doctorProfileData?.profilePicture || ""}
             sx={{
               width: 300,
               height: 300,

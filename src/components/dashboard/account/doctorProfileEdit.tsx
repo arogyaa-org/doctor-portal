@@ -292,6 +292,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       >
         <Box sx={{ position: "relative", width: 130, height: 130 }}>
           <Avatar
+            src={doctorProfileData?.profilePicture || ""}
             sx={{
               width: "100%",
               height: "100%",

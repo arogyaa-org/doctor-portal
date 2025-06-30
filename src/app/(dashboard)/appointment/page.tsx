@@ -63,12 +63,6 @@ const statusOptions = [
     textColor: "#856404",
   },
   {
-    value: "approved",
-    label: "Approved",
-    icon: <ApprovedIcon fontSize="small" color="success" />,
-    color: "success",
-  },
-  {
     value: "rejected",
     label: "Rejected",
     icon: <RejectedIcon fontSize="small" color="error" />,

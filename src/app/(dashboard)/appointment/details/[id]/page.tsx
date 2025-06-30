@@ -79,12 +79,6 @@ const statusOptions = [
     icon: <HourglassEmpty fontSize="small" />,
   },
   {
-    value: "approved",
-    label: "Approved",
-    color: "#2D9735",
-    icon: <CheckCircle fontSize="small" />,
-  },
-  {
     value: "rejected",
     label: "Rejected",
     color: "red",

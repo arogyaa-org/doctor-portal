@@ -41,11 +41,6 @@ export const datagridColumns = ({
     align: "center",
     flex: 1.5,
     renderCell: ({ row: { doctorData } }) => {
-      // Debugging logs
-      console.log("DoctorData object:", doctorData);
-      console.log("Doctor username:", doctorData?.username);
-      // console.log("Full row data:", row); // If you need access to the full row
-
       return (
         <Typography>
           {capitalizeFirstLetter(doctorData?.[0]?.username) || "N/A"}
@@ -101,19 +96,7 @@ export const datagridColumns = ({
       renderCell: ({ row: { appointmentTime } }) => {
         if (!appointmentTime) return <Typography>N/A</Typography>;
 
-        // Handle both ISO strings (2023-01-01T14:30) and raw time (14:30)
-        const timeStr = appointmentTime.includes(":")
-          ? appointmentTime.includes("T")
-            ? appointmentTime
-            : `1970-01-01T${appointmentTime}`
-          : "N/A";
-
-        try {
-          const formattedTime = format(new Date(timeStr), "hh:mm a");
-          return <Typography>{formattedTime}</Typography>;
-        } catch {
-          return <Typography>N/A</Typography>; // If parsing fails
-        }
+        return <Typography>{appointmentTime}</Typography>; // Render raw time
       },
     },
     {
@@ -150,12 +133,6 @@ export const datagridColumns = ({
             label: "Rescheduled",
             color: "#856404",
             icon: <RescheduledIcon fontSize="small" />,
-          },
-          {
-            value: "approved",
-            label: "Approved",
-            color: "#2D9735",
-            icon: <CheckCircle fontSize="small" />,
           },
           {
             value: "rejected",
@@ -205,7 +182,7 @@ export const datagridColumns = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "8px", // Adds spacing between icon and text
+                gap: "8px",
               },
             }}
             renderValue={() => (

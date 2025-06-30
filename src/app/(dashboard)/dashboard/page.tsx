@@ -149,22 +149,13 @@ const Page = React.memo(function Page(): React.JSX.Element {
         ? rawAppointments.data
         : [];
 
-    return appointments.map((appt: ApiAppointment) => {
-      const [hours, minutes] = appt.appointmentTime.split(":").map(Number);
-      const utcDate = dayjs
-        .utc(appt.appointmentDate)
-        .hour(hours)
-        .minute(minutes);
-      const istDate = utcDate.add(6, "hour").add(30, "minute").toDate();
-
-      return {
-        id: appt._id,
-        patientName: appt.patientData[0]?.username || "Unknown Patient",
-        doctorName: appt.doctorData[0]?.username || "Unknown Doctor",
-        time: istDate,
-        status: appt.status,
-      };
-    });
+    return appointments.map((appt: ApiAppointment) => ({
+      id: appt._id,
+      patientName: appt.patientData[0]?.username || "Unknown Patient",
+      doctorName: appt.doctorData[0]?.username || "Unknown Doctor",
+      time: appt.appointmentTime, // Use raw appointmentTime string
+      status: appt.status,
+    }));
   }, [todayAppointmentData]);
 
   const upcomingAppointments: UpcomingTableAppointmentData[] =
@@ -177,23 +168,14 @@ const Page = React.memo(function Page(): React.JSX.Element {
           ? rawAppointments.data
           : [];
 
-      return appointments.map((appt: ApiAppointment) => {
-        const [hours, minutes] = appt.appointmentTime.split(":").map(Number);
-        const utcDate = dayjs
-          .utc(appt.appointmentDate)
-          .hour(hours)
-          .minute(minutes);
-        const istDate = utcDate.add(6, "hour").add(30, "minute").toDate();
-
-        return {
-          id: appt._id,
-          patientName: appt.patientData[0]?.username || "Unknown Patient",
-          doctorName: appt.doctorData[0]?.username || "Unknown Doctor",
-          date: dayjs.utc(appt.appointmentDate).toDate(),
-          time: istDate,
-          status: appt.status,
-        };
-      });
+      return appointments.map((appt: ApiAppointment) => ({
+        id: appt._id,
+        patientName: appt.patientData[0]?.username || "Unknown Patient",
+        doctorName: appt.doctorData[0]?.username || "Unknown Doctor",
+        date: appt.appointmentDate, // Use raw appointmentDate string
+        time: appt.appointmentTime, // Use raw appointmentTime string
+        status: appt.status,
+      }));
     }, [upcomingAppointmentData]);
 
   const getDoctorPatientTicks = (data: ChartSeriesData[]): number[] => {
@@ -1026,7 +1008,7 @@ interface TableAppointmentData {
   id: string;
   patientName: string;
   doctorName: string;
-  time: Date;
+  time: string; // Changed from Date to string
   status: string;
 }
 
@@ -1034,8 +1016,8 @@ interface UpcomingTableAppointmentData {
   id: string;
   patientName: string;
   doctorName: string;
-  date: string;
-  time: Date;
+  date: string; // Changed from Date to string
+  time: string; // Changed from Date to string
   status: string;
 }
 
