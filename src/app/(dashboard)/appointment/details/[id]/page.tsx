@@ -48,7 +48,7 @@ import {
   ChevronRight as ChevronRightIcon,
   CheckCircle as CompletedIcon,
 } from "@mui/icons-material";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { motion } from "framer-motion";
 import ReactPlayer from "react-player";
 
@@ -107,12 +107,12 @@ const AppointmentDetails = () => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const router = useRouter();
   const { toastAndNavigate } = Utility();
-  const [status, setStatus] = useState();
+  const [status, setStatus] = useState<string | undefined>(undefined);
   const { toast } = useSelector((state: RootState) => state.toast);
   const dispatch: AppDispatch = useDispatch();
 
   const params = useParams();
-  const appointmentId = params?.id;
+  const appointmentId = params?.id as string;
 
   const StyledAvatar = styled(Avatar)(({ theme }) => ({
     width: 64,
@@ -181,7 +181,7 @@ const AppointmentDetails = () => {
       setStatus(appointmentData?.data?.status);
       refetch();
     }
-  }, [appointmentData]);
+  }, [appointmentData, refetch]);
 
   const toggleVideo = () => {
     setShowVideo(!showVideo);
@@ -218,7 +218,7 @@ const AppointmentDetails = () => {
     }
   };
 
-  const handleTabChange = (tabKey) => {
+  const handleTabChange = (tabKey: string) => {
     setActiveTab(tabKey);
   };
 
@@ -339,12 +339,30 @@ const AppointmentDetails = () => {
                       <AccessTimeIcon sx={{ mr: 0.5 }} />
                       <Typography variant="body2">
                         {appointmentData?.data?.appointmentTime
-                          ? format(
-                              new Date(
-                                `1970-01-01T${appointmentData?.data?.appointmentTime}`
-                              ),
-                              "hh:mm a"
-                            )
+                          ? (() => {
+                              try {
+                                const timeString =
+                                  appointmentData.data.appointmentTime;
+                                if (
+                                  !timeString ||
+                                  !/^\d{1,2}:\d{2}\s[AP]M$/.test(timeString)
+                                ) {
+                                  return "N/A";
+                                }
+                                const parsedTime = parse(
+                                  timeString,
+                                  "hh:mm a",
+                                  new Date()
+                                );
+                                return format(parsedTime, "hh:mm a");
+                              } catch (error) {
+                                console.error(
+                                  "Error parsing appointment time:",
+                                  error
+                                );
+                                return "Invalid Time";
+                              }
+                            })()
                           : "N/A"}
                       </Typography>
                     </Box>
@@ -357,9 +375,8 @@ const AppointmentDetails = () => {
                 <Select
                   value={status}
                   onChange={(e) => {
-                    // const newStatus = e.target.value;
-                    setStatus(e.target.value); // Update local state
-                    handleStatusChange(e.target.value); // Update status in backend and global state
+                    setStatus(e.target.value);
+                    handleStatusChange(e.target.value);
                   }}
                   variant="outlined"
                   size="small"
@@ -386,7 +403,7 @@ const AppointmentDetails = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "8px", // Adds spacing between icon and text
+                      gap: "8px",
                     },
                   }}
                   renderValue={() => {
@@ -415,7 +432,7 @@ const AppointmentDetails = () => {
                   }}
                 >
                   {statusOptions
-                    .filter((option) => option.value !== status) // Filter out the selected status to avoid it appearing twice
+                    .filter((option) => option.value !== status)
                     .map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         <Box
@@ -586,14 +603,14 @@ const AppointmentDetails = () => {
       <Box
         sx={{
           flex: showVideo ? "0 0 65%" : 1,
-          transition: "all 0.00003s ease", // Smoother transition
-          padding: isSmallScreen ? 0.5 : 1, // Reduced padding
+          transition: "all 0.00003s ease",
+          padding: isSmallScreen ? 0.5 : 1,
           overflow: "hidden",
         }}
       >
         <div
           style={{
-            padding: 0, // Removed additional padding
+            padding: 0,
           }}
         >
           {/* Heading and Back Button in the same row */}
@@ -601,14 +618,14 @@ const AppointmentDetails = () => {
             sx={{
               display: "flex",
               alignItems: "center",
-              marginBottom: 1, // Reduced margin
+              marginBottom: 1,
             }}
           >
             {/* Back Button */}
             <IconButton
               onClick={() => router.back()}
               sx={{
-                marginRight: 1, // Reduced margin
+                marginRight: 1,
               }}
             >
               <ArrowBackIcon sx={{ color: "primary.main" }} />
@@ -629,11 +646,11 @@ const AppointmentDetails = () => {
               display: "flex",
               justifyContent: "space-between",
               flexWrap: "wrap",
-              gap: 4, // Reduced gap
+              gap: 4,
               marginBottom: 12,
               backgroundColor: "#f0f4f8",
-              borderRadius: 6, // Slightly reduced radius
-              padding: 6, // Reduced padding
+              borderRadius: 6,
+              padding: 6,
             }}
           >
             {tabs.map((tab) => (
@@ -647,8 +664,8 @@ const AppointmentDetails = () => {
                   alignItems: "center",
                   gap: 1,
                   textTransform: "none",
-                  padding: "8px 12px", // Reduced padding
-                  minWidth: "90px", // Reduced width
+                  padding: "8px 12px",
+                  minWidth: "90px",
                   color: activeTab === tab.key ? "blue" : "black",
                   bgcolor:
                     activeTab === tab.key ? "rgba(63,81,181,0.1)" : "none",
@@ -668,9 +685,9 @@ const AppointmentDetails = () => {
           {/* Removed Paper component and now content is displayed directly */}
           <Box
             sx={{
-              maxHeight: isSmallScreen ? "auto" : "calc(100vh - 120px)", // Adjusted height
+              maxHeight: isSmallScreen ? "auto" : "calc(100vh - 120px)",
               overflowY: "auto",
-              mt: 1, // Small margin top
+              mt: 1,
             }}
           >
             {tabs.find((tab) => tab.key === activeTab)?.content}
@@ -743,7 +760,7 @@ const AppointmentDetails = () => {
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
-                    backgroundColor: "rgba(0, 0, 0, 0.8)", // Dark overlay
+                    backgroundColor: "rgba(0, 0, 0, 0.8)",
                     color: "white",
                   }}
                 >
@@ -771,15 +788,15 @@ const AppointmentDetails = () => {
           position: "relative",
           overflowY: "auto",
           borderLeft: "1px solid rgba(0,0,0,0.12)",
-          transition: "transition: all 0.3s spring",
+          transition: "all 0.3s spring",
           mt: 7,
         }}
       >
         <Box
           sx={{
             height: "100%",
-            width: "100%", // Ensure full width within the allocated space
-            padding: 2, // Increased padding
+            width: "100%",
+            padding: 2,
             display: "flex",
             flexDirection: "column",
             background:
@@ -790,7 +807,7 @@ const AppointmentDetails = () => {
             elevation={6}
             sx={{
               width: "100%",
-              borderRadius: 2, // Reduced border radius
+              borderRadius: 2,
               overflow: "hidden",
               position: "relative",
               boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
@@ -813,7 +830,6 @@ const AppointmentDetails = () => {
               </Typography>
             </Box>
 
-            {/* Video container with overlay - takes full width */}
             <Box
               sx={{
                 position: "relative",
@@ -840,7 +856,6 @@ const AppointmentDetails = () => {
                 />
                 Your browser does not support the video tag.
               </video>
-              {/* Overlay message when no video is available */}
               {!appointmentData?.data?.videoUrl && (
                 <Box
                   sx={{
@@ -852,7 +867,7 @@ const AppointmentDetails = () => {
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
-                    backgroundColor: "rgba(0, 0, 0, 0.8)", // Dark overlay
+                    backgroundColor: "rgba(0, 0, 0, 0.8)",
                     color: "white",
                   }}
                 >

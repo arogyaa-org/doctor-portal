@@ -14,6 +14,8 @@ import { User as UserIcon } from "@phosphor-icons/react/dist/ssr/User";
 
 import { paths } from "@/paths";
 import { Utility } from "@/utils";
+import { useGetDoctor } from "@/hooks/doctor"; 
+import { useGetuser } from "@/hooks/user"; 
 
 interface UserPopoverProps {
   anchorEl: Element | null;
@@ -28,8 +30,29 @@ export function UserPopover({
 }: UserPopoverProps): React.JSX.Element {
   const popoverRef = React.useRef<HTMLDivElement | null>(null);
   const { capitalizeFirstLetter, decodedToken } = Utility();
-  const { role, email, userName, doctorName } = decodedToken() || {};
+  const { role, email, userName, doctorName, id } = decodedToken() || {};
   const displayName = role === "admin" ? userName : doctorName;
+
+  const { value: doctorData } = useGetDoctor(
+    null,
+    id && role === "doctor" ? `/get-doctor-by-id/${id}` : "",
+    1,
+    1
+  );
+
+  const { value: userData } = useGetuser(
+    null,
+    id && role === "admin" ? `/get-user-by-id/${id}` : "",
+    1,
+    1
+  );
+
+  const profileImage =
+    role === "doctor"
+      ? doctorData?.data?.profilePicture || null
+      : role === "admin"
+        ? userData?.data?.profilePicture || null
+        : null;
 
   React.useEffect(() => {
     if (popoverRef.current) {
@@ -93,11 +116,12 @@ export function UserPopover({
         {/* User Avatar */}
         <Avatar
           alt={displayName || "User"}
+          src={ profileImage }
           sx={{
             width: 40,
             height: 40,
             borderRadius: "50%",
-            backgroundColor: "gray",
+            backgroundColor: profileImage ? "transparent" : "gray",
           }}
         >
           {displayName ? displayName[0].toUpperCase() : "U"}

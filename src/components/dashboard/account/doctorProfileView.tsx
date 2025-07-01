@@ -8,6 +8,8 @@ import {
   IconButton,
   Modal,
   Tooltip,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import PhoneIcon from "@mui/icons-material/Phone";
 import EmailIcon from "@mui/icons-material/Email";
@@ -17,6 +19,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/Close";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { styled } from "@mui/system";
 import PersonIcon from "@mui/icons-material/Person";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -86,6 +89,15 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
     ""
   );
   const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200, "");
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
 
   const onEditClick = () => {
     console.log(
@@ -453,9 +465,14 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
                   Availability
                 </Typography>
                 {doctorProfileData?.availability?.length > 0 ? (
-                  doctorProfileData.availability.map((slot, index) => (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                    }}
+                  >
                     <Box
-                      key={index}
                       sx={{
                         display: "flex",
                         alignItems: "center",
@@ -470,8 +487,9 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
                       >
                         <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
                         <Typography variant="body2" sx={{ color: "#555" }}>
-                          {slot.hospitalName && slot.hospitalLocation
-                            ? `${slot.hospitalName} - ${slot.hospitalLocation}`
+                          {doctorProfileData.availability[0].hospitalName &&
+                          doctorProfileData.availability[0].hospitalLocation
+                            ? `${doctorProfileData.availability[0].hospitalName} - ${doctorProfileData.availability[0].hospitalLocation}`
                             : "Hospital Not Specified"}
                         </Typography>
                       </Box>
@@ -485,11 +503,80 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
                       >
                         <AccessTimeIcon sx={{ color: "#8F44FD" }} />
                         <Typography variant="body2" sx={{ color: "#555" }}>
-                          {slot.day}: {slot.startTime} - {slot.endTime}
+                          {doctorProfileData.availability[0].day}:{" "}
+                          {doctorProfileData.availability[0].startTime} -{" "}
+                          {doctorProfileData.availability[0].endTime}
                         </Typography>
                       </Box>
                     </Box>
-                  ))
+                    {doctorProfileData.availability.length > 1 && (
+                      <>
+                        <IconButton
+                          onClick={handleMenuClick}
+                          sx={{ alignSelf: "flex-start" }}
+                        >
+                          <ArrowDropDownIcon sx={{ color: "#8F44FD" }} />
+                        </IconButton>
+                        <Menu
+                          anchorEl={anchorEl}
+                          open={Boolean(anchorEl)}
+                          onClose={handleMenuClose}
+                        >
+                          {doctorProfileData.availability
+                            .slice(1)
+                            .map((slot, index) => (
+                              <MenuItem key={index} onClick={handleMenuClose}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 1,
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 1,
+                                    }}
+                                  >
+                                    <LocalHospitalIcon
+                                      sx={{ color: "#8F44FD" }}
+                                    />
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ color: "#555" }}
+                                    >
+                                      {slot.hospitalName &&
+                                      slot.hospitalLocation
+                                        ? `${slot.hospitalName} - ${slot.hospitalLocation}`
+                                        : "Hospital Not Specified"}
+                                    </Typography>
+                                  </Box>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 1,
+                                      ml: 4,
+                                    }}
+                                  >
+                                    <AccessTimeIcon sx={{ color: "#8F44FD" }} />
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ color: "#555" }}
+                                    >
+                                      {slot.day}: {slot.startTime} -{" "}
+                                      {slot.endTime}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </MenuItem>
+                            ))}
+                        </Menu>
+                      </>
+                    )}
+                  </Box>
                 ) : (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <AccessTimeIcon sx={{ color: "#8F44FD" }} />
