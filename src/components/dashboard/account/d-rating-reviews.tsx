@@ -48,13 +48,10 @@ export default function DoctorRatingsAndReviews(): React.JSX.Element {
           "testimonial",
           `/get-testimonial-by-doctor-id/${doctorId}`
         );
-        console.log("API Response:", response);
-        // Extract the data array from the response
         const testimonialsArray = response.data || [];
         setTestimonials(testimonialsArray);
       } catch (err) {
         setError("Failed to load testimonials");
-        console.error("Error fetching testimonials:", err);
       } finally {
         setLoading(false);
       }

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import io from "socket.io-client";
 import { Utility } from "@/utils";
+import { creator, fetcher } from "@/apis/apiClient";
 import { Pulse } from "@phosphor-icons/react";
 import {
   Container,
@@ -74,6 +75,7 @@ const GradientButton = styled(Button)(({ theme, gradient }) => ({
   },
 }));
 
+// eslint-disable-next-line react/function-component-definition
 const DoctorDashboard = () => {
   const { decodedToken } = Utility();
   const [doctorId, setDocterId] = useState("");
@@ -243,14 +245,8 @@ const DoctorDashboard = () => {
 
   const fetchRooms = useCallback(async () => {
     try {
-      const response = await fetch(
-        `http://localhost:4009/api/v1/chat-service/doctor/${doctorId}/rooms`
-      );
-      const result = await response.json();
-
-      if (result.success) {
-        setRooms(result.data);
-      }
+      const response = await fetcher("chat", `/doctor/${doctorId}/rooms`);
+      setRooms(response.data);
     } catch (error) {
       console.error("Error fetching rooms:", error);
     }
@@ -266,19 +262,14 @@ const DoctorDashboard = () => {
 
   const completeRoom = async (roomId) => {
     try {
-      const response = await fetch(
-        `http://localhost:4009/api/v1/chat-service/room/${roomId}/complete`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await creator(
+        "chat",
+        `/room/${roomId}/complete`,
+        {},
+        { "Content-Type": "application/json" }
       );
 
-      const result = await response.json();
-
-      if (result.success) {
+      if (response.success) {
         showBrowserNotification(
           "Room Completed",
           "Video call has been marked as completed"

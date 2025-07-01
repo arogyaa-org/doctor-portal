@@ -34,7 +34,11 @@ import dayjs from "dayjs";
 import * as yup from "yup";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import {
+  DatePicker,
+  LocalizationProvider,
+  TimePicker,
+} from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 
@@ -53,6 +57,11 @@ const daysOfWeek = [
   "Saturday",
   "Sunday",
 ];
+
+const parseTimeTo12Hour = (date: dayjs.Dayjs | null) => {
+  if (!date || !date.isValid()) return "";
+  return date.format("h:mm A"); // Outputs "2:30 PM"
+};
 
 interface DoctorProfileEditProps {
   editFields: DoctorData;
@@ -129,6 +138,38 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
         .min(1, "Select At Least 1 Qualification")
         .max(4, "Maximum 5 Qualifications Allowed")
         .required("Qualifications are required"),
+      availability: yup.array().of(
+        yup.object().shape({
+          day: yup.string().required("Day is required"),
+          startTime: yup
+            .string()
+            .required("Start time is required")
+            .matches(
+              /^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/,
+              "Invalid time format"
+            ),
+          endTime: yup
+            .string()
+            .required("End time is required")
+            .matches(
+              /^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/,
+              "Invalid time format"
+            )
+            .test(
+              "end-time-after-start",
+              "End time must be after start time",
+              function (endTime) {
+                const { startTime } = this.parent;
+                if (!startTime || !endTime) return true;
+                return dayjs(endTime, "h:mm A").isAfter(
+                  dayjs(startTime, "h:mm A")
+                );
+              }
+            ),
+          hospitalName: yup.string().nullable(),
+          hospitalLocation: yup.string().nullable(),
+        })
+      ),
     }),
   });
 
@@ -239,8 +280,8 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
           role === "doctor" && dataWithoutPassword.availability
             ? dataWithoutPassword.availability.map((slot) => ({
                 day: slot.day,
-                startTime: slot.startTime,
-                endTime: slot.endTime,
+                startTime: slot.startTime, 
+                endTime: slot.endTime, 
                 hospital:
                   slot.hospitalName && slot.hospitalLocation
                     ? {
@@ -1109,50 +1150,95 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                           outline: "none",
                         }}
                       />
-                      <input
-                        type="time"
-                        value={slot.startTime || ""}
-                        onChange={(e) =>
+                      <TimePicker
+                        label="Start Time"
+                        value={
+                          slot.startTime
+                            ? dayjs(slot.startTime, "h:mm A")
+                            : null
+                        }
+                        onChange={(newValue) => {
+                          const formattedTime = parseTimeTo12Hour(newValue);
                           handleFieldChange(
                             "availability",
-                            e.target.value,
+                            formattedTime,
                             index,
                             "startTime"
-                          )
-                        }
-                        style={{
-                          fontSize: "16px",
-                          color: "#555",
-                          border: "2px solid #8F44FD",
-                          borderRadius: "6px",
-                          padding: "6px 10px",
-                          background: "transparent",
-                          cursor: "pointer",
-                          width: "200px",
-                          outline: "none",
+                          );
+                        }}
+                        ampm
+                        slotProps={{
+                          textField: {
+                            sx: {
+                              width: "200px",
+                              "& .MuiOutlinedInput-root": {
+                                "& fieldset": {
+                                  border: errors.availability?.[index]
+                                    ?.startTime
+                                    ? "2px solid red"
+                                    : "2px solid #8F44FD",
+                                },
+                                "&:hover fieldset": {
+                                  border: errors.availability?.[index]
+                                    ?.startTime
+                                    ? "2px solid red"
+                                    : "2px solid #8F44FD",
+                                },
+                                "&.Mui-focused fieldset": {
+                                  border: errors.availability?.[index]
+                                    ?.startTime
+                                    ? "2px solid red"
+                                    : "2px solid #8F44FD",
+                                },
+                              },
+                            },
+                            error: !!errors.availability?.[index]?.startTime,
+                            helperText:
+                              errors.availability?.[index]?.startTime?.message,
+                          },
                         }}
                       />
-                      <input
-                        type="time"
-                        value={slot.endTime || ""}
-                        onChange={(e) =>
+                      <TimePicker
+                        label="End Time"
+                        value={
+                          slot.endTime ? dayjs(slot.endTime, "h:mm A") : null
+                        }
+                        onChange={(newValue) => {
+                          const formattedTime = parseTimeTo12Hour(newValue);
                           handleFieldChange(
                             "availability",
-                            e.target.value,
+                            formattedTime,
                             index,
                             "endTime"
-                          )
-                        }
-                        style={{
-                          fontSize: "16px",
-                          color: "#555",
-                          border: "2px solid #8F44FD",
-                          borderRadius: "6px",
-                          padding: "6px 10px",
-                          background: "transparent",
-                          cursor: "pointer",
-                          width: "200px",
-                          outline: "none",
+                          );
+                        }}
+                        ampm
+                        slotProps={{
+                          textField: {
+                            sx: {
+                              width: "200px",
+                              "& .MuiOutlinedInput-root": {
+                                "& fieldset": {
+                                  border: errors.availability?.[index]?.endTime
+                                    ? "2px solid red"
+                                    : "2px solid #8F44FD",
+                                },
+                                "&:hover fieldset": {
+                                  border: errors.availability?.[index]?.endTime
+                                    ? "2px solid red"
+                                    : "2px solid #8F44FD",
+                                },
+                                "&.Mui-focused fieldset": {
+                                  border: errors.availability?.[index]?.endTime
+                                    ? "2px solid red"
+                                    : "2px solid #8F44FD",
+                                },
+                              },
+                            },
+                            error: !!errors.availability?.[index]?.endTime,
+                            helperText:
+                              errors.availability?.[index]?.endTime?.message,
+                          },
                         }}
                       />
                       <button

@@ -41,9 +41,12 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PinDrop from "@mui/icons-material/PinDrop";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import {
+  DatePicker,
+  LocalizationProvider,
+  TimePicker,
+} from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 
 import Loader from "@/components/common/Loader";
 import Toast from "@/components/common/Toast";
@@ -62,6 +65,19 @@ interface DoctorResponse {
   message: string;
   data: DoctorData;
 }
+
+const parseTimeTo12Hour = (date: dayjs.Dayjs | null) => {
+  if (!date || !date.isValid()) return "";
+  return date.format("h:mm A");
+};
+
+const initializeTime = (time: string) => {
+  if (!time) return null;
+  if (time.includes("AM") || time.includes("PM")) {
+    return dayjs(time, "h:mm A");
+  }
+  return dayjs(`2023-01-01T${time}`);
+};
 
 const initialValues: DoctorData = {
   username: "",
@@ -174,6 +190,12 @@ const DoctorForm: React.FC = () => {
     async (values: DoctorData) => {
       setLoading(true);
       try {
+        const formattedAvailability = values.availability.map((slot) => ({
+          ...slot,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        }));
+
         const response = await createDoctor({
           ...values,
           gender: values.gender || null,
@@ -182,6 +204,7 @@ const DoctorForm: React.FC = () => {
           qualificationIds: getIdsFromObject(values?.qualificationIds),
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
+          availability: formattedAvailability,
         });
         if (response?.statusCode === 409) {
           toastAndNavigate(
@@ -223,7 +246,19 @@ const DoctorForm: React.FC = () => {
         `get-doctor-by-id/${doctorId}`
       );
       if (response?.statusCode === 200) {
-        setFormValues(response.data);
+        const formattedData = {
+          ...response.data,
+          availability: response.data.availability.map((slot) => ({
+            ...slot,
+            startTime: slot.startTime
+              ? initializeTime(slot.startTime).format("h:mm A")
+              : "",
+            endTime: slot.endTime
+              ? initializeTime(slot.endTime).format("h:mm A")
+              : "",
+          })),
+        };
+        setFormValues(formattedData);
       }
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -236,6 +271,12 @@ const DoctorForm: React.FC = () => {
     async (values: any) => {
       setLoading(true);
       try {
+        const formattedAvailability = values.availability.map((slot: any) => ({
+          ...slot,
+          startTime: slot.startTime, 
+          endTime: slot.endTime, 
+        }));
+
         const payload = {
           ...values,
           gender: values.gender || null,
@@ -244,6 +285,7 @@ const DoctorForm: React.FC = () => {
           qualificationIds: getIdsFromObject(values?.qualificationIds),
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
+          availability: formattedAvailability,
         };
         if (!updatePassword) {
           delete payload.password;
@@ -612,13 +654,9 @@ const DoctorForm: React.FC = () => {
                 value={values.specializationIds || []}
                 onChange={(event, value) => {
                   setFieldValue("specializationIds", value);
-
-                  // Extract selected specialization names
                   const selectedSpecializationTags = value.map(
                     (item) => item.name
                   );
-
-                  // Update tags by adding/removing the selected specialization tags
                   const updatedTags = [
                     ...new Set([
                       ...values.tags.filter(
@@ -1049,40 +1087,62 @@ const DoctorForm: React.FC = () => {
                       />
                     </Grid>
                     <Grid item xs={4}>
-                      <Field
-                        as={MuiTextField}
-                        label="Start Time"
-                        name={`availability[${index}].startTime`}
-                        type="time"
-                        variant="outlined"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        value={slot.startTime || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].startTime = e.target.value;
-                          setFieldValue("availability", updatedAvailability);
-                          setFieldValue("dirty", true);
-                        }}
-                      />
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <TimePicker
+                          label="Start Time"
+                          value={initializeTime(slot.startTime)}
+                          onChange={(newValue) => {
+                            const updatedAvailability = [
+                              ...values.availability,
+                            ];
+                            updatedAvailability[index].startTime =
+                              parseTimeTo12Hour(newValue);
+                            setFieldValue("availability", updatedAvailability);
+                            setFieldValue("dirty", true);
+                          }}
+                          ampm
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              error:
+                                !!touched.availability?.[index]?.startTime &&
+                                !!errors.availability?.[index]?.startTime,
+                              helperText:
+                                touched.availability?.[index]?.startTime &&
+                                errors.availability?.[index]?.startTime,
+                            },
+                          }}
+                        />
+                      </LocalizationProvider>
                     </Grid>
                     <Grid item xs={4}>
-                      <Field
-                        as={MuiTextField}
-                        label="End Time"
-                        name={`availability[${index}].endTime`}
-                        type="time"
-                        variant="outlined"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        value={slot.endTime || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const updatedAvailability = [...values.availability];
-                          updatedAvailability[index].endTime = e.target.value;
-                          setFieldValue("availability", updatedAvailability);
-                          setFieldValue("dirty", true);
-                        }}
-                      />
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <TimePicker
+                          label="End Time"
+                          value={initializeTime(slot.endTime)}
+                          onChange={(newValue) => {
+                            const updatedAvailability = [
+                              ...values.availability,
+                            ];
+                            updatedAvailability[index].endTime =
+                              parseTimeTo12Hour(newValue);
+                            setFieldValue("availability", updatedAvailability);
+                            setFieldValue("dirty", true);
+                          }}
+                          ampm
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              error:
+                                !!touched.availability?.[index]?.endTime &&
+                                !!errors.availability?.[index]?.endTime,
+                              helperText:
+                                touched.availability?.[index]?.endTime &&
+                                errors.availability?.[index]?.endTime,
+                            },
+                          }}
+                        />
+                      </LocalizationProvider>
                     </Grid>
 
                     <Grid item xs={2} sx={{ display: "flex", gap: 1 }}>

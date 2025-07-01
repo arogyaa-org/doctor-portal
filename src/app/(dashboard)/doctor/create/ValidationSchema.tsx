@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import dayjs from "dayjs";
 
 const phoneRegExp =
   /^((\+[1-9]{1,4}[ -]?)|(\([0-9]{2,3}\)[ -]?)|([0-9]{2,4})[ -]?)*?[0-9]{3,4}[ -]?[0-9]{3,4}$/;
@@ -21,24 +22,44 @@ const validationSchema = yup.object().shape({
     .matches(/[a-z]/, "Password Must Contain At Least 1 Lowercase Letter")
     .matches(/[0-9]/, "Password Must Contain At Least 1 Number")
     .matches(/[^\w]/, "Password Must Contain At Least 1 Special Character")
-    .required("This Field is Required"),
+    .when("_id", {
+      is: (value: string) => !value, 
+      then: (schema) => schema.required("This Field is Required"),
+      otherwise: (schema) => schema.optional(),
+    }),
   contact: yup
     .string()
     .matches(phoneRegExp, "Phone Number Is Not Valid")
     .required("This Field is Required"),
-  experience: yup.number().max(70, "Experience must be less than 70 years"),
+  experience: yup
+    .number()
+    .min(0, "Experience cannot be negative")
+    .max(70, "Experience must be less than 70 years")
+    .required("Experience is required"),
   specializationIds: yup
     .array()
     .min(1, "Select At Least 1 Specialization")
-    .max(4, "Maximum 5 Specialization Allowed"),
-  symptomIds: yup.array().min(1, "Select At Least 1 Symptom"),
+    .max(4, "Maximum 4 Specializations Allowed")
+    .required("Specializations are required"),
+  symptomIds: yup
+    .array()
+    .min(1, "Select At Least 1 Symptom")
+    .required("Symptoms are required"),
   qualificationIds: yup
     .array()
     .min(1, "Select At Least 1 Qualification")
-    .max(4, "Maximum 5 Qualifications Allowed"),
-  gender: yup.string(),
-  status: yup.string(),
-  bio: yup.string(),
+    .max(4, "Maximum 4 Qualifications Allowed")
+    .required("Qualifications are required"),
+  gender: yup.string().required("Gender is required"),
+  status: yup.string().required("Status is required"),
+  bio: yup.string().optional(),
+  languagesSpoken: yup.array().of(yup.string()).optional(),
+  tags: yup.array().of(yup.string()).optional(),
+  clinicAddress: yup.string().required("Clinic Address is required"),
+  pincode: yup
+    .string()
+    .matches(/^[0-9]{6}$/, "Pincode must be a valid 6-digit number")
+    .required("Pincode is required"),
   dob: yup
     .string()
     .required("Date of Birth is required")
@@ -46,13 +67,50 @@ const validationSchema = yup.object().shape({
       "is-at-least-20-years-old",
       "You must be at least 20 years old",
       (value) => {
-        if (!value) return false; 
+        if (!value) return false;
         const dob = new Date(value);
         const minDate = new Date();
         minDate.setFullYear(minDate.getFullYear() - 20);
-        return dob <= minDate; 
+        return dob <= minDate;
       }
     ),
+  availability: yup
+    .array()
+    .of(
+      yup.object().shape({
+        day: yup.string().required("Day is required"),
+        startTime: yup
+          .string()
+          .required("Start time is required")
+          .matches(
+            /^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/,
+            "Invalid time format"
+          ),
+        endTime: yup
+          .string()
+          .required("End time is required")
+          .matches(
+            /^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/,
+            "Invalid time format"
+          )
+          .test(
+            "end-time-after-start",
+            "End time must be after start time",
+            function (endTime) {
+              const { startTime } = this.parent;
+              if (!startTime || !endTime) return true;
+              return dayjs(endTime, "h:mm A").isAfter(
+                dayjs(startTime, "h:mm A")
+              );
+            }
+          ),
+        hospital: yup.object().shape({
+          name: yup.string().nullable(),
+          location: yup.string().nullable(),
+        }),
+      })
+    )
+    .min(1, "At least one availability slot is required"),
 });
 
 export default validationSchema;
