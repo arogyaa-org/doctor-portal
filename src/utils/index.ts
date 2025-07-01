@@ -75,6 +75,7 @@ export const Utility = () => {
       treatment:process.env.NEXT_PUBLIC_TREATMENT_URL as string,
       test:process.env.NEXT_PUBLIC_TESTS_URL as string,
       dashboard: process.env.NEXT_PUBLIC_DASHBOARD_URL as string,
+      testimonial:process.env.NEXT_PUBLIC_TESTIMONIAL_URL as string,
     };
 
     return urls[serviceName] || "";

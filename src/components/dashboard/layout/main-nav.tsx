@@ -15,6 +15,8 @@ import { usePopover } from '@/hooks/use-popover';
 import { MobileNav } from './mobile-nav';
 import { UserPopover } from './user-popover';
 import { Utility } from '@/utils';
+import { useGetDoctor } from "@/hooks/doctor";
+import { useGetuser } from "@/hooks/user";
 
 import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
@@ -24,8 +26,29 @@ export function MainNav(): React.JSX.Element {
 
   const userPopover = usePopover<HTMLDivElement>();
   const { decodedToken } = Utility();
-  const { role, userName, doctorName } = decodedToken() || {};
-  const displayName = role === 'admin' ? userName : doctorName;
+  const { role, userName, doctorName, id } = decodedToken() || {};
+  const displayName = role === "admin" ? userName : doctorName;
+
+  const { value: doctorData } = useGetDoctor(
+    null,
+    id && role === "doctor" ? `/get-doctor-by-id/${id}` : "",
+    1,
+    1
+  );
+
+  const { value: userData } = useGetuser(
+    null,
+    id && role === "admin" ? `/get-user-by-id/${id}` : "",
+    1,
+    1
+  );
+
+  const profileImage =
+    role === "doctor"
+      ? doctorData?.data?.profilePicture || null
+      : role === "admin"
+        ? userData?.data?.profilePicture || null
+        : null;
 
   // Notification popover state
   const [notificationAnchorEl, setNotificationAnchorEl] =
@@ -94,9 +117,10 @@ export function MainNav(): React.JSX.Element {
               </Badge>
             </Tooltip>
             <Avatar
+              src={ profileImage }
               onClick={userPopover.handleOpen}
               ref={userPopover.anchorRef}
-              sx={{ cursor: 'pointer' }}
+              sx={{ cursor: "pointer" }}
             >
               {displayName?.[0]?.toUpperCase()}
             </Avatar>
