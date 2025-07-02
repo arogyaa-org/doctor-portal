@@ -425,11 +425,6 @@ const DoctorDashboard = () => {
                 <Bell size={20} />
               </IconButton>
             </Badge>
-            <IconButton
-              sx={{ bgcolor: "white", border: 1, borderColor: "grey.200" }}
-            >
-              <Video size={20} />
-            </IconButton>
           </Stack>
         </Box>
 
