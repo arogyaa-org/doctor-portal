@@ -95,7 +95,7 @@ const DoctorDashboard = () => {
     if (!doctorId) {
       setDocterId(decodedToken().id);
     }
-  }, []);
+  }, [decodedToken().id]);
 
   // Request notification permission
   useEffect(() => {
@@ -109,14 +109,16 @@ const DoctorDashboard = () => {
       }
     }
   }, []);
+  console.log(process.env.NEXT_PUBLIC_SOCKET_ENDPOINT, 'socket endpoint')
 
   // Initialize socket connection
   useEffect(() => {
+    console.log('ye call hua?')
     const newSocket = io(`${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`, {
       transports: ["websocket"],
       autoConnect: true,
     });
-    console.log(process.env.NEXT_PUBLIC_SOCKET_ENDPOINT, 'socket endpoint')
+
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket");
       setIsConnected(true);
@@ -174,7 +176,7 @@ const DoctorDashboard = () => {
     return () => {
       newSocket.close();
     };
-  }, [doctorId]);
+  }, [decodedToken().id]);
 
   const handleRoomNotification = useCallback(
     (notification) => {
