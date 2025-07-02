@@ -78,7 +78,7 @@ const GradientButton = styled(Button)(({ theme, gradient }) => ({
 // eslint-disable-next-line react/function-component-definition
 const DoctorDashboard = () => {
   const { decodedToken } = Utility();
-  const [doctorId, setDocterId] = useState("");
+  const [doctorId, setDocterId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [rooms, setRooms] = useState({
@@ -95,7 +95,7 @@ const DoctorDashboard = () => {
     if (!doctorId) {
       setDocterId(decodedToken().id);
     }
-  }, [decodedToken, doctorId]);
+  }, []);
 
   // Request notification permission
   useEffect(() => {
@@ -116,7 +116,7 @@ const DoctorDashboard = () => {
       transports: ["websocket"],
       autoConnect: true,
     });
-
+    console.log(process.env.NEXT_PUBLIC_SOCKET_ENDPOINT, 'socket endpoint')
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket");
       setIsConnected(true);
@@ -245,8 +245,9 @@ const DoctorDashboard = () => {
 
   const fetchRooms = useCallback(async () => {
     try {
-      const response = await fetcher("chat", `/doctor/${doctorId}/rooms`);
-      setRooms(response.data);
+      const { data } = await fetcher("chat", `/doctor/${doctorId}/rooms`);
+      console.log(data, 'roomdata')
+      setRooms(data);
     } catch (error) {
       console.error("Error fetching rooms:", error);
     }
