@@ -177,11 +177,10 @@ const AppointmentDetails = () => {
   );
 
   useEffect(() => {
-    if (appointmentData) {
-      setStatus(appointmentData?.data?.status);
-      refetch();
+    if (appointmentData?.data?.status) {
+      setStatus(appointmentData.data.status);
     }
-  }, [appointmentData, refetch]);
+  }, [appointmentData?.data?.status]);
 
   const toggleVideo = () => {
     setShowVideo(!showVideo);

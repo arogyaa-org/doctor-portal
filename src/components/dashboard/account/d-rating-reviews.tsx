@@ -11,7 +11,7 @@ import {
 import { fetcher } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 
-const { decodedToken } = Utility();
+const { decodedToken, capitalizeFirstLetter } = Utility();
 const { id: doctorId } = decodedToken() || {};
 
 interface Testimonial {
@@ -66,7 +66,23 @@ export default function DoctorRatingsAndReviews(): React.JSX.Element {
   }, [doctorId]);
 
   if (loading) {
-    return <Typography>Loading testimonials...</Typography>;
+    return (
+      <Stack spacing={2}>
+        {[1, 2, 3].map((i) => (
+          <Card key={i} variant="outlined">
+            <CardContent>
+              <Stack direction="row" spacing={2}>
+                <Box width={50} height={50} bgcolor="#ccc" borderRadius="50%" />
+                <Box flex={1}>
+                  <Box width="30%" height={20} bgcolor="#ddd" mb={1} />
+                  <Box width="100%" height={15} bgcolor="#eee" />
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        ))}
+      </Stack>
+    );
   }
 
   if (error) {
@@ -95,8 +111,10 @@ export default function DoctorRatingsAndReviews(): React.JSX.Element {
             <Stack direction="row" spacing={2} alignItems="flex-start">
               {/* User Profile Image */}
               <Avatar
-                src="/api/placeholder/128/128" // No image field in schema, using fallback
-                alt={review.patientId.username}
+                src="/api/placeholder/128/128"
+                alt={(
+                  review.patientId.username?.charAt(0) || "U"
+                ).toUpperCase()}
                 sx={{ width: 50, height: 50 }}
               />
 
@@ -109,7 +127,7 @@ export default function DoctorRatingsAndReviews(): React.JSX.Element {
                     alignItems="center"
                   >
                     <Typography variant="h6">
-                      {review.patientId.username}
+                      {capitalizeFirstLetter(review.patientId.username)}
                     </Typography>
                     <Rating
                       value={review.rating || 0}
