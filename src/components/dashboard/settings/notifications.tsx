@@ -37,10 +37,7 @@ export default function DoctorNotificationPopover({
   );
 
   const { decodedToken } = Utility();
-  const token = decodedToken();
-  console.log("Decoded Token:", token);
   const doctorId = decodedToken()?.id;
-  console.log("Doctor ID:", doctorId);
 
   const unreadCount = useSelector(
     (state: RootState) =>

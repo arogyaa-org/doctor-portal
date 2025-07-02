@@ -176,7 +176,7 @@ const DoctorDashboard = () => {
     return () => {
       newSocket.close();
     };
-  }, [decodedToken().id]);
+  }, [doctorId]);
 
   const handleRoomNotification = useCallback(
     (notification) => {
