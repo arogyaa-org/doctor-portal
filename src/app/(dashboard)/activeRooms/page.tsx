@@ -113,23 +113,54 @@ const DoctorDashboard = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    console.log('ye call hua?')
+    if (!doctorId) {
+      console.log('Doctor ID not available, skipping socket connection');
+      setIsConnected(false);
+      return;
+    }
+
     const newSocket = io(`${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"], // Add polling as fallback
       autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      timeout: 20000,
+      forceNew: true, // Force new connection
     });
 
+    // Connection event handlers
     newSocket.on("connect", () => {
-      console.log("Connected to WebSocket");
+      console.log("Connected to WebSocket with ID:", newSocket.id);
       setIsConnected(true);
-      newSocket.emit("joinDoctorRoom", { doctorId });
+
+      // Only join doctor room if doctorId is available
+      if (doctorId) {
+        console.log("Joining doctor room with ID:", doctorId);
+        newSocket.emit("joinDoctorRoom", { doctorId });
+      }
     });
 
-    newSocket.on("disconnect", () => {
-      console.log("Disconnected from WebSocket");
+    newSocket.on("connect_error", (error) => {
+      console.error("Connection error:", error);
       setIsConnected(false);
     });
 
+    newSocket.on("disconnect", (reason) => {
+      console.log("Disconnected from WebSocket. Reason:", reason);
+      setIsConnected(false);
+    });
+
+    newSocket.on("reconnect", (attemptNumber) => {
+      console.log("Reconnected after", attemptNumber, "attempts");
+      setIsConnected(true);
+    });
+
+    newSocket.on("reconnect_error", (error) => {
+      console.error("Reconnection error:", error);
+    });
+
+    // Room event handlers
     newSocket.on("joinedDoctorRoom", (data) => {
       console.log("Joined doctor room:", data);
     });
@@ -169,12 +200,19 @@ const DoctorDashboard = () => {
 
     setSocket(newSocket);
 
-    setTimeout(() => {
+    // Fetch rooms after a short delay
+    const fetchTimer = setTimeout(() => {
       fetchRooms();
-    }, 1000);
+    }, 2000); // Increased delay
 
+    // Cleanup function
     return () => {
-      newSocket.close();
+      clearTimeout(fetchTimer);
+      if (newSocket) {
+        console.log("Cleaning up socket connection");
+        newSocket.removeAllListeners();
+        newSocket.close();
+      }
     };
   }, [doctorId]);
 
