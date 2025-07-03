@@ -70,7 +70,7 @@ export function SignInForm({
 
       try {
         const response: DoctorResponse = await creator(
-          clientRole === "admin" || clientRole === "sub admin" ? "user" : clientRole ?? "doctor",
+          clientRole === "admin" || clientRole === "sub_admin" ? "user" : clientRole ?? "doctor",
           "/login",
           {
             email: values.email,

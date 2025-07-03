@@ -27,7 +27,7 @@ export function MainNav(): React.JSX.Element {
   const userPopover = usePopover<HTMLDivElement>();
   const { decodedToken } = Utility();
   const { role, userName, doctorName, id } = decodedToken() || {};
-  const displayName = role === "admin" || role === "sub admin" ? userName : doctorName;
+  const displayName = role === "admin" || role === "sub_admin" ? userName : doctorName;
 
   const { value: doctorData } = useGetDoctor(
     null,
@@ -46,7 +46,7 @@ export function MainNav(): React.JSX.Element {
   const profileImage =
     role === "doctor"
       ? doctorData?.data?.profilePicture || null
-      : (role === "admin" || role === "sub admin")
+      : (role === "admin" || role === "sub_admin")
         ? userData?.data?.profilePicture || null
         : null;
 
