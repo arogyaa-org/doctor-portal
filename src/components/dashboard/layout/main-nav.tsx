@@ -27,7 +27,7 @@ export function MainNav(): React.JSX.Element {
   const userPopover = usePopover<HTMLDivElement>();
   const { decodedToken } = Utility();
   const { role, userName, doctorName, id } = decodedToken() || {};
-  const displayName = role === "admin" ? userName : doctorName;
+  const displayName = role === "admin" || role === "sub admin" ? userName : doctorName;
 
   const { value: doctorData } = useGetDoctor(
     null,
@@ -46,7 +46,7 @@ export function MainNav(): React.JSX.Element {
   const profileImage =
     role === "doctor"
       ? doctorData?.data?.profilePicture || null
-      : role === "admin"
+      : (role === "admin" || role === "sub admin")
         ? userData?.data?.profilePicture || null
         : null;
 
@@ -117,7 +117,7 @@ export function MainNav(): React.JSX.Element {
               </Badge>
             </Tooltip>
             <Avatar
-              src={ profileImage }
+              src={profileImage}
               onClick={userPopover.handleOpen}
               ref={userPopover.anchorRef}
               sx={{ cursor: "pointer" }}

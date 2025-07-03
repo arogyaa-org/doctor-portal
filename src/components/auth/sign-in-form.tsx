@@ -70,7 +70,7 @@ export function SignInForm({
 
       try {
         const response: DoctorResponse = await creator(
-          clientRole === "admin" ? "user" : clientRole ?? "guest",
+          clientRole === "admin" || clientRole === "sub admin" ? "user" : clientRole ?? "doctor",
           "/login",
           {
             email: values.email,
@@ -178,7 +178,7 @@ export function SignInForm({
               startIcon={<AdminPanelSettings />}
               onClick={() => setClientRole("admin")}
             >
-              Login as Admin
+              Login as Admin/Sub Admin
             </Button>
           </Box>
         ) : (

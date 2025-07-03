@@ -14,8 +14,8 @@ import { User as UserIcon } from "@phosphor-icons/react/dist/ssr/User";
 
 import { paths } from "@/paths";
 import { Utility } from "@/utils";
-import { useGetDoctor } from "@/hooks/doctor"; 
-import { useGetuser } from "@/hooks/user"; 
+import { useGetDoctor } from "@/hooks/doctor";
+import { useGetuser } from "@/hooks/user";
 
 interface UserPopoverProps {
   anchorEl: Element | null;
@@ -31,7 +31,7 @@ export function UserPopover({
   const popoverRef = React.useRef<HTMLDivElement | null>(null);
   const { capitalizeFirstLetter, decodedToken } = Utility();
   const { role, email, userName, doctorName, id } = decodedToken() || {};
-  const displayName = role === "admin" ? userName : doctorName;
+  const displayName = role === "admin" || role === "sub admin" ? userName : doctorName;
 
   const { value: doctorData } = useGetDoctor(
     null,
@@ -50,7 +50,7 @@ export function UserPopover({
   const profileImage =
     role === "doctor"
       ? doctorData?.data?.profilePicture || null
-      : role === "admin"
+      : role === "admin" || role === "sub admin"
         ? userData?.data?.profilePicture || null
         : null;
 
@@ -116,7 +116,7 @@ export function UserPopover({
         {/* User Avatar */}
         <Avatar
           alt={displayName || "User"}
-          src={ profileImage }
+          src={profileImage}
           sx={{
             width: 40,
             height: 40,

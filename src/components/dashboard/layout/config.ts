@@ -19,7 +19,11 @@ const getNavItemsByRole = (): NavItemConfig[] => {
   const { decodedToken } = Utility();
   const role = decodedToken()?.role;
 
-  if (role === "doctor") {
+  if (role === "sub admin") {
+    return navItems.filter(item =>
+      ["dashboard", "doctor", "speciality", "qualification", "symptoms"].includes(item.key)
+    );
+  } else if (role === "doctor") {
     return navItems.filter(item =>
       ["dashboard", "appointment", "activeRooms"].includes(item.key)
     );
