@@ -81,6 +81,9 @@ const DoctorDashboard = () => {
   const [doctorId, setDocterId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [disconnectedRooms, setDisconnectedRooms] = useState(new Set());
+  const [patientNames, setPatientNames] = useState({});
+
   const [rooms, setRooms] = useState({
     activeRooms: [],
     scheduledRooms: [],
@@ -109,12 +112,12 @@ const DoctorDashboard = () => {
       }
     }
   }, []);
-  console.log(process.env.NEXT_PUBLIC_SOCKET_ENDPOINT, 'socket endpoint')
+  console.log(process.env.NEXT_PUBLIC_SOCKET_ENDPOINT, "socket endpoint");
 
   // Initialize socket connection
   useEffect(() => {
     if (!doctorId) {
-      console.log('Doctor ID not available, skipping socket connection');
+      console.log("Doctor ID not available, skipping socket connection");
       setIsConnected(false);
       return;
     }
@@ -195,7 +198,12 @@ const DoctorDashboard = () => {
 
     newSocket.on("roomCompleted", (data) => {
       console.log("Room completed:", data);
+      setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
       fetchRooms();
+    });
+
+    newSocket.on("disconnectFromRoom", (data) => {
+      setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
     });
 
     setSocket(newSocket);
@@ -215,6 +223,16 @@ const DoctorDashboard = () => {
       }
     };
   }, [doctorId]);
+
+  useEffect(() => {
+    const allPatientIds = [
+      ...rooms.activeRooms,
+      ...rooms.scheduledRooms,
+      ...rooms.recentRooms,
+    ].map((room) => room.patientId);
+
+    [...new Set(allPatientIds)].forEach(fetchPatientName);
+  }, [rooms]);
 
   const handleRoomNotification = useCallback(
     (notification) => {
@@ -283,10 +301,26 @@ const DoctorDashboard = () => {
     [notificationPermission]
   );
 
+  const fetchPatientName = async (patientId) => {
+    if (!patientId || patientNames[patientId]) return;
+
+    try {
+      const { Patientdata } = await fetcher(
+        "patient",
+        `get-patient-by-id/${patientId}`
+      );
+      const name = Patientdata?.data?.username;
+
+      setPatientNames((prev) => ({ ...prev, [patientId]: name || "Unknown" }));
+    } catch (error) {
+      console.error("Error fetching patient name:", error);
+      setPatientNames((prev) => ({ ...prev, [patientId]: "Unknown" }));
+    }
+  };
+
   const fetchRooms = useCallback(async () => {
     try {
       const { data } = await fetcher("chat", `/doctor/${doctorId}/rooms`);
-      console.log(data, 'roomdata')
       setRooms(data);
     } catch (error) {
       console.error("Error fetching rooms:", error);
@@ -627,7 +661,8 @@ const DoctorDashboard = () => {
                               fontWeight="bold"
                               color="text.primary"
                             >
-                              Patient: {room.patientId}
+                              Patient:{" "}
+                              {patientNames[room.patientId] || "Loading..."}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Type: <strong>{room.type}</strong> | Duration:{" "}
@@ -654,7 +689,9 @@ const DoctorDashboard = () => {
                               )
                             }
                           >
-                            Join Call
+                            {disconnectedRooms.has(room.roomId)
+                              ? "Rejoin Call"
+                              : "Join Call"}
                           </GradientButton>
                           <GradientButton
                             gradient="linear-gradient(to right, #64748b, #475569)"

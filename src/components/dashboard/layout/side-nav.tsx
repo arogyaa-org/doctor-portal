@@ -12,6 +12,7 @@ import type { NavItemConfig } from "@/types/nav";
 import { paths } from "@/paths";
 import { isNavItemActive } from "@/utils/is-nav-item-active";
 import { Logo } from "@/components/core/logo";
+import { Utility } from "@/utils";
 
 import { useNavItems } from "./config";
 import { navIcons } from "./nav-icons";
@@ -19,6 +20,7 @@ import { navIcons } from "./nav-icons";
 export function SideNav(): React.JSX.Element {
   const pathname = usePathname();
   const navItems = useNavItems();
+  const role = Utility()?.decodedToken()?.role; // Get the role using Utility
 
   return (
     <Box
@@ -58,18 +60,20 @@ export function SideNav(): React.JSX.Element {
           <Logo color="light" height={122} width={142} />
         </Box>
       </Stack>
-      <Divider sx={{ borderColor: "var(--mui-palette-neutral-700)" }} />
       <Box component="nav" sx={{ flex: "1 1 auto", p: "12px" }}>
         {renderNavItems({
           pathname,
           items: navItems.slice(0, 4),
         })}
-        <Divider
-          sx={{ borderColor: "var(--mui-palette-neutral-700)", my: 2 }}
-        />
+        {/* Conditionally render Divider if role is not sub_admin */}
+        {role !== "sub_admin" && (
+          <Divider
+            sx={{ borderColor: "var(--mui-palette-neutral-700)", my: 2 }}
+          />
+        )}
         {renderNavItems({
           pathname,
-          items: navItems.slice(4), 
+          items: navItems.slice(4),
         })}
       </Box>
     </Box>
