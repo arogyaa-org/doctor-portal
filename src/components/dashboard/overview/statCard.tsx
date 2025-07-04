@@ -38,8 +38,8 @@ export function StatCard({
         boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
         transition: "all 0.3s ease",
         "&:hover": {
-          transform: "scale(1.05)",
-          boxShadow: "0px 8px 25px rgba(0, 0, 0, 0.1)",
+          transform: "scale(1.02)", 
+          boxShadow: "0px 6px 15px rgba(0, 0, 0, 0.08)", 
           zIndex: 10,
         },
       }}

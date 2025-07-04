@@ -69,6 +69,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
     rawDoctorName.charAt(0).toUpperCase() + rawDoctorName.slice(1);
 
   const isDoctor = role === "doctor";
+  const isSubAdmin = role === "sub_admin";
 
   const [selectedDate, setSelectedDate] = React.useState<dayjs.Dayjs | null>(
     dayjs().startOf("month")
@@ -153,7 +154,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
       id: appt._id,
       patientName: appt.patientData[0]?.username || "Unknown Patient",
       doctorName: appt.doctorData[0]?.username || "Unknown Doctor",
-      time: appt.appointmentTime, // Use raw appointmentTime string
+      time: appt.appointmentTime,
       status: appt.status,
     }));
   }, [todayAppointmentData]);
@@ -172,8 +173,8 @@ const Page = React.memo(function Page(): React.JSX.Element {
         id: appt._id,
         patientName: appt.patientData[0]?.username || "Unknown Patient",
         doctorName: appt.doctorData[0]?.username || "Unknown Doctor",
-        date: appt.appointmentDate, // Use raw appointmentDate string
-        time: appt.appointmentTime, // Use raw appointmentTime string
+        date: appt.appointmentDate,
+        time: appt.appointmentTime,
         status: appt.status,
       }));
     }, [upcomingAppointmentData]);
@@ -629,7 +630,6 @@ const Page = React.memo(function Page(): React.JSX.Element {
                               if (filterType === "year-only") {
                                 setSelectedDate(newValue.startOf("year"));
                               } else if (filterType === "month-year") {
-                                // Check if the year has changed, reset to start of the new year
                                 if (
                                   selectedDate &&
                                   newValue.year() !== selectedDate.year()
@@ -697,35 +697,46 @@ const Page = React.memo(function Page(): React.JSX.Element {
         selectedDate={selectedDate}
         filterType={filterType}
         isDoctor={isDoctor}
+        isSubAdmin={isSubAdmin}
       />
 
-      <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
-        <ReusableTable
-          items={todayAppointments}
-          columns={todayAppointmentColumns}
-          title="Today's Appointments"
-          statusKey="status"
-          statusMap={appointmentStatusMap}
-          actionButtonText="View All Appointments"
-          sx={cardStyle}
-        />
-      </Grid>
+      {!isSubAdmin && (
+        <>
+          <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
+            <ReusableTable
+              items={todayAppointments}
+              columns={todayAppointmentColumns}
+              title="Today's Appointments"
+              statusKey="status"
+              statusMap={appointmentStatusMap}
+              actionButtonText="View All Appointments"
+              sx={cardStyle}
+            />
+          </Grid>
 
-      <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
-        <ReusableTable
-          items={upcomingAppointments}
-          columns={upcomingAppointmentColumns}
-          title="Upcoming Appointments"
-          statusKey="status"
-          statusMap={appointmentStatusMap}
-          actionButtonText="View All Appointments"
-          sx={cardStyle}
-        />
-      </Grid>
+          <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
+            <ReusableTable
+              items={upcomingAppointments}
+              columns={upcomingAppointmentColumns}
+              title="Upcoming Appointments"
+              statusKey="status"
+              statusMap={appointmentStatusMap}
+              actionButtonText="View All Appointments"
+              sx={cardStyle}
+            />
+          </Grid>
+        </>
+      )}
 
       <Grid container item spacing={3} xs={12}>
-        {!isDoctor && (
-          <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
+        {(isSubAdmin || !isDoctor) && (
+          <Grid
+            xs={12}
+            sm={12}
+            md={isSubAdmin ? 12 : 6}
+            lg={isSubAdmin ? 12 : 6}
+            xl={isSubAdmin ? 12 : 6}
+          >
             <Sales
               endpoint={getEndpointWithYear(doctorOnboardingEndpoint)}
               title="Doctors Onboarded"
@@ -740,7 +751,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
             />
           </Grid>
         )}
-        {!isDoctor && (
+        {!isSubAdmin && !isDoctor && (
           <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
             <Sales
               endpoint={getEndpointWithYear(patientOnboardingEndpoint)}
@@ -755,33 +766,37 @@ const Page = React.memo(function Page(): React.JSX.Element {
             />
           </Grid>
         )}
-        <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
-          <Sales
-            endpoint={getEndpointWithYear(paymentMonthlyEndpoint)}
-            title="Payments"
-            syncButtonText="Sync"
-            overviewButtonText="View All"
-            chartType="bar"
-            enableStacked={true}
-            yAxisSuffix="K"
-            yAxisTicks={getPaymentTicks}
-            sx={cardStyle}
-            selectedYear={selectedYear}
-          />
-        </Grid>
-        <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
-          <Sales
-            endpoint={getEndpointWithYear(appointmentsMonthlyEndpoint)}
-            title="Appointments"
-            syncButtonText="Update"
-            chartType="bar"
-            enableStacked={true}
-            yAxisSuffix=""
-            yAxisTicks={getAppointmentTicks}
-            sx={cardStyle}
-            selectedYear={selectedYear}
-          />
-        </Grid>
+        {!isSubAdmin && (
+          <>
+            <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
+              <Sales
+                endpoint={getEndpointWithYear(paymentMonthlyEndpoint)}
+                title="Payments"
+                syncButtonText="Sync"
+                overviewButtonText="View All"
+                chartType="bar"
+                enableStacked={true}
+                yAxisSuffix="K"
+                yAxisTicks={getPaymentTicks}
+                sx={cardStyle}
+                selectedYear={selectedYear}
+              />
+            </Grid>
+            <Grid xs={12} sm={12} md={6} lg={6} xl={6}>
+              <Sales
+                endpoint={getEndpointWithYear(appointmentsMonthlyEndpoint)}
+                title="Appointments"
+                syncButtonText="Update"
+                chartType="bar"
+                enableStacked={true}
+                yAxisSuffix=""
+                yAxisTicks={getAppointmentTicks}
+                sx={cardStyle}
+                selectedYear={selectedYear}
+              />
+            </Grid>
+          </>
+        )}
       </Grid>
     </Grid>
   );
@@ -793,12 +808,14 @@ const StatCards = React.memo(function StatCards({
   selectedDate,
   filterType,
   isDoctor,
+  isSubAdmin,
 }: {
   role?: string;
   doctorId?: string;
   selectedDate: dayjs.Dayjs | null;
   filterType: string;
   isDoctor: boolean;
+  isSubAdmin: boolean;
 }) {
   const baseStatsEndpoint =
     role === "doctor" && doctorId
@@ -875,46 +892,60 @@ const StatCards = React.memo(function StatCards({
     iconColor: cardColors[titleToColorKey[stat.title]] || "#000000",
   });
 
-  const statCardsRow1 = stats
+  // Deduplicate and filter stats for sub_admin to ensure only one "DOCTORS" stat
+  const filteredStats = React.useMemo(() => {
+    if (isSubAdmin) {
+      const doctorStats = stats.filter((stat) => stat.title === "DOCTORS");
+      return doctorStats.length > 0 ? [doctorStats[0]] : [];
+    }
+    return stats;
+  }, [stats, isSubAdmin]);
+
+  const statCardsRow1 = filteredStats
     .filter((stat) =>
-      isDoctor
-        ? [
-            "TOTAL PAYMENTS",
-            "BOOKED APPOINTMENTS",
-            "COMPLETED APPOINTMENTS",
-          ].includes(stat.title)
-        : [
-            "DOCTORS",
-            "PATIENTS",
-            "TOTAL PAYMENTS",
-            "BOOKED APPOINTMENTS",
-          ].includes(stat.title)
+      isSubAdmin
+        ? stat.title === "DOCTORS"
+        : isDoctor
+          ? [
+              "TOTAL PAYMENTS",
+              "BOOKED APPOINTMENTS",
+              "COMPLETED APPOINTMENTS",
+            ].includes(stat.title)
+          : [
+              "DOCTORS",
+              "PATIENTS",
+              "TOTAL PAYMENTS",
+              "BOOKED APPOINTMENTS",
+            ].includes(stat.title)
     )
     .map(mapStatToCard);
 
-  const statCardsRow2 = stats
-    .filter((stat) =>
-      isDoctor
-        ? [
-            "CANCELLED APPOINTMENTS",
-            "PENDING APPOINTMENTS",
-            "APPOINTMENTS THIS MONTH",
-          ].includes(stat.title)
-        : [
-            "COMPLETED APPOINTMENTS",
-            "CANCELLED APPOINTMENTS",
-            "PENDING APPOINTMENTS",
-            "APPOINTMENTS THIS MONTH",
-          ].includes(stat.title)
-    )
-    .map(mapStatToCard);
+  // Explicitly empty for sub_admin to prevent any cards in row 2
+  const statCardsRow2 = isSubAdmin
+    ? []
+    : filteredStats
+        .filter((stat) =>
+          isDoctor
+            ? [
+                "CANCELLED APPOINTMENTS",
+                "PENDING APPOINTMENTS",
+                "APPOINTMENTS THIS MONTH",
+              ].includes(stat.title)
+            : [
+                "COMPLETED APPOINTMENTS",
+                "CANCELLED APPOINTMENTS",
+                "PENDING APPOINTMENTS",
+                "APPOINTMENTS THIS MONTH",
+              ].includes(stat.title)
+        )
+        .map(mapStatToCard);
 
   const getStatCardWidth = (cardsInRow: any[]) => ({
     xs: 12,
-    sm: 6,
-    md: 6,
-    lg: isDoctor ? 4 : 12 / Math.min(cardsInRow.length, 4),
-    xl: isDoctor ? 4 : 12 / Math.min(cardsInRow.length, 4),
+    sm: isSubAdmin ? 12 : 6,
+    md: isSubAdmin ? 12 : 6,
+    lg: isSubAdmin ? 12 : isDoctor ? 4 : 12 / Math.min(cardsInRow.length, 4),
+    xl: isSubAdmin ? 12 : isDoctor ? 4 : 12 / Math.min(cardsInRow.length, 4),
   });
 
   if (statsLoading) {
@@ -955,39 +986,35 @@ const StatCards = React.memo(function StatCards({
               Icon={card.Icon}
               title={card.title}
               iconColor={card.iconColor}
-              sx={{ position: "relative" }}
+              sx={{ position: "relative", isDoctor }}
             />
           </Grid>
         ))
       )}
 
-      {statCardsRow2.length === 0 ? (
-        <Grid xs={12}>
-          <Typography>No stat cards available for Row 2</Typography>
-        </Grid>
-      ) : (
-        statCardsRow2.map((card, index) => (
-          <Grid
-            key={`stat-card-2-${index}`}
-            {...getStatCardWidth(statCardsRow2)}
-            sx={{ mt: 1, position: "relative" }}
-          >
-            <StatCard
-              value={card.value}
-              diff={card.diff}
-              trend={card.trend}
-              Icon={card.Icon}
-              title={card.title}
-              iconColor={card.iconColor}
-              sx={
-                card.title === "PENDING APPOINTMENTS" && isDoctor
-                  ? { isDoctor: true, position: "relative" }
-                  : { position: "relative" }
-              }
-            />
-          </Grid>
-        ))
-      )}
+      {statCardsRow2.length === 0
+        ? null
+        : statCardsRow2.map((card, index) => (
+            <Grid
+              key={`stat-card-2-${index}`}
+              {...getStatCardWidth(statCardsRow2)}
+              sx={{ mt: 1, position: "relative" }}
+            >
+              <StatCard
+                value={card.value}
+                diff={card.diff}
+                trend={card.trend}
+                Icon={card.Icon}
+                title={card.title}
+                iconColor={card.iconColor}
+                sx={
+                  card.title === "PENDING APPOINTMENTS" && isDoctor
+                    ? { isDoctor: true, position: "relative" }
+                    : { position: "relative" }
+                }
+              />
+            </Grid>
+          ))}
     </>
   );
 });
@@ -1008,7 +1035,7 @@ interface TableAppointmentData {
   id: string;
   patientName: string;
   doctorName: string;
-  time: string; // Changed from Date to string
+  time: string;
   status: string;
 }
 
@@ -1016,8 +1043,8 @@ interface UpcomingTableAppointmentData {
   id: string;
   patientName: string;
   doctorName: string;
-  date: string; // Changed from Date to string
-  time: string; // Changed from Date to string
+  date: string;
+  time: string;
   status: string;
 }
 
