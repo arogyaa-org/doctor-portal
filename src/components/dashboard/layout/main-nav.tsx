@@ -16,7 +16,7 @@ import { MobileNav } from './mobile-nav';
 import { UserPopover } from './user-popover';
 import { Utility } from '@/utils';
 import { useGetDoctor } from "@/hooks/doctor";
-import { useGetuser } from "@/hooks/user";
+import { useGetUser } from "@/hooks/user";
 
 import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
@@ -36,9 +36,9 @@ export function MainNav(): React.JSX.Element {
     1
   );
 
-  const { value: userData } = useGetuser(
+  const { value: userData } = useGetUser(
     null,
-    id && role === "admin" ? `/get-user-by-id/${id}` : "",
+    id && (role === "admin" || role === "sub_admin") ? `/get-user-by-id/${id}` : "",
     1,
     1
   );

@@ -4,7 +4,8 @@ import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 
 import { creator, fetcher, modifier } from '@/apis/apiClient';
-import {user, userData} from '@/types/user';
+import { User, UserData } from '@/types/user';
+
 /**
  * Hook for fetching users with SWR (stale-while-revalidate) strategy.
  *
@@ -14,17 +15,17 @@ import {user, userData} from '@/types/user';
  * @param limit 
  * @returns An object containing the fetched users, loading, error state, and refetch function.
  */
-export const useGetuser = (
-    initialData: user | null,
+export const useGetUser = (
+    initialData: User | null,
     pathKey: string,
     page: number = 1,
     limit: number = 5,
     keyword?: string
 ) => {
     const url = `${pathKey}?page=${page}&limit=${limit}&keyword=${keyword}`;
-    const { data: swrData, error, isValidating } = useSWR<user | null>(
+    const { data: swrData, error, isValidating } = useSWR<User | null>(
         url,
-        () => fetcher<user>('user', url),
+        () => fetcher<User>('user', url),
         {
             fallbackData: initialData,
             refreshInterval: initialData ? 3600000 : 0,
@@ -54,20 +55,20 @@ export const useGetuser = (
  * Hook for creating a new user.
  * 
  * @param pathKey - The API path key used to create a new user.
- * @returns An object containing the created user, loading state, error state, and the createuser function.
+ * @returns An object containing the created user, loading state, error state, and the createUser function.
  */
-export const useCreateuser = (pathKey: string) => {
+export const useCreateUser = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const createuser = async (newuserData: Partial<userData>) => {
+    const createUser = async (newUserData: Partial<UserData>) => {
         setLoading(true);
         setError(null);
         try {
             const headers = {
                 "Content-Type": "multipart/form-data"
             };
-            const user = await creator<user, Partial<userData>>('user', pathKey, newuserData, headers);
+            const user = await creator<User, Partial<UserData>>('user', pathKey, newUserData, headers);
             return user;
         } catch (err) {
             setError(err as Error);
@@ -75,27 +76,27 @@ export const useCreateuser = (pathKey: string) => {
             setLoading(false);
         }
     };
-    return { loading, error, createuser };
+    return { loading, error, createUser };
 };
 
 /**
  * Hook for modifying an existing user.
  * 
  * @param pathKey - The API path key used to modify a user.
- * @returns An object containing the updated user, loading state, error state, and the modifyuser function.
+ * @returns An object containing the updated user, loading state, error state, and the modifyUser function.
  */
-export const useModifyuser = (pathKey: string) => {
+export const useModifyUser = (pathKey: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const modifyuser = async (updateduserData: Partial<userData>) => {
+    const modifyUser = async (updatedUserData: Partial<UserData>) => {
         setLoading(true);
         setError(null);
         try {
             const headers = {
                 "Content-Type": "multipart/form-data"
             };
-            const user = await modifier<user, Partial<userData>>('user', pathKey, updateduserData, headers);
+            const user = await modifier<User, Partial<UserData>>('user', pathKey, updatedUserData, headers);
             return user;
         } catch (err) {
             setError(err as Error);
@@ -103,5 +104,5 @@ export const useModifyuser = (pathKey: string) => {
             setLoading(false);
         }
     };
-    return { loading, error, modifyuser };
+    return { loading, error, modifyUser };
 };

@@ -17,6 +17,9 @@ export const paths = {
     integrations: '/integrations',
     settings: '/settings',
     activeRooms: '/activeRooms',
+    user: '/user',
+    userCreate: '/user/create',
+    userUpdate: (id: string | number) => `/user/update/${id}`,
   },
   errors: { notFound: '/not-found' },
 } as const;

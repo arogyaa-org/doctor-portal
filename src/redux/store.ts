@@ -8,6 +8,7 @@ import symptomsReducer from "./features/symptomsSlice";
 import qualifuicationReducer from "./features/qualificationSlice";
 import toastReducer from "./features/toastSlice";
 import notificationReducer from "./features/notificationSlice";
+import userReducer from "./features/userSlice";
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +20,7 @@ export const store = configureStore({
     qualification: qualifuicationReducer,
     toast: toastReducer,
     notifications: notificationReducer,
+    user: userReducer,
   },
 });
 

@@ -13,6 +13,7 @@ export const navItems = [
   { key: 'symptoms', title: 'Symptom', href: paths.dashboard.symptom, icon: 'medical-services' },
   { key: 'settings', title: 'Settings', href: paths.dashboard.settings, icon: 'gear-six' },
   { key: 'activeRooms', title: 'Active Rooms', href: paths.dashboard.activeRooms, icon: 'Video' },
+  { key: 'user', title: 'User', href: paths.dashboard.user, icon: 'users' },
 ] satisfies NavItemConfig[];
 
 const getNavItemsByRole = (): NavItemConfig[] => {
@@ -21,7 +22,7 @@ const getNavItemsByRole = (): NavItemConfig[] => {
 
   if (role === "sub_admin") {
     return navItems.filter(item =>
-      ["dashboard", "doctor", "speciality", "qualification", "symptoms"].includes(item.key)
+      ["dashboard", "doctor", "speciality", "qualification", "symptoms", "user"].includes(item.key)
     );
   } else if (role === "doctor") {
     return navItems.filter(item =>

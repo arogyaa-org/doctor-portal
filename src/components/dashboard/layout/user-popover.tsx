@@ -15,7 +15,7 @@ import { User as UserIcon } from "@phosphor-icons/react/dist/ssr/User";
 import { paths } from "@/paths";
 import { Utility } from "@/utils";
 import { useGetDoctor } from "@/hooks/doctor";
-import { useGetuser } from "@/hooks/user";
+import { useGetUser } from "@/hooks/user";
 
 interface UserPopoverProps {
   anchorEl: Element | null;
@@ -40,9 +40,9 @@ export function UserPopover({
     1
   );
 
-  const { value: userData } = useGetuser(
+  const { value: userData } = useGetUser(
     null,
-    id && role === "admin" ? `/get-user-by-id/${id}` : "",
+    id && (role === "admin" || role === "sub_admin") ? `/get-user-by-id/${id}` : "",
     1,
     1
   );
@@ -50,7 +50,7 @@ export function UserPopover({
   const profileImage =
     role === "doctor"
       ? doctorData?.data?.profilePicture || null
-      : role === "admin" || role === "sub_admin"
+      : (role === "admin" || role === "sub_admin")
         ? userData?.data?.profilePicture || null
         : null;
 
