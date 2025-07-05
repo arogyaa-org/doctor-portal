@@ -86,7 +86,7 @@ const initialValues: DoctorData = {
   contact: "",
   gender: "",
   dob: "",
-  experience: null,
+  experience: '',
   bio: "",
   tags: [],
   languagesSpoken: [],
@@ -126,7 +126,7 @@ const DoctorForm: React.FC = () => {
   const { toast } = useSelector((state: RootState) => state.toast);
   const { createDoctor } = useCreateDoctor("create-doctor");
   const { modifyDoctor } = useModifyDoctor("update-doctor");
-  const { getIdsFromObject, toastAndNavigate } = Utility();
+  const { decodedToken, getIdsFromObject, toastAndNavigate } = Utility();
   const doctorId = params?.id;
 
   const { value: specialities } = useGetSpeciality(
@@ -205,6 +205,7 @@ const DoctorForm: React.FC = () => {
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
           availability: formattedAvailability,
+          createdBy: decodedToken().id
         });
         if (response?.statusCode === 409) {
           toastAndNavigate(
@@ -273,8 +274,8 @@ const DoctorForm: React.FC = () => {
       try {
         const formattedAvailability = values.availability.map((slot: any) => ({
           ...slot,
-          startTime: slot.startTime, 
-          endTime: slot.endTime, 
+          startTime: slot.startTime,
+          endTime: slot.endTime,
         }));
 
         const payload = {
@@ -680,7 +681,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.specializationIds &&
-                      typeof errors.specializationIds === "string"
+                        typeof errors.specializationIds === "string"
                         ? errors.specializationIds
                         : ""
                     }
@@ -731,7 +732,7 @@ const DoctorForm: React.FC = () => {
                     error={!!touched.symptomIds && !!errors.symptomIds}
                     helperText={
                       touched.symptomIds &&
-                      typeof errors.symptomIds === "string"
+                        typeof errors.symptomIds === "string"
                         ? errors.symptomIds
                         : ""
                     }
@@ -785,7 +786,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.qualificationIds &&
-                      typeof errors.qualificationIds === "string"
+                        typeof errors.qualificationIds === "string"
                         ? errors.qualificationIds
                         : ""
                     }
@@ -939,7 +940,7 @@ const DoctorForm: React.FC = () => {
                       <DeleteIcon sx={{ fontSize: "18px" }} />
                     </IconButton>
                     {values.profilePicture?.preview ||
-                    typeof values.profilePicture === "string" ? (
+                      typeof values.profilePicture === "string" ? (
                       <Box
                         component="img"
                         src={

@@ -28,6 +28,7 @@ export interface DoctorData {
         endTime: string;
     }[];
     isVerified: boolean;
+    createdBy?: string;
     createdAt?: string;
     updatedAt?: string;
     __v?: number;
