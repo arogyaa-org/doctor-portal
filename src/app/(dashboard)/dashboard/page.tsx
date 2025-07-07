@@ -115,33 +115,39 @@ const Page = React.memo(function Page(): React.JSX.Element {
     return baseEndpoint;
   };
 
+  // Only call today and upcoming appointments for non-sub_admin roles
   const {
     data: todayAppointmentData,
     loading: todayAppointmentLoading,
     error: todayAppointmentError,
-  } = useGetDashboard(
-    null,
-    todayAppointmentEndpoint,
-    undefined,
-    undefined,
-    undefined,
-    role === "doctor" ? doctorId : undefined
-  );
+  } = isSubAdmin
+    ? { data: null, loading: false, error: null }
+    : useGetDashboard(
+        null,
+        todayAppointmentEndpoint,
+        undefined,
+        undefined,
+        undefined,
+        role === "doctor" ? doctorId : undefined
+      );
 
   const {
     data: upcomingAppointmentData,
     loading: upcomingAppointmentLoading,
     error: upcomingAppointmentError,
-  } = useGetDashboard(
-    null,
-    upcomingAppointmentEndpoint,
-    undefined,
-    undefined,
-    undefined,
-    role === "doctor" ? doctorId : undefined
-  );
+  } = isSubAdmin
+    ? { data: null, loading: false, error: null }
+    : useGetDashboard(
+        null,
+        upcomingAppointmentEndpoint,
+        undefined,
+        undefined,
+        undefined,
+        role === "doctor" ? doctorId : undefined
+      );
 
   const todayAppointments: TableAppointmentData[] = React.useMemo(() => {
+    if (isSubAdmin) return []; // No appointments for sub_admin
     const rawAppointments = todayAppointmentData;
 
     const appointments = Array.isArray(rawAppointments)
@@ -157,10 +163,11 @@ const Page = React.memo(function Page(): React.JSX.Element {
       time: appt.appointmentTime,
       status: appt.status,
     }));
-  }, [todayAppointmentData]);
+  }, [todayAppointmentData, isSubAdmin]);
 
   const upcomingAppointments: UpcomingTableAppointmentData[] =
     React.useMemo(() => {
+      if (isSubAdmin) return []; // No appointments for sub_admin
       const rawAppointments = upcomingAppointmentData;
 
       const appointments = Array.isArray(rawAppointments)
@@ -177,7 +184,7 @@ const Page = React.memo(function Page(): React.JSX.Element {
         time: appt.appointmentTime,
         status: appt.status,
       }));
-    }, [upcomingAppointmentData]);
+    }, [upcomingAppointmentData, isSubAdmin]);
 
   const getDoctorPatientTicks = (data: ChartSeriesData[]): number[] => {
     const maxValue = Math.max(...data.flatMap((series) => series.data));
@@ -920,7 +927,6 @@ const StatCards = React.memo(function StatCards({
     )
     .map(mapStatToCard);
 
-  // Explicitly empty for sub_admin to prevent any cards in row 2
   const statCardsRow2 = isSubAdmin
     ? []
     : filteredStats

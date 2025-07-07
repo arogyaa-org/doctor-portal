@@ -31,14 +31,6 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       flex: 1.5,
     },
     {
-      field: "experience",
-      headerName: "Experience (Years)",
-      headerClassName: "super-app-theme--header",
-      headerAlign: "center",
-      align: "center",
-      flex: 1,
-    },
-    {
       field: "bio",
       headerName: "Bio",
       headerClassName: "super-app-theme--header",
