@@ -33,8 +33,8 @@ const schema = zod.object({
 type Values = zod.infer<typeof schema>;
 
 const defaultValues = {
-  email: "john.doe@example.com",
-  password: "John@123",
+  email: "adarsh@gmail.com",
+  password: "Adarsh@123",
 } satisfies Values;
 
 interface SignInFormProps {
@@ -70,17 +70,22 @@ export function SignInForm({
 
       try {
         const response: DoctorResponse = await creator(
-          clientRole === "admin" || clientRole === "sub_admin" ? "user" : clientRole ?? "doctor",
+          (clientRole === "admin" || clientRole === "sub_admin" || clientRole === "sales") ? "user" : clientRole ?? "doctor",
           "/login",
           {
             email: values.email,
             password: values.password,
           }
         );
-        console.log(response, "this is response from login");
+        const { role } = decodedToken(response.token);
+        console.log(response, "this is response from login", role, 'role');
+
         if (response?.statusCode === 200) {
           document.cookie = `token=${response.token}; path=/; max-age=${1 * 24 * 60 * 60}; secure; samesite=strict`;
           router.push("/dashboard");
+          if (role === 'sales') {
+            router.push("/sales-dashboard");
+          }
         } else if (
           response?.statusCode === 409 ||
           response?.statusCode === 404
@@ -178,7 +183,7 @@ export function SignInForm({
               startIcon={<AdminPanelSettings />}
               onClick={() => setClientRole("admin")}
             >
-              Login as Admin/Sub Admin
+              Login as User
             </Button>
           </Box>
         ) : (
@@ -220,7 +225,7 @@ export function SignInForm({
                   color: clientRole === "admin" ? "#122647" : "#15b79e",
                 }}
               >
-                {capitalizeFirstLetter(clientRole)} Login
+                {clientRole !== 'doctor' ? 'User' : capitalizeFirstLetter(clientRole)} Login
               </Typography>
             </Box>
 

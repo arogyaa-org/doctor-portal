@@ -20,6 +20,10 @@ export const paths = {
     user: '/user',
     userCreate: '/user/create',
     userUpdate: (id: string | number) => `/user/update/${id}`,
+    salesDashboard: '/sales-dashboard',
+    salesDoctor: '/sales-doctor',
+    salesDoctorCreate: '/sales-doctor/create',
+    salesDoctorUpdate: (id: string | number) => `/sales-doctor/update/${id}`,
   },
   errors: { notFound: '/not-found' },
 } as const;

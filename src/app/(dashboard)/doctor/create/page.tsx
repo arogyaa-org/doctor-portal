@@ -287,6 +287,7 @@ const DoctorForm: React.FC = () => {
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
           availability: formattedAvailability,
+          updatedBy: decodedToken().id
         };
         if (!updatePassword) {
           delete payload.password;

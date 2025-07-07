@@ -14,6 +14,8 @@ export const navItems = [
   { key: 'settings', title: 'Settings', href: paths.dashboard.settings, icon: 'gear-six' },
   { key: 'activeRooms', title: 'Active Rooms', href: paths.dashboard.activeRooms, icon: 'Video' },
   { key: 'user', title: 'User', href: paths.dashboard.user, icon: 'users' },
+  { key: 'salesDashboard', title: 'Dashboard', href: paths.dashboard.salesDashboard, icon: 'chart-pie' },
+  { key: 'salesDoctor', title: 'Doctor', href: paths.dashboard.salesDoctor, icon: 'user' },
 ] satisfies NavItemConfig[];
 
 const getNavItemsByRole = (): NavItemConfig[] => {
@@ -27,6 +29,10 @@ const getNavItemsByRole = (): NavItemConfig[] => {
   } else if (role === "doctor") {
     return navItems.filter(item =>
       ["dashboard", "appointment", "activeRooms"].includes(item.key)
+    );
+  } else if (role === "sales") {
+    return navItems.filter(item =>
+      ["salesDashboard", "salesDoctor"].includes(item.key)
     );
   }
   return navItems;
