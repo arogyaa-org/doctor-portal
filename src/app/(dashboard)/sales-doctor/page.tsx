@@ -15,6 +15,7 @@ import { paths } from "@/paths";
 import { doctorDatagridColumns } from "./doctorConfig";
 import { setDoctor } from "@/redux/features/doctorSlice";
 import { useGetDoctor } from "@/hooks/doctor";
+import { Utility } from "@/utils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -29,6 +30,9 @@ const Page: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
+  const { decodedToken } = Utility();
+  const role = decodedToken()?.role;
+  const userId = decodedToken()?.id;
 
   const apiParams = useMemo(
     () => ({
@@ -40,12 +44,14 @@ const Page: React.FC = () => {
   );
 
   const { value: data, refetch } = useGetDoctor(
-    null,
-    "get-doctors",
-    apiParams.page,
-    apiParams.limit,
-    apiParams.search
-  );
+      null,
+      role === "sales"
+        ? `get-doctors-created-by-user-id/${userId}`
+        : "get-doctors",
+      apiParams.page,
+      apiParams.limit,
+      apiParams.search
+    );
 
   useEffect(() => {
     if (data?.results && !isEqual(data, doctor)) {

@@ -122,15 +122,18 @@ const DoctorDashboard = () => {
       return;
     }
 
-    const newSocket = io(`${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`, {
-      transports: ["websocket", "polling"], // Add polling as fallback
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      timeout: 20000,
-      forceNew: true, // Force new connection
-    });
+    const newSocket = io(
+      `${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`,
+      {
+        transports: ["websocket", "polling"], // Add polling as fallback
+        autoConnect: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+        timeout: 20000,
+        forceNew: true, // Force new connection
+      }
+    );
 
     // Connection event handlers
     newSocket.on("connect", () => {
@@ -305,7 +308,7 @@ const DoctorDashboard = () => {
     if (!patientId || patientNames[patientId]) return;
 
     try {
-      const { Patientdata } = await fetcher(
+      const Patientdata = await fetcher(
         "patient",
         `get-patient-by-id/${patientId}`
       );
@@ -662,7 +665,7 @@ const DoctorDashboard = () => {
                               color="text.primary"
                             >
                               Patient:{" "}
-                              {patientNames[room.patientId] || "Loading..."}
+                              {patientNames[room.patientId] || room.patientId}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Type: <strong>{room.type}</strong> | Duration:{" "}
@@ -790,7 +793,8 @@ const DoctorDashboard = () => {
                               fontWeight="bold"
                               color="text.primary"
                             >
-                              Patient: {room.patientId}
+                              Patient:{" "}
+                              {patientNames[room.patientId] || room.patientId}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Type: <strong>{room.type}</strong> | Duration:{" "}
@@ -889,7 +893,8 @@ const DoctorDashboard = () => {
                             fontWeight="bold"
                             color="text.primary"
                           >
-                            Patient: {room.patientId}
+                            Patient:{" "}
+                            {patientNames[room.patientId] || room.patientId}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Type: <strong>{room.type}</strong> | Duration:{" "}
