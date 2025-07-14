@@ -5,7 +5,6 @@
  * restricted rights software. The use, reproduction, or disclosure of this software is subject to
  * restrictions set forth in your license agreement with F2Fintech.
  */
-
 import { Typography, Box, Button, Select, MenuItem } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
 import { format } from "date-fns";
@@ -73,7 +72,6 @@ export const datagridColumns = ({
       minWidth: 80,
       renderCell: ({ row: { appointmentDate } }) => {
         if (!appointmentDate) return <Typography>N/A</Typography>;
-
         try {
           const formattedDate = format(
             new Date(appointmentDate),
@@ -226,12 +224,41 @@ export const datagridColumns = ({
       },
     },
     {
+      field: "paymentStatus",
+      headerName: "Payment Status",
+      headerAlign: "center",
+      align: "center",
+      flex: 1.2,
+      renderCell: ({ row }) => {
+        type PaymentStatusKey = "success" | "failed" | "pending" | "not found";
+        const paymentStatusOptions: Record<
+          PaymentStatusKey,
+          { label: string; color: string }
+        > = {
+          success: { label: "Success", color: "#28a745" },
+          failed: { label: "Failed", color: "#FF0000" },
+          pending: { label: "Pending", color: "#f39c12" },
+          "not found": { label: "Not Found", color: "#6c757d" },
+        };
+
+        const statusKey: PaymentStatusKey =
+          (row.paymentStatus?.toLowerCase() as PaymentStatusKey) || "not found";
+        const statusInfo =
+          paymentStatusOptions[statusKey] || paymentStatusOptions["not found"];
+        return (
+          <Typography sx={{ fontWeight: 500, color: statusInfo.color }}>
+            {statusInfo.label}
+          </Typography>
+        );
+      },
+    },
+
+    {
       field: "action",
       headerName: "Action",
       headerAlign: "center",
       align: "center",
       flex: 1,
-      minWidth: 100,
       renderCell: ({ row: { _id } }) => (
         <Box
           width="85%"

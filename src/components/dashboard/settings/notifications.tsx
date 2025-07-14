@@ -8,11 +8,13 @@ import { Utility } from "@/utils";
 import { fetcher, modifier } from "@/apis/apiClient";
 import { RootState } from "@/redux/store";
 import { setNotifications } from "@/redux/features/notificationSlice";
+import { useRouter } from "next/navigation";
 
 interface Notification {
   _id: string;
   message: string;
   status: "read" | "unread";
+  appointmentId?: string;
 }
 
 interface NotificationPopoverProps {
@@ -20,6 +22,7 @@ interface NotificationPopoverProps {
   anchorEl: HTMLButtonElement | null;
   onClose: () => void;
   setUnreadCount?: (count: number) => void;
+  setReadCount?: (count: number) => void;
 }
 
 export default function DoctorNotificationPopover({
@@ -27,11 +30,14 @@ export default function DoctorNotificationPopover({
   anchorEl,
   onClose,
   setUnreadCount,
+  setReadCount,
 }: NotificationPopoverProps) {
   const [tabValue, setTabValue] = useState(0);
   const [visibleNotifications, setVisibleNotifications] = useState(5);
 
   const dispatch = useDispatch();
+  const router = useRouter();
+
   const notifications = useSelector(
     (state: RootState) => state.notifications.notifications
   );
@@ -45,6 +51,12 @@ export default function DoctorNotificationPopover({
         (n) => n.status === "unread"
       ).length
   );
+  const readCount = useSelector(
+    (state: RootState) =>
+      (state.notifications.notifications || []).filter(
+        (n) => n.status === "read"
+      ).length
+  );
 
   const fetchNotifications = async () => {
     if (!doctorId) return;
@@ -54,7 +66,6 @@ export default function DoctorNotificationPopover({
         "notification",
         `get-notifications/${doctorId}`
       );
-      console.log("Fetched Notifications:", response);
       dispatch(setNotifications(Array.isArray(response) ? response : []));
     } catch (err) {
       console.error("Fetch error:", err);
@@ -71,6 +82,12 @@ export default function DoctorNotificationPopover({
     }
   }, [unreadCount, setUnreadCount]);
 
+  useEffect(() => {
+    if (setReadCount) {
+      setReadCount(readCount);
+    }
+  }, [readCount, setReadCount]);
+
   const markAsRead = async (id: string) => {
     try {
       await modifier("notification", `update-notification/${id}`, {
@@ -82,6 +99,21 @@ export default function DoctorNotificationPopover({
       dispatch(setNotifications(updated));
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const onNotificationClick = async (notification: Notification) => {
+    try {
+      if (notification.status === "unread") {
+        await markAsRead(notification._id);
+      }
+
+      if (notification.appointmentId) {
+        router.push(`/appointment/details/${notification.appointmentId}`);
+        onClose();
+      }
+    } catch (err) {
+      console.error("Notification click error:", err);
     }
   };
 
@@ -126,7 +158,7 @@ export default function DoctorNotificationPopover({
         }}
       >
         <Tab label={`Unread (${unreadCount})`} />
-        <Tab label="Read" />
+        <Tab label={`Read (${readCount})`} />
       </Tabs>
 
       <Box sx={{ maxHeight: 400, overflowY: "auto", px: 2, py: 1 }}>
@@ -154,31 +186,43 @@ export default function DoctorNotificationPopover({
             {displayedNotifications.map((notification) => (
               <Box
                 key={notification._id}
+                onClick={() => onNotificationClick(notification)}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  borderBottom: "1px solid #f0f0f0",
-                  py: 1,
-                  gap: 1,
+                  p: 2,
+                  mb: 1,
+                  borderRadius: 2,
+                  backgroundColor:
+                    notification.status === "unread" ? "#f5f8ff" : "#f9f9f9",
+                  border: "1px solid #e0e0e0",
                   cursor: "pointer",
+                  transition: "0.2s",
+                  "&:hover": {
+                    backgroundColor: "#eaf1ff",
+                    boxShadow: "0px 2px 8px rgba(0,0,0,0.1)",
+                  },
                 }}
-                onClick={() =>
-                  notification.status === "unread" &&
-                  markAsRead(notification._id)
-                }
               >
                 <Typography
                   variant="body2"
                   sx={{
-                    color: notification.status === "unread" ? "#111" : "#666",
+                    color: "#333",
                     fontWeight: notification.status === "unread" ? 600 : 400,
+                    whiteSpace: "normal",
                   }}
                 >
                   {notification.message}
                 </Typography>
+                {notification.appointmentId && (
+                  <Typography
+                    variant="caption"
+                    sx={{ mt: 0.5, color: "#0070f3", display: "block" }}
+                  >
+                    Click to view appointment
+                  </Typography>
+                )}
               </Box>
             ))}
+
             {filteredNotifications.length > visibleNotifications && (
               <Box sx={{ mt: 1, textAlign: "center" }}>
                 <Button
