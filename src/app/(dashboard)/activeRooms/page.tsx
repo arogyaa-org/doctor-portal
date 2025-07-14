@@ -30,9 +30,12 @@ import {
   CircularProgress,
   Paper,
   Tooltip,
+  Dialog,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+import type { Socket } from "socket.io-client";
+import { paths } from "@/paths";
 
 // Custom styled components
 const GradientCard = styled(Card)(({ theme, gradient }) => ({
@@ -78,11 +81,18 @@ const GradientButton = styled(Button)(({ theme, gradient }) => ({
 // eslint-disable-next-line react/function-component-definition
 const DoctorDashboard = () => {
   const { decodedToken } = Utility();
-  const [doctorId, setDocterId] = useState(null);
-  const [socket, setSocket] = useState(null);
+  const [doctorId, setDocterId] = useState<string | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [disconnectedRooms, setDisconnectedRooms] = useState(new Set());
   const [patientNames, setPatientNames] = useState({});
+  // const [extendRequestData, setExtendRequestData] = useState(null);
+  const [openExtendDialog, setOpenExtendDialog] = useState(false);
+ 
+  const [extendRequestData, setExtendRequestData] = useState<{
+    doctorId: string;
+    appointmentId: string;
+  } | null>(null);
 
   const [rooms, setRooms] = useState({
     activeRooms: [],
@@ -94,11 +104,18 @@ const DoctorDashboard = () => {
   const [notificationPermission, setNotificationPermission] =
     useState("default");
 
+  // useEffect(() => {
+  //   if (!doctorId) {
+  //     setDocterId(decodedToken().id);
+  //   }
+  // }, [decodedToken().id]);
+
   useEffect(() => {
-    if (!doctorId) {
-      setDocterId(decodedToken().id);
+    const token = decodedToken();
+    if (token && token.id) {
+      setDocterId(token.id);
     }
-  }, [decodedToken().id]);
+  }, []);
 
   // Request notification permission
   useEffect(() => {
@@ -145,6 +162,12 @@ const DoctorDashboard = () => {
         console.log("Joining doctor room with ID:", doctorId);
         newSocket.emit("joinDoctorRoom", { doctorId });
       }
+    });
+
+    newSocket.on("request-extend-call", (data) => {
+      console.log("Received extension request from patient:", data);
+      setExtendRequestData(data);
+      setOpenExtendDialog(true);
     });
 
     newSocket.on("connect_error", (error) => {
@@ -337,7 +360,6 @@ const DoctorDashboard = () => {
       alert("Room URL not available");
     }
   };
-
   const completeRoom = async (roomId) => {
     try {
       const response = await creator(
@@ -354,9 +376,11 @@ const DoctorDashboard = () => {
         );
         fetchRooms();
       }
+      return response;
     } catch (error) {
       console.error("Error completing room:", error);
-      alert("Failed to complete room");
+
+      return null;
     }
   };
 
@@ -374,6 +398,30 @@ const DoctorDashboard = () => {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  // Accept handler
+  const handleAcceptExtension = () => {
+    if (!extendRequestData || !socket) return;
+    socket.emit("doctor-accepted-extension", {
+      appointmentId: extendRequestData.appointmentId,
+      doctorId: extendRequestData.doctorId,
+    });
+    setOpenExtendDialog(false);
+    alert(
+      "You accepted the extension request. Patient will proceed to payment."
+    );
+  };
+
+  // Reject handler
+  const handleRejectExtension = () => {
+    if (!extendRequestData || !socket) return;
+    socket.emit("doctor-rejected-extension", {
+      appointmentId: extendRequestData.appointmentId,
+      doctorId: extendRequestData.doctorId,
+    });
+    setOpenExtendDialog(false);
+    alert("You rejected the extension request.");
   };
 
   const getStatusIcon = (status) => {
@@ -698,7 +746,22 @@ const DoctorDashboard = () => {
                           </GradientButton>
                           <GradientButton
                             gradient="linear-gradient(to right, #64748b, #475569)"
-                            onClick={() => completeRoom(room.roomId)}
+                            onClick={async () => {
+                             
+                              const response = await completeRoom(room.roomId);
+
+                              if (response?.success && room.appointmentId) {
+                                router.push(
+                                  paths.dashboard.appointmentDetails_id(
+                                    room.appointmentId
+                                  )
+                                );
+                              } else {
+                                alert(
+                                  "Appointment ID not found, cannot redirect."
+                                );
+                              }
+                            }}
                           >
                             Complete
                           </GradientButton>
@@ -708,6 +771,24 @@ const DoctorDashboard = () => {
                   </GradientCard>
                 ))}
               </Stack>
+              {extendRequestData && (
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleAcceptExtension}
+                  >
+                    Accept Extend
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleRejectExtension}
+                  >
+                    Reject Extend
+                  </Button>
+                </Stack>
+              )}
             </Box>
           </Paper>
         )}
