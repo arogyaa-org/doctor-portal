@@ -77,14 +77,14 @@ const GradientButton = styled(Button)(({ theme, gradient }) => ({
 
 // eslint-disable-next-line react/function-component-definition
 const DoctorDashboard = () => {
-  const { decodedToken } = Utility();
+  const { decodedToken, getLocalStorage} = Utility();
   const [doctorId, setDocterId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [patientNames, setPatientNames] = useState({});
   const [disconnectedRooms, setDisconnectedRooms] = useState(() => {
-    const storedRooms = localStorage?.getItem("disconnectedRooms");
-    return storedRooms ? new Set(JSON.parse(storedRooms)) : new Set();
+    const storedRooms = getLocalStorage("disconnectedRooms");
+    return storedRooms ? new Set((storedRooms)) : new Set();
   });
 
   const [rooms, setRooms] = useState({
@@ -121,7 +121,6 @@ const DoctorDashboard = () => {
       }
     }
   }, []);
-  console.log(process.env.NEXT_PUBLIC_SOCKET_ENDPOINT, "socket endpoint");
 
   // Initialize socket connection
   useEffect(() => {
