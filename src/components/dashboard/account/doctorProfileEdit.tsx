@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Box,
   Avatar,
@@ -119,6 +119,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
         value ? dayjs(value, "YYYY-MM-DD", true).isValid() : false
       ),
     ...(role === "doctor" && {
+      bio: yup.string().max(500, "Bio is too long!"),
       experience: yup
         .number()
         .max(70, "Experience must be less than 70 years")
@@ -127,7 +128,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       specializationIds: yup
         .array()
         .min(1, "Select At Least 1 Specialization")
-        .max(4, "Maximum 5 Specialization Allowed")
+        .max(4, "Maximum 4 Specializations Allowed")
         .required("Specializations are required"),
       symptomIds: yup
         .array()
@@ -136,7 +137,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       qualificationIds: yup
         .array()
         .min(1, "Select At Least 1 Qualification")
-        .max(4, "Maximum 5 Qualifications Allowed")
+        .max(4, "Maximum 4 Qualifications Allowed")
         .required("Qualifications are required"),
       availability: yup.array().of(
         yup.object().shape({
@@ -166,8 +167,13 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                 );
               }
             ),
-          hospitalName: yup.string().nullable(),
-          hospitalLocation: yup.string().nullable(),
+          hospital: yup
+            .object()
+            .shape({
+              name: yup.string().nullable(),
+              location: yup.string().nullable(),
+            })
+            .nullable(),
         })
       ),
     }),
@@ -176,6 +182,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
   const [isQualificationEditing, setIsQualificationEditing] = useState(false);
   const [isSpecializationEditing, setIsSpecializationEditing] = useState(false);
   const [isSymptomsEditing, setIsSymptomsEditing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Initialize react-hook-form with Yup resolver
   const {
@@ -183,14 +190,109 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
     handleSubmit,
     formState: { errors },
     setValue,
+    trigger,
+    watch,
   } = useForm<DoctorData>({
     resolver: yupResolver(validationSchema),
     defaultValues: {
       ...editFields,
       dob: editFields.dob ? dayjs(editFields.dob).format("YYYY-MM-DD") : "",
-      password: undefined, // Explicitly exclude password
+      password: undefined,
+      availability: editFields.availability.map((slot) => ({
+        ...slot,
+        hospital: {
+          name: slot.hospital?.name || slot.hospitalName || "",
+          location: slot.hospital?.location || slot.hospitalLocation || "",
+        },
+      })),
     },
   });
+
+  // Watch form values to avoid unnecessary updates
+  const watchedValues = watch();
+
+  // Update editFields when doctorProfileData changes to ensure hospital fields are populated
+  useEffect(() => {
+    if (doctorProfileData) {
+      setEditFields({
+        ...doctorProfileData,
+        availability: doctorProfileData.availability.map((slot) => ({
+          ...slot,
+          hospital: {
+            name: slot.hospital?.name || slot.hospitalName || "",
+            location: slot.hospital?.location || slot.hospitalLocation || "",
+          },
+        })),
+      });
+    }
+  }, [doctorProfileData, setEditFields]);
+
+  // Memoized handleFieldChange to prevent re-creation on every render
+  const handleFieldChange = useCallback(
+    (
+      field: keyof DoctorData,
+      value: any,
+      index?: number,
+      subField?: string
+    ) => {
+      if (index !== undefined && field === "availability" && subField) {
+        const updatedAvailability = [...editFields.availability];
+        if (subField.startsWith("hospital.")) {
+          const hospitalField = subField.split(".")[1] as "name" | "location";
+          updatedAvailability[index] = {
+            ...updatedAvailability[index],
+            hospital: {
+              ...updatedAvailability[index].hospital,
+              [hospitalField]: value,
+            },
+          };
+        } else {
+          updatedAvailability[index] = {
+            ...updatedAvailability[index],
+            [subField]: value,
+          };
+        }
+        if (
+          JSON.stringify(updatedAvailability) !==
+          JSON.stringify(editFields.availability)
+        ) {
+          setEditFields((prev) => ({ ...prev, [field]: updatedAvailability }));
+          setValue("availability", updatedAvailability);
+          trigger("availability");
+        }
+      } else {
+        if (
+          field === "qualificationIds" ||
+          field === "specializationIds" ||
+          field === "symptomIds"
+        ) {
+          const newValue = Array.isArray(value)
+            ? value.filter(
+                (id) => id && typeof id === "string" && id.length > 0
+              )
+            : value;
+          if (JSON.stringify(newValue) !== JSON.stringify(editFields[field])) {
+            setEditFields((prev) => ({ ...prev, [field]: newValue }));
+            setValue(field, newValue);
+            trigger(field);
+          }
+        } else if (
+          JSON.stringify(value) !== JSON.stringify(editFields[field])
+        ) {
+          setEditFields((prev) => ({ ...prev, [field]: value }));
+          setValue(field, value);
+          if (
+            ["qualificationIds", "specializationIds", "symptomIds"].includes(
+              field
+            )
+          ) {
+            trigger(field);
+          }
+        }
+      }
+    },
+    [editFields, setValue, trigger]
+  );
 
   useEffect(() => {
     if (nameInputRef.current) {
@@ -205,102 +307,105 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       bioInputRef.current.style.height = "auto";
       bioInputRef.current.style.height = `${bioInputRef.current.scrollHeight}px`;
     }
-  }, [editFields.bio]);
+  }, [watchedValues.bio]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const previewUrl = URL.createObjectURL(file);
-    setEditFields((prev) => ({
-      ...prev,
-      profilePicture: { file, preview: previewUrl },
-    }));
-    setValue("profilePicture", { file, preview: previewUrl });
-  };
-
-  const handleFieldChange = (
-    field: keyof DoctorData,
-    value: any,
-    index?: number,
-    subField?: string
-  ) => {
-    if (index !== undefined && field === "availability") {
-      const updatedAvailability = [...editFields.availability];
-      if (subField) {
-        updatedAvailability[index] = {
-          ...updatedAvailability[index],
-          [subField]: value,
-        };
-      }
-      setEditFields({ ...editFields, [field]: updatedAvailability });
-      setValue("availability", updatedAvailability);
-    } else {
-      setEditFields({ ...editFields, [field]: value });
-      setValue(field, value);
+    const newProfilePicture = { file, preview: previewUrl };
+    if (
+      JSON.stringify(newProfilePicture) !==
+      JSON.stringify(editFields.profilePicture)
+    ) {
+      setEditFields((prev) => ({
+        ...prev,
+        profilePicture: newProfilePicture,
+      }));
+      setValue("profilePicture", newProfilePicture);
     }
   };
 
   const handleCancelChanges = () => {
     setIsEditOpen(false);
     setEditFields(doctorProfileData ? { ...doctorProfileData } : editFields);
+    setErrorMessage(null);
   };
 
   const handleSaveChanges = async (data: DoctorData) => {
     try {
-      // Exclude password from payload
-      const { password, ...dataWithoutPassword } = data;
+      const formData = new FormData();
+      formData.append("_id", editFields._id || "");
+      formData.append("username", data.username || "");
+      formData.append("email", data.email || "");
+      formData.append("contact", data.contact || "");
+      formData.append("gender", data.gender || "");
+      formData.append("dob", data.dob || "");
+      formData.append("status", data.status || "");
+      if (role === "doctor") {
+        formData.append("bio", data.bio || "");
+        formData.append("experience", data.experience?.toString() || "");
+        formData.append("consultationFee", data.consultationFee || "");
+        data.qualificationIds.forEach((qual, index) => {
+          const qualId =
+            qual && typeof qual === "string" && qual.length > 0 ? qual : "";
+          if (qualId) {
+            formData.append(`qualificationIds[${index}]`, qualId);
+          } else {
+            console.warn(`Invalid qualification ID at index ${index} skipped`);
+          }
+        });
+        data.specializationIds.forEach((spec, index) => {
+          const specId =
+            spec && typeof spec === "string" && spec.length > 0 ? spec : "";
+          if (specId) {
+            formData.append(`specializationIds[${index}]`, specId);
+          } else {
+            console.warn(`Invalid specialization ID at index ${index} skipped`);
+          }
+        });
+        data.symptomIds.forEach((sym, index) => {
+          const symId =
+            sym && typeof sym === "string" && sym.length > 0 ? sym : "";
+          if (symId) {
+            formData.append(`symptomIds[${index}]`, symId);
+          } else {
+            console.warn(`Invalid symptom ID at index ${index} skipped`);
+          }
+        });
+        data.availability.forEach((slot, index) => {
+          formData.append(`availability[${index}][day]`, slot.day || "");
+          formData.append(`availability[${index}][startTime]`, slot.startTime || "");
+          formData.append(`availability[${index}][endTime]`, slot.endTime || "");
+          if (slot.hospital?.name || slot.hospital?.location) {
+            formData.append(`availability[${index}][hospital][name]`, slot.hospital?.name || "");
+            formData.append(`availability[${index}][hospital][location]`, slot.hospital?.location || "");
+          }
+          if (slot._id) {
+            formData.append(`availability[${index}][_id]`, slot._id);
+          }
+        });
+      }
+      if (data.profilePicture?.file) {
+        formData.append("profilePicture", data.profilePicture.file);
+      }
 
-      // Normalize qualificationIds, specializationIds, and symptomIds to arrays of strings
-      const normalizedQualificationIds =
-        role === "doctor"
-          ? dataWithoutPassword.qualificationIds.map((qual) =>
-              typeof qual === "object" && qual._id ? qual._id : qual
-            )
-          : [];
-      const normalizedSpecializationIds =
-        role === "doctor"
-          ? dataWithoutPassword.specializationIds.map((spec) =>
-              typeof spec === "object" && spec._id ? spec._id : spec
-            )
-          : [];
-      const normalizedSymptomIds =
-        role === "doctor"
-          ? dataWithoutPassword.symptomIds.map((sym) =>
-              typeof sym === "object" && sym._id ? sym._id : sym
-            )
-          : [];
-
-      // Map availability to backend format
-      const payload = {
-        ...dataWithoutPassword,
-        qualificationIds: normalizedQualificationIds,
-        specializationIds: normalizedSpecializationIds,
-        symptomIds: normalizedSymptomIds,
-        availability:
-          role === "doctor" && dataWithoutPassword.availability
-            ? dataWithoutPassword.availability.map((slot) => ({
-                day: slot.day,
-                startTime: slot.startTime, 
-                endTime: slot.endTime, 
-                hospital:
-                  slot.hospitalName && slot.hospitalLocation
-                    ? {
-                        name: slot.hospitalName,
-                        location: slot.hospitalLocation,
-                      }
-                    : undefined,
-                _id: slot._id,
-              }))
-            : [],
-      };
-
-      // Log the payload for debugging
-      console.log("Payload being sent to backend:", payload);
-
-      await modifyDoctor(payload);
-      setDoctorProfileData(dataWithoutPassword);
-      setIsEditOpen(false);
-    } catch (error) {
+      console.log("Payload being sent to backend:", Object.fromEntries(formData));
+      const response = await modifyDoctor(formData);
+      console.log("Backend response:", response);
+      if (response?.statusCode === 200) {
+        setDoctorProfileData({
+          ...data,
+          profilePicture: response.data.profilePicture || editFields.profilePicture,
+          _id: editFields._id,
+        });
+        setIsEditOpen(false);
+        setErrorMessage(null);
+      } else {
+        setErrorMessage(`Save failed: ${response?.message || "Unknown error"}`);
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || "Error updating profile. Please try again.");
       console.error("Error updating profile:", error);
     }
   };
@@ -309,16 +414,29 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
     if (!ids || !options || options.length === 0) return [];
     return ids
       .map((id) => {
-        if (typeof id === "object" && id._id) {
-          return id;
+        if (typeof id === "object" && id._id) return id;
+        const found = options.find((option) => option._id === id);
+        if (!found) {
+          console.warn(`ID ${id} not found in options`);
+          return null;
         }
-        return options.find((option) => option._id === id);
+        return found;
       })
-      .filter((item) => item !== undefined) as any[];
+      .filter((item) => item !== null && item !== undefined) as any[];
   };
 
   const isLoading =
     qualificationsLoading || specialitiesLoading || symptomsLoading;
+
+  if (!doctorProfileData || !editFields._id) {
+    return (
+      <Box sx={{ textAlign: "center", mt: 4 }}>
+        <Typography variant="h6" color="error">
+          Unable to load profile for editing. Please try again.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <>
@@ -333,7 +451,11 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       >
         <Box sx={{ position: "relative", width: 130, height: 130 }}>
           <Avatar
-            src={doctorProfileData?.profilePicture || ""}
+            src={
+              typeof editFields.profilePicture === "string"
+                ? editFields.profilePicture
+                : editFields.profilePicture?.preview || ""
+            }
             sx={{
               width: "100%",
               height: "100%",
@@ -560,6 +682,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                       background: "transparent",
                       cursor: "pointer",
                       width: "200px",
+                      outline: "none",
                     }}
                   >
                     <option value="Male">Male</option>
@@ -1084,7 +1207,9 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                         style={{
                           fontSize: "16px",
                           color: "#555",
-                          border: "2px solid #8F44FD",
+                          border: errors.availability?.[index]?.day
+                            ? "2px solid red"
+                            : "2px solid #8F44FD",
                           borderRadius: "6px",
                           padding: "6px 10px",
                           background: "transparent",
@@ -1104,20 +1229,22 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                       </select>
                       <input
                         type="text"
-                        value={slot.hospitalName || ""}
+                        value={slot.hospital?.name || ""}
                         onChange={(e) =>
                           handleFieldChange(
                             "availability",
                             e.target.value,
                             index,
-                            "hospitalName"
+                            "hospital.name"
                           )
                         }
                         placeholder="Hospital Name (Optional)"
                         style={{
                           fontSize: "16px",
                           color: "#555",
-                          border: "2px solid #8F44FD",
+                          border: errors.availability?.[index]?.hospital?.name
+                            ? "2px solid red"
+                            : "2px solid #8F44FD",
                           borderRadius: "6px",
                           padding: "6px 10px",
                           background: "transparent",
@@ -1126,22 +1253,29 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                           outline: "none",
                         }}
                       />
+                      {errors.availability?.[index]?.hospital?.name && (
+                        <Typography variant="body2" color="error">
+                          {errors.availability[index].hospital?.name?.message}
+                        </Typography>
+                      )}
                       <input
                         type="text"
-                        value={slot.hospitalLocation || ""}
+                        value={slot.hospital?.location || ""}
                         onChange={(e) =>
                           handleFieldChange(
                             "availability",
                             e.target.value,
                             index,
-                            "hospitalLocation"
+                            "hospital.location"
                           )
                         }
                         placeholder="Hospital Location (Optional)"
                         style={{
                           fontSize: "16px",
                           color: "#555",
-                          border: "2px solid #8F44FD",
+                          border: errors.availability?.[index]?.hospital?.location
+                            ? "2px solid red"
+                            : "2px solid #8F44FD",
                           borderRadius: "6px",
                           padding: "6px 10px",
                           background: "transparent",
@@ -1150,6 +1284,11 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                           outline: "none",
                         }}
                       />
+                      {errors.availability?.[index]?.hospital?.location && (
+                        <Typography variant="body2" color="error">
+                          {errors.availability[index].hospital?.location?.message}
+                        </Typography>
+                      )}
                       <TimePicker
                         label="Start Time"
                         value={
@@ -1173,20 +1312,17 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                               width: "200px",
                               "& .MuiOutlinedInput-root": {
                                 "& fieldset": {
-                                  border: errors.availability?.[index]
-                                    ?.startTime
+                                  border: errors.availability?.[index]?.startTime
                                     ? "2px solid red"
                                     : "2px solid #8F44FD",
                                 },
                                 "&:hover fieldset": {
-                                  border: errors.availability?.[index]
-                                    ?.startTime
+                                  border: errors.availability?.[index]?.startTime
                                     ? "2px solid red"
                                     : "2px solid #8F44FD",
                                 },
                                 "&.Mui-focused fieldset": {
-                                  border: errors.availability?.[index]
-                                    ?.startTime
+                                  border: errors.availability?.[index]?.startTime
                                     ? "2px solid red"
                                     : "2px solid #8F44FD",
                                 },
@@ -1279,8 +1415,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                     ...editFields.availability,
                     {
                       day: "",
-                      hospitalName: "",
-                      hospitalLocation: "",
+                      hospital: { name: "", location: "" },
                       startTime: "",
                       endTime: "",
                     },
@@ -1326,6 +1461,14 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
           Cancel
         </Button>
       </Box>
+
+      {errorMessage && (
+        <Box sx={{ textAlign: "center", mt: 2 }}>
+          <Typography variant="body2" color="error">
+            {errorMessage}
+          </Typography>
+        </Box>
+      )}
     </>
   );
 };

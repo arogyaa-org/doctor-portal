@@ -16,13 +16,11 @@ import EmailIcon from "@mui/icons-material/Email";
 import HistoryIcon from "@mui/icons-material/History";
 import ReviewsIcon from "@mui/icons-material/RateReview";
 import InfoIcon from "@mui/icons-material/Info";
-import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { styled } from "@mui/system";
 import PersonIcon from "@mui/icons-material/Person";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import SchoolIcon from "@mui/icons-material/School";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -157,20 +155,6 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
             }}
             onClick={handleImageClick}
           />
-          <IconButton
-            sx={{
-              position: "absolute",
-              bottom: 8,
-              right: -3,
-              bgcolor: "white",
-              boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
-              "&:hover": { bgcolor: "grey.100" },
-            }}
-            component="label"
-          >
-            <input type="file" accept="image/*" hidden />
-            <PhotoCamera fontSize="small" />
-          </IconButton>
         </Box>
 
         <Typography
@@ -487,10 +471,14 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
                       >
                         <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
                         <Typography variant="body2" sx={{ color: "#555" }}>
-                          {doctorProfileData.availability[0].hospitalName &&
-                          doctorProfileData.availability[0].hospitalLocation
-                            ? `${doctorProfileData.availability[0].hospitalName} - ${doctorProfileData.availability[0].hospitalLocation}`
-                            : "Hospital Not Specified"}
+                          {doctorProfileData.availability[0].hospital?.name &&
+                          doctorProfileData.availability[0].hospital?.location
+                            ? `${doctorProfileData.availability[0].hospital.name} - ${doctorProfileData.availability[0].hospital.location}`
+                            : doctorProfileData.availability[0].hospitalName &&
+                                doctorProfileData.availability[0]
+                                  .hospitalLocation
+                              ? `${doctorProfileData.availability[0].hospitalName} - ${doctorProfileData.availability[0].hospitalLocation}`
+                              : "Hospital Not Specified"}
                         </Typography>
                       </Box>
                       <Box
@@ -547,10 +535,13 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
                                       variant="body2"
                                       sx={{ color: "#555" }}
                                     >
-                                      {slot.hospitalName &&
-                                      slot.hospitalLocation
-                                        ? `${slot.hospitalName} - ${slot.hospitalLocation}`
-                                        : "Hospital Not Specified"}
+                                      {slot.hospital?.name &&
+                                      slot.hospital?.location
+                                        ? `${slot.hospital.name} - ${slot.hospital.location}`
+                                        : slot.hospitalName &&
+                                            slot.hospitalLocation
+                                          ? `${slot.hospitalName} - ${slot.hospitalLocation}`
+                                          : "Hospital Not Specified"}
                                     </Typography>
                                   </Box>
                                   <Box
