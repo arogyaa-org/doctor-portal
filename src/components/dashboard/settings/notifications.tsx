@@ -8,11 +8,13 @@ import { Utility } from "@/utils";
 import { fetcher, modifier } from "@/apis/apiClient";
 import { RootState } from "@/redux/store";
 import { setNotifications } from "@/redux/features/notificationSlice";
+import { useRouter } from "next/navigation"; 
 
 interface Notification {
   _id: string;
   message: string;
   status: "read" | "unread";
+  appointmentId?: string;
 }
 
 interface NotificationPopoverProps {
@@ -32,6 +34,8 @@ export default function DoctorNotificationPopover({
   const [visibleNotifications, setVisibleNotifications] = useState(5);
 
   const dispatch = useDispatch();
+  const router = useRouter();
+
   const notifications = useSelector(
     (state: RootState) => state.notifications.notifications
   );
@@ -82,6 +86,16 @@ export default function DoctorNotificationPopover({
       dispatch(setNotifications(updated));
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const onNotificationClick = (notification: Notification) => {
+    if (notification.status === "unread") {
+      markAsRead(notification._id);
+    }
+
+    if (notification.appointmentId) {
+      router.push(`/appointment/details/${notification.appointmentId}`);
     }
   };
 
