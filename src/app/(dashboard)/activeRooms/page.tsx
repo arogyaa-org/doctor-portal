@@ -36,6 +36,7 @@ import { styled } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import type { Socket } from "socket.io-client";
 import { paths } from "@/paths";
+import { useRouter } from "next/navigation";
 
 // Custom styled components
 const GradientCard = styled(Card)(({ theme, gradient }) => ({
@@ -88,7 +89,8 @@ const DoctorDashboard = () => {
   const [patientNames, setPatientNames] = useState({});
   // const [extendRequestData, setExtendRequestData] = useState(null);
   const [openExtendDialog, setOpenExtendDialog] = useState(false);
- 
+  const router = useRouter();
+
   const [extendRequestData, setExtendRequestData] = useState<{
     doctorId: string;
     appointmentId: string;
@@ -747,17 +749,14 @@ const DoctorDashboard = () => {
                           <GradientButton
                             gradient="linear-gradient(to right, #64748b, #475569)"
                             onClick={async () => {
-                             
                               const response = await completeRoom(room.roomId);
 
                               if (response?.success && room.appointmentId) {
                                 router.push(
-                                  paths.dashboard.appointmentDetails_id(
-                                    room.appointmentId
-                                  )
+                                  `/appointment/details/${room.appointmentId}`
                                 );
                               } else {
-                                alert(
+                                console.log(
                                   "Appointment ID not found, cannot redirect."
                                 );
                               }
