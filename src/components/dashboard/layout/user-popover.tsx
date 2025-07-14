@@ -31,7 +31,7 @@ export function UserPopover({
   const popoverRef = React.useRef<HTMLDivElement | null>(null);
   const { capitalizeFirstLetter, decodedToken } = Utility();
   const { role, email, userName, doctorName, id } = decodedToken() || {};
-  const displayName = role === "admin" || role === "sub_admin" ? userName : doctorName;
+  const displayName = role === "doctor" ? doctorName : userName;
 
   const { value: doctorData } = useGetDoctor(
     null,
@@ -42,7 +42,7 @@ export function UserPopover({
 
   const { value: userData } = useGetUser(
     null,
-    id && (role === "admin" || role === "sub_admin") ? `/get-user-by-id/${id}` : "",
+    id && (role === "admin" || role === "sub_admin" || role === "sales") ? `/get-user-by-id/${id}` : "",
     1,
     1
   );
@@ -50,7 +50,7 @@ export function UserPopover({
   const profileImage =
     role === "doctor"
       ? doctorData?.data?.profilePicture || null
-      : (role === "admin" || role === "sub_admin")
+      : (role === "admin" || role === "sub_admin" || role === "sales")
         ? userData?.data?.profilePicture || null
         : null;
 

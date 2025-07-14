@@ -81,13 +81,15 @@ const GradientButton = styled(Button)(({ theme, gradient }) => ({
 
 // eslint-disable-next-line react/function-component-definition
 const DoctorDashboard = () => {
-  const { decodedToken } = Utility();
-  const [doctorId, setDocterId] = useState<string | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const { decodedToken, getLocalStorage} = Utility();
+  const [doctorId, setDocterId] = useState(null);
+  const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [disconnectedRooms, setDisconnectedRooms] = useState(new Set());
   const [patientNames, setPatientNames] = useState({});
-  // const [extendRequestData, setExtendRequestData] = useState(null);
+  const [disconnectedRooms, setDisconnectedRooms] = useState(() => {
+    const storedRooms = getLocalStorage("disconnectedRooms");
+    return storedRooms ? new Set((storedRooms)) : new Set();
+  });
   const [openExtendDialog, setOpenExtendDialog] = useState(false);
   const router = useRouter();
 
@@ -100,7 +102,13 @@ const DoctorDashboard = () => {
     activeRooms: [],
     scheduledRooms: [],
     recentRooms: [],
-    summary: { totalActive: 0, totalScheduled: 0, totalRecent: 0 },
+    expiredRooms: [],
+    summary: {
+      totalActive: 0,
+      totalScheduled: 0,
+      totalRecent: 0,
+      totalExpired: 0,
+    },
   });
   const [notifications, setNotifications] = useState([]);
   const [notificationPermission, setNotificationPermission] =
@@ -131,7 +139,6 @@ const DoctorDashboard = () => {
       }
     }
   }, []);
-  console.log(process.env.NEXT_PUBLIC_SOCKET_ENDPOINT, "socket endpoint");
 
   // Initialize socket connection
   useEffect(() => {
@@ -180,6 +187,14 @@ const DoctorDashboard = () => {
     newSocket.on("disconnect", (reason) => {
       console.log("Disconnected from WebSocket. Reason:", reason);
       setIsConnected(false);
+
+      setDisconnectedRooms((prev) => {
+        const newSet = new Set(prev);
+        rooms.activeRooms.forEach((room) => {
+          newSet.add(room.roomId);
+        });
+        return newSet;
+      });
     });
 
     newSocket.on("reconnect", (attemptNumber) => {
@@ -257,6 +272,7 @@ const DoctorDashboard = () => {
       ...rooms.activeRooms,
       ...rooms.scheduledRooms,
       ...rooms.recentRooms,
+      ...rooms.expiredRooms,
     ].map((room) => room.patientId);
 
     [...new Set(allPatientIds)].forEach(fetchPatientName);
@@ -357,7 +373,28 @@ const DoctorDashboard = () => {
 
   const joinRoom = (roomId, url) => {
     if (url) {
-      window.open(url, "_blank");
+      const newWindow = window.open(url, "_blank");
+      const roomIdToTrack = roomId;
+
+      const interval = setInterval(() => {
+        if (newWindow.closed) {
+          console.log("Video tab closed, marking as disconnected");
+
+          setDisconnectedRooms((prev) => {
+            const newSet = new Set(prev);
+            newSet.add(roomIdToTrack);
+
+            localStorage.setItem(
+              "disconnectedRooms",
+              JSON.stringify([...newSet])
+            );
+
+            return newSet;
+          });
+
+          clearInterval(interval);
+        }
+      }, 500);
     } else {
       alert("Room URL not available");
     }
@@ -627,6 +664,42 @@ const DoctorDashboard = () => {
                   fontWeight="medium"
                 >
                   Completed sessions
+                </Typography>
+              </CardContent>
+            </GradientCard>
+          </Grid>
+
+          {/* Expired Calls Card */}
+          <Grid item xs={12} md={4}>
+            <GradientCard gradient="linear-gradient(to right, #fef2f2, #fee2e2)">
+              <CardContent>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={2}
+                >
+                  <Box sx={{ p: 1.5, bgcolor: "error.main", borderRadius: 2 }}>
+                    <AlertCircle size={24} color="white" />
+                  </Box>
+                  <AlertCircle size={20} color="error.main" />
+                </Stack>
+                <Typography
+                  variant="overline"
+                  color="text.secondary"
+                  fontWeight="bold"
+                >
+                  Expired Calls
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" color="text.primary">
+                  {rooms.summary.totalExpired}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="error.main"
+                  fontWeight="medium"
+                >
+                  Missed or expired sessions
                 </Typography>
               </CardContent>
             </GradientCard>
@@ -983,6 +1056,99 @@ const DoctorDashboard = () => {
                           <Typography variant="body2" color="text.secondary">
                             {room.completedAt ? "Completed" : "Created"}:{" "}
                             <strong>{`${formatDate(room.completedAt || room.createAt)} at ${formatTime(room.completedAt || room.createAt)}`}</strong>
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </GradientCard>
+                ))}
+              </Stack>
+            </Box>
+          </Paper>
+        )}
+
+        {/* Expired Rooms */}
+        {rooms.expiredRooms?.length > 0 && (
+          <Paper
+            elevation={3}
+            sx={{ mb: 4, borderRadius: 4, overflow: "hidden" }}
+          >
+            <Box
+              sx={{
+                p: 4,
+                bgcolor: "error.light",
+                borderBottom: 1,
+                borderColor: "error.main",
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Box sx={{ p: 1, bgcolor: "error.main", borderRadius: 2 }}>
+                  <AlertCircle size={20} color="white" />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Typography
+                      variant="h5"
+                      fontWeight="bold"
+                      color="text.primary"
+                    >
+                      Expired Calls
+                    </Typography>
+                    <Chip
+                      label={`${rooms.expiredRooms.length} Expired`}
+                      color="error"
+                      size="small"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  </Stack>
+                  <Typography variant="body2" color="error.dark">
+                    Missed or expired video consultations
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+            <Box sx={{ p: 4 }}>
+              <Stack spacing={2}>
+                {rooms.expiredRooms.map((room) => (
+                  <GradientCard
+                    key={room._id}
+                    gradient="linear-gradient(to right, #fef2f2, #fee2e2)"
+                    sx={{ p: 3 }}
+                  >
+                    <CardContent sx={{ p: 0 }}>
+                      <Stack direction="row" spacing={3}>
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                          <Box
+                            sx={{
+                              p: 1,
+                              bgcolor: "error.light",
+                              borderRadius: 2,
+                            }}
+                          >
+                            <AlertCircle size={20} color="white" />
+                          </Box>
+                          <StatusChip
+                            label={room.status}
+                            status="expired"
+                            size="small"
+                          />
+                        </Stack>
+                        <Box>
+                          <Typography
+                            variant="h6"
+                            fontWeight="bold"
+                            color="text.primary"
+                          >
+                            Patient:{" "}
+                            {patientNames[room.patientId] || room.patientId}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Type: <strong>{room.type}</strong> | Duration:{" "}
+                            <strong>{room.duration} min</strong>
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Expired:{" "}
+                            <strong>{`${formatDate(room.expiresAt)} at ${formatTime(room.expiresAt)}`}</strong>
                           </Typography>
                         </Box>
                       </Stack>
