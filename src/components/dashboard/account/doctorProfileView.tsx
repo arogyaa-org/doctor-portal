@@ -21,6 +21,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { styled } from "@mui/system";
 import PersonIcon from "@mui/icons-material/Person";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import SchoolIcon from "@mui/icons-material/School";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -30,6 +32,10 @@ import ManIcon from "@mui/icons-material/Man";
 import WomanIcon from "@mui/icons-material/Woman";
 import SickIcon from "@mui/icons-material/Sick";
 import WorkIcon from "@mui/icons-material/Work";
+import Accordion from "@mui/material/Accordion";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 import DoctorAppointmentHistory from "./appointment-history";
@@ -88,7 +94,8 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
   );
   const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200, "");
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -193,7 +200,10 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
         onChange={(e, tab) => handleTabClick(tab)}
         indicatorColor="primary"
         textColor="primary"
-        centered
+        centered={!isSmallScreen}
+        variant={isSmallScreen ? "scrollable" : "standard"}
+        scrollButtons={isSmallScreen}
+        allowScrollButtonsMobile={isSmallScreen}
         sx={{ mb: 3 }}
       >
         <StyledTab
@@ -449,125 +459,71 @@ const DoctorProfileView: React.FC<DoctorProfileViewProps> = ({
                   Availability
                 </Typography>
                 {doctorProfileData?.availability?.length > 0 ? (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        flexDirection: "column",
-                        alignItems: "flex-start",
-                        mb: 1,
-                      }}
-                    >
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
-                        <Typography variant="body2" sx={{ color: "#555" }}>
-                          {doctorProfileData.availability[0].hospital?.name &&
-                          doctorProfileData.availability[0].hospital?.location
-                            ? `${doctorProfileData.availability[0].hospital.name} - ${doctorProfileData.availability[0].hospital.location}`
-                            : doctorProfileData.availability[0].hospitalName &&
-                                doctorProfileData.availability[0]
-                                  .hospitalLocation
-                              ? `${doctorProfileData.availability[0].hospitalName} - ${doctorProfileData.availability[0].hospitalLocation}`
-                              : "Hospital Not Specified"}
-                        </Typography>
-                      </Box>
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography>
+                        View Availability (
+                        {doctorProfileData.availability.length})
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
                       <Box
                         sx={{
                           display: "flex",
-                          alignItems: "center",
+                          flexDirection: "column",
                           gap: 1,
-                          ml: 4,
                         }}
                       >
-                        <AccessTimeIcon sx={{ color: "#8F44FD" }} />
-                        <Typography variant="body2" sx={{ color: "#555" }}>
-                          {doctorProfileData.availability[0].day}:{" "}
-                          {doctorProfileData.availability[0].startTime} -{" "}
-                          {doctorProfileData.availability[0].endTime}
-                        </Typography>
+                        {doctorProfileData.availability.map((slot, index) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              p: 2,
+                              border: "1px solid #E0E0E0",
+                              borderRadius: "8px",
+                              bgcolor: "#F9FAFB",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <LocalHospitalIcon sx={{ color: "#8F44FD" }} />
+                              <Typography
+                                variant="body2"
+                                sx={{ color: "#555" }}
+                              >
+                                {slot.hospital?.name && slot.hospital?.location
+                                  ? `${slot.hospital.name} - ${slot.hospital.location}`
+                                  : slot.hospitalName && slot.hospitalLocation
+                                    ? `${slot.hospitalName} - ${slot.hospitalLocation}`
+                                    : "Hospital Not Specified"}
+                              </Typography>
+                            </Box>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                mt: 0.5,
+                              }}
+                            >
+                              <AccessTimeIcon sx={{ color: "#8F44FD" }} />
+                              <Typography
+                                variant="body2"
+                                sx={{ color: "#555" }}
+                              >
+                                {slot.day}: {slot.startTime} - {slot.endTime}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))}
                       </Box>
-                    </Box>
-                    {doctorProfileData.availability.length > 1 && (
-                      <>
-                        <IconButton
-                          onClick={handleMenuClick}
-                          sx={{ alignSelf: "flex-start" }}
-                        >
-                          <ArrowDropDownIcon sx={{ color: "#8F44FD" }} />
-                        </IconButton>
-                        <Menu
-                          anchorEl={anchorEl}
-                          open={Boolean(anchorEl)}
-                          onClose={handleMenuClose}
-                        >
-                          {doctorProfileData.availability
-                            .slice(1)
-                            .map((slot, index) => (
-                              <MenuItem key={index} onClick={handleMenuClose}>
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 1,
-                                  }}
-                                >
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                    }}
-                                  >
-                                    <LocalHospitalIcon
-                                      sx={{ color: "#8F44FD" }}
-                                    />
-                                    <Typography
-                                      variant="body2"
-                                      sx={{ color: "#555" }}
-                                    >
-                                      {slot.hospital?.name &&
-                                      slot.hospital?.location
-                                        ? `${slot.hospital.name} - ${slot.hospital.location}`
-                                        : slot.hospitalName &&
-                                            slot.hospitalLocation
-                                          ? `${slot.hospitalName} - ${slot.hospitalLocation}`
-                                          : "Hospital Not Specified"}
-                                    </Typography>
-                                  </Box>
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                      ml: 4,
-                                    }}
-                                  >
-                                    <AccessTimeIcon sx={{ color: "#8F44FD" }} />
-                                    <Typography
-                                      variant="body2"
-                                      sx={{ color: "#555" }}
-                                    >
-                                      {slot.day}: {slot.startTime} -{" "}
-                                      {slot.endTime}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              </MenuItem>
-                            ))}
-                        </Menu>
-                      </>
-                    )}
-                  </Box>
+                    </AccordionDetails>
+                  </Accordion>
                 ) : (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <AccessTimeIcon sx={{ color: "#8F44FD" }} />

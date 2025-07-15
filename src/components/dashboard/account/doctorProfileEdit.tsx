@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Typography,
   Chip,
+  InputAdornment,
 } from "@mui/material";
 import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import PhoneIcon from "@mui/icons-material/Phone";
@@ -24,16 +25,9 @@ import WomanIcon from "@mui/icons-material/Woman";
 import SickIcon from "@mui/icons-material/Sick";
 import WorkIcon from "@mui/icons-material/Work";
 import HistoryIcon from "@mui/icons-material/History";
-
-import { DoctorData } from "@/types/doctor";
-import { useModifyDoctor } from "@/hooks/doctor";
-import { useGetSpeciality } from "@/hooks/Speciality";
-import { useGetQualification } from "@/hooks/qualification";
-import { useGetSymptom } from "@/hooks/symptoms";
-import dayjs from "dayjs";
-import * as yup from "yup";
-import { useForm, Controller } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
+import PasswordIcon from "@mui/icons-material/Lock";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
   DatePicker,
   LocalizationProvider,
@@ -41,6 +35,21 @@ import {
 } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+
+import Toast from "@/components/common/Toast";
+import { DoctorData } from "@/types/doctor";
+import { useModifyDoctor } from "@/hooks/doctor";
+import { useGetSpeciality } from "@/hooks/Speciality";
+import { useGetQualification } from "@/hooks/qualification";
+import { useGetSymptom } from "@/hooks/symptoms";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/redux/store";
+import { Utility } from "@/utils";
+
+import dayjs from "dayjs";
+import * as yup from "yup";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 
 // Define validation schema
 const phoneRegExp =
@@ -60,7 +69,7 @@ const daysOfWeek = [
 
 const parseTimeTo12Hour = (date: dayjs.Dayjs | null) => {
   if (!date || !date.isValid()) return "";
-  return date.format("h:mm A"); // Outputs "2:30 PM"
+  return date.format("h:mm A");
 };
 
 interface DoctorProfileEditProps {
@@ -81,8 +90,11 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
   setIsEditOpen,
   role,
 }) => {
+  const dispatch: AppDispatch = useDispatch();
+  const { toastAndNavigate } = Utility();
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const bioInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const pwFieldRef = useRef<HTMLInputElement | null>(null);
   const { modifyDoctor } = useModifyDoctor("update-doctor");
   const { value: specialities, loading: specialitiesLoading } =
     useGetSpeciality(null, "get-specialities", 1, 200, "");
@@ -118,6 +130,21 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       .test("is-valid-date", "Invalid date format", (value) =>
         value ? dayjs(value, "YYYY-MM-DD", true).isValid() : false
       ),
+    password: yup.string().when("updatePassword", {
+      is: true,
+      then: (schema) =>
+        schema
+          .min(8, "Password Must Be 8 Characters Long")
+          .matches(/[A-Z]/, "Password Must Contain At Least 1 Uppercase Letter")
+          .matches(/[a-z]/, "Password Must Contain At Least 1 Lowercase Letter")
+          .matches(/[0-9]/, "Password Must Contain At Least 1 Number")
+          .matches(
+            /[^\w]/,
+            "Password Must Contain At Least 1 Special Character"
+          )
+          .required("This Field is Required"),
+      otherwise: (schema) => schema.optional(),
+    }),
     ...(role === "doctor" && {
       bio: yup.string().max(500, "Bio is too long!"),
       experience: yup
@@ -182,9 +209,10 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
   const [isQualificationEditing, setIsQualificationEditing] = useState(false);
   const [isSpecializationEditing, setIsSpecializationEditing] = useState(false);
   const [isSymptomsEditing, setIsSymptomsEditing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [updatePassword, setUpdatePassword] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const { toast } = useSelector((state: RootState) => state.toast);
 
-  // Initialize react-hook-form with Yup resolver
   const {
     control,
     handleSubmit,
@@ -192,12 +220,13 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
     setValue,
     trigger,
     watch,
-  } = useForm<DoctorData>({
+  } = useForm<DoctorData & { updatePassword?: boolean }>({
     resolver: yupResolver(validationSchema),
+    context: { updatePassword },
     defaultValues: {
       ...editFields,
       dob: editFields.dob ? dayjs(editFields.dob).format("YYYY-MM-DD") : "",
-      password: undefined,
+      password: "",
       availability: editFields.availability.map((slot) => ({
         ...slot,
         hospital: {
@@ -205,13 +234,30 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
           location: slot.hospital?.location || slot.hospitalLocation || "",
         },
       })),
+      updatePassword: false,
     },
   });
-
-  // Watch form values to avoid unnecessary updates
   const watchedValues = watch();
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
 
-  // Update editFields when doctorProfileData changes to ensure hospital fields are populated
+  const handleUpdatePasswordToggle = useCallback(() => {
+    setUpdatePassword((prev) => {
+      const newValue = !prev;
+      if (newValue) {
+        setValue("password", "");
+        setValue("updatePassword", true);
+        pwFieldRef.current?.focus();
+      } else {
+        setValue("password", "");
+        setValue("updatePassword", false);
+      }
+      trigger("password");
+      return newValue;
+    });
+  }, [setValue, trigger]);
+
   useEffect(() => {
     if (doctorProfileData) {
       setEditFields({
@@ -227,7 +273,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
     }
   }, [doctorProfileData, setEditFields]);
 
-  // Memoized handleFieldChange to prevent re-creation on every render
+  // Memoized handleFieldChange
   const handleFieldChange = useCallback(
     (
       field: keyof DoctorData,
@@ -329,7 +375,9 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
   const handleCancelChanges = () => {
     setIsEditOpen(false);
     setEditFields(doctorProfileData ? { ...doctorProfileData } : editFields);
-    setErrorMessage(null);
+    setUpdatePassword(false);
+    setValue("password", "");
+    setValue("updatePassword", false);
   };
 
   const handleSaveChanges = async (data: DoctorData) => {
@@ -342,84 +390,142 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       formData.append("gender", data.gender || "");
       formData.append("dob", data.dob || "");
       formData.append("status", data.status || "");
+      if (updatePassword && data.password) {
+        formData.append("password", data.password);
+      }
       if (role === "doctor") {
         formData.append("bio", data.bio || "");
         formData.append("experience", data.experience?.toString() || "");
         formData.append("consultationFee", data.consultationFee || "");
+
         data.qualificationIds.forEach((qual, index) => {
-          const qualId =
-            qual && typeof qual === "string" && qual.length > 0 ? qual : "";
-          if (qualId) {
+          let qualId = "";
+          if (typeof qual === "string") {
+            qualId = qual;
+          } else if (typeof qual === "object" && qual._id) {
+            qualId = qual._id;
+          }
+          if (qualId && typeof qualId === "string" && qualId.length > 0) {
             formData.append(`qualificationIds[${index}]`, qualId);
           } else {
             console.warn(`Invalid qualification ID at index ${index} skipped`);
           }
         });
+
         data.specializationIds.forEach((spec, index) => {
-          const specId =
-            spec && typeof spec === "string" && spec.length > 0 ? spec : "";
-          if (specId) {
+          let specId = "";
+          if (typeof spec === "string") {
+            specId = spec;
+          } else if (typeof spec === "object" && spec._id) {
+            specId = spec._id;
+          }
+          if (specId && typeof specId === "string" && specId.length > 0) {
             formData.append(`specializationIds[${index}]`, specId);
           } else {
             console.warn(`Invalid specialization ID at index ${index} skipped`);
           }
         });
+
         data.symptomIds.forEach((sym, index) => {
-          const symId =
-            sym && typeof sym === "string" && sym.length > 0 ? sym : "";
-          if (symId) {
+          let symId = "";
+          if (typeof sym === "string") {
+            symId = sym;
+          } else if (typeof sym === "object" && sym._id) {
+            symId = sym._id;
+          }
+          if (symId && typeof symId === "string" && symId.length > 0) {
             formData.append(`symptomIds[${index}]`, symId);
           } else {
             console.warn(`Invalid symptom ID at index ${index} skipped`);
           }
         });
+
         data.availability.forEach((slot, index) => {
           formData.append(`availability[${index}][day]`, slot.day || "");
-          formData.append(`availability[${index}][startTime]`, slot.startTime || "");
-          formData.append(`availability[${index}][endTime]`, slot.endTime || "");
+          formData.append(
+            `availability[${index}][startTime]`,
+            slot.startTime || ""
+          );
+          formData.append(
+            `availability[${index}][endTime]`,
+            slot.endTime || ""
+          );
           if (slot.hospital?.name || slot.hospital?.location) {
-            formData.append(`availability[${index}][hospital][name]`, slot.hospital?.name || "");
-            formData.append(`availability[${index}][hospital][location]`, slot.hospital?.location || "");
+            formData.append(
+              `availability[${index}][hospital][name]`,
+              slot.hospital?.name || ""
+            );
+            formData.append(
+              `availability[${index}][hospital][location]`,
+              slot.hospital?.location || ""
+            );
           }
           if (slot._id) {
             formData.append(`availability[${index}][_id]`, slot._id);
           }
         });
       }
+
       if (data.profilePicture?.file) {
         formData.append("profilePicture", data.profilePicture.file);
       }
 
-      console.log("Payload being sent to backend:", Object.fromEntries(formData));
       const response = await modifyDoctor(formData);
-      console.log("Backend response:", response);
+
       if (response?.statusCode === 200) {
-        setDoctorProfileData({
-          ...data,
-          profilePicture: response.data.profilePicture || editFields.profilePicture,
-          _id: editFields._id,
-        });
-        setIsEditOpen(false);
-        setErrorMessage(null);
+        toastAndNavigate(
+          dispatch,
+          true,
+          "success",
+          "Profile updated successfully!"
+        );
+
+        setTimeout(() => {
+          setDoctorProfileData({
+            ...response.data,
+            password: undefined,
+            updatePassword: undefined,
+            profilePicture:
+              response.data.profilePicture || editFields.profilePicture,
+            _id: editFields._id,
+          });
+          setIsEditOpen(false);
+          setUpdatePassword(false);
+          setValue("password", "");
+          setValue("updatePassword", false);
+        }, 1000);
       } else {
-        setErrorMessage(`Save failed: ${response?.message || "Unknown error"}`);
+        toastAndNavigate(
+          dispatch,
+          true,
+          "error",
+          `Save failed: ${response?.message || "Unknown error"}`
+        );
       }
     } catch (error: any) {
-      setErrorMessage(error.message || "Error updating profile. Please try again.");
       console.error("Error updating profile:", error);
+      toastAndNavigate(
+        dispatch,
+        true,
+        "error",
+        error.message || "Error updating profile. Please try again."
+      );
     }
   };
 
   const getItemsFromIds = (ids: any[] | undefined, options: any[]) => {
     if (!ids || !options || options.length === 0) return [];
+    const seen = new Set();
     return ids
       .map((id) => {
-        if (typeof id === "object" && id._id) return id;
-        const found = options.find((option) => option._id === id);
+        let idVal = typeof id === "object" && id._id ? id._id : id;
+        if (!idVal || seen.has(idVal)) return null;
+        const found = options.find((option) => option._id === idVal);
         if (!found) {
-          console.warn(`ID ${id} not found in options`);
+          console.warn(`ID ${idVal} not found in options`);
           return null;
         }
+        seen.add(idVal);
         return found;
       })
       .filter((item) => item !== null && item !== undefined) as any[];
@@ -509,11 +615,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
               />
             )}
           />
-          {errors.username && (
-            <Typography variant="body2" color="error">
-              {errors.username.message}
-            </Typography>
-          )}
         </Box>
 
         {(role === "doctor" || role === "admin") && (
@@ -552,11 +653,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                 />
               )}
             />
-            {errors.bio && (
-              <Typography variant="body2" color="error">
-                {errors.bio.message}
-              </Typography>
-            )}
           </Box>
         )}
       </Box>
@@ -607,11 +703,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                 )}
               />
             </Box>
-            {errors.contact && (
-              <Typography variant="body2" color="error">
-                {errors.contact.message}
-              </Typography>
-            )}
           </Box>
 
           <Box>
@@ -644,12 +735,67 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                 )}
               />
             </Box>
-            {errors.email && (
-              <Typography variant="body2" color="error">
-                {errors.email.message}
-              </Typography>
-            )}
           </Box>
+
+          {updatePassword && (
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
+                New Password
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <PasswordIcon sx={{ color: "#8F44FD" }} />
+                <Controller
+                  name="password"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      type={showPassword ? "text" : "password"}
+                      inputRef={pwFieldRef}
+                      sx={{
+                        width: "200px",
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": {
+                            border: errors.password
+                              ? "2px solid red"
+                              : "2px solid #8F44FD",
+                          },
+                          "&:hover fieldset": {
+                            border: errors.password
+                              ? "2px solid red"
+                              : "2px solid #8F44FD",
+                          },
+                          "&.Mui-focused fieldset": {
+                            border: errors.password
+                              ? "2px solid red"
+                              : "2px solid #8F44FD",
+                          },
+                        },
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={togglePasswordVisibility}
+                            >
+                              {showPassword ? (
+                                <VisibilityIcon sx={{ color: "#8F44FD" }} />
+                              ) : (
+                                <VisibilityOffIcon sx={{ color: "#8F44FD" }} />
+                              )}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                      error={!!errors.password}
+                      helperText={errors.password?.message}
+                    />
+                  )}
+                />
+              </Box>
+            </Box>
+          )}
 
           <Box>
             <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
@@ -692,11 +838,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                 )}
               />
             </Box>
-            {errors.gender && (
-              <Typography variant="body2" color="error">
-                {errors.gender.message}
-              </Typography>
-            )}
           </Box>
 
           <Box>
@@ -805,11 +946,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                   )}
                 />
               </Box>
-              {errors.experience && (
-                <Typography variant="body2" color="error">
-                  {errors.experience.message}
-                </Typography>
-              )}
             </Box>
           )}
 
@@ -844,11 +980,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                   )}
                 />
               </Box>
-              {errors.consultationFee && (
-                <Typography variant="body2" color="error">
-                  {errors.consultationFee.message}
-                </Typography>
-              )}
             </Box>
           )}
 
@@ -893,11 +1024,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                 )}
               />
             </Box>
-            {errors.status && (
-              <Typography variant="body2" color="error">
-                {errors.status.message}
-              </Typography>
-            )}
           </Box>
 
           {role === "doctor" && (
@@ -1253,11 +1379,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                           outline: "none",
                         }}
                       />
-                      {errors.availability?.[index]?.hospital?.name && (
-                        <Typography variant="body2" color="error">
-                          {errors.availability[index].hospital?.name?.message}
-                        </Typography>
-                      )}
                       <input
                         type="text"
                         value={slot.hospital?.location || ""}
@@ -1273,7 +1394,8 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                         style={{
                           fontSize: "16px",
                           color: "#555",
-                          border: errors.availability?.[index]?.hospital?.location
+                          border: errors.availability?.[index]?.hospital
+                            ?.location
                             ? "2px solid red"
                             : "2px solid #8F44FD",
                           borderRadius: "6px",
@@ -1284,11 +1406,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                           outline: "none",
                         }}
                       />
-                      {errors.availability?.[index]?.hospital?.location && (
-                        <Typography variant="body2" color="error">
-                          {errors.availability[index].hospital?.location?.message}
-                        </Typography>
-                      )}
                       <TimePicker
                         label="Start Time"
                         value={
@@ -1312,17 +1429,20 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                               width: "200px",
                               "& .MuiOutlinedInput-root": {
                                 "& fieldset": {
-                                  border: errors.availability?.[index]?.startTime
+                                  border: errors.availability?.[index]
+                                    ?.startTime
                                     ? "2px solid red"
                                     : "2px solid #8F44FD",
                                 },
                                 "&:hover fieldset": {
-                                  border: errors.availability?.[index]?.startTime
+                                  border: errors.availability?.[index]
+                                    ?.startTime
                                     ? "2px solid red"
                                     : "2px solid #8F44FD",
                                 },
                                 "&.Mui-focused fieldset": {
-                                  border: errors.availability?.[index]?.startTime
+                                  border: errors.availability?.[index]
+                                    ?.startTime
                                     ? "2px solid red"
                                     : "2px solid #8F44FD",
                                 },
@@ -1432,43 +1552,59 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
       <Box
         sx={{
           display: "flex",
-          flexDirection: "column",
-          position: "absolute",
-          top: 70,
-          right: -3,
-          opacity: 1,
-          transform: "translateY(0)",
-          transition: "opacity 0.3s ease, transform 0.3s ease",
-          width: "auto",
-          mr: 1,
+          flexDirection: { xs: "row", sm: "column" },
+          flexWrap: "wrap",
+          gap: 1,
+          position: { xs: "static", sm: "absolute" },
+          top: { sm: 20 },
+          right: { sm: -3 },
+          alignItems: "center",
+          justifyContent: "center",
+          mt: { xs: 2, sm: 0 },
         }}
       >
         <Button
           type="button"
           variant="contained"
+          color={updatePassword ? "error" : "info"}
+          onClick={handleUpdatePasswordToggle}
+          sx={{
+            minWidth: { xs: "100px", sm: "150px" },
+            flex: 1,
+          }}
+        >
+          {updatePassword ? "Cancel Password Update" : "Update Password"}
+        </Button>
+        <Button
+          type="button"
+          variant="contained"
           color="success"
           onClick={handleSubmit(handleSaveChanges)}
-          sx={{ mb: 1, width: "100px" }}
+          sx={{
+            minWidth: { xs: "80px", sm: "100px" },
+            flex: 1,
+          }}
         >
           Save
         </Button>
         <Button
           color="error"
           variant="contained"
-          sx={{ mb: 1, width: "100px" }}
           onClick={handleCancelChanges}
+          sx={{
+            minWidth: { xs: "80px", sm: "100px" },
+            flex: 1,
+          }}
         >
           Cancel
         </Button>
       </Box>
 
-      {errorMessage && (
-        <Box sx={{ textAlign: "center", mt: 2 }}>
-          <Typography variant="body2" color="error">
-            {errorMessage}
-          </Typography>
-        </Box>
-      )}
+      <Toast
+        alerting={toast.toastAlert}
+        severity={toast.toastSeverity}
+        message={toast.toastMessage}
+      />
     </>
   );
 };
