@@ -31,6 +31,9 @@ import {
   Paper,
   Tooltip,
   Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
@@ -81,18 +84,17 @@ const GradientButton = styled(Button)(({ theme, gradient }) => ({
 
 // eslint-disable-next-line react/function-component-definition
 const DoctorDashboard = () => {
-  const { decodedToken, getLocalStorage} = Utility();
+  const { decodedToken, getLocalStorage } = Utility();
   const [doctorId, setDocterId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [patientNames, setPatientNames] = useState({});
   const [disconnectedRooms, setDisconnectedRooms] = useState(() => {
     const storedRooms = getLocalStorage("disconnectedRooms");
-    return storedRooms ? new Set((storedRooms)) : new Set();
+    return storedRooms ? new Set(storedRooms) : new Set();
   });
   const [openExtendDialog, setOpenExtendDialog] = useState(false);
   const router = useRouter();
-
   const [extendRequestData, setExtendRequestData] = useState<{
     doctorId: string;
     appointmentId: string;
@@ -247,6 +249,12 @@ const DoctorDashboard = () => {
 
     newSocket.on("disconnectFromRoom", (data) => {
       setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
+    });
+
+    newSocket.on("call-extended", (data) => {
+      console.log("Call successfully extended:", data);
+      alert("Call time successfully extended!");
+      fetchRooms(); // Refresh rooms to update expiry time
     });
 
     setSocket(newSocket);
@@ -820,6 +828,22 @@ const DoctorDashboard = () => {
                               : "Join Call"}
                           </GradientButton>
                           <GradientButton
+                            gradient="linear-gradient( #4FC3F7)"
+                            onClick={async () => {
+                              if (room.appointmentId) {
+                                router.push(
+                                  `/appointment/details/${room.appointmentId}`
+                                );
+                              } else {
+                                console.log(
+                                  "Appointment ID not found, cannot redirect."
+                                );
+                              }
+                            }}
+                          >
+                            Patient Details
+                          </GradientButton>
+                          <GradientButton
                             gradient="linear-gradient(to right, #64748b, #475569)"
                             onClick={async () => {
                               const response = await completeRoom(room.roomId);
@@ -1159,6 +1183,25 @@ const DoctorDashboard = () => {
             </Box>
           </Paper>
         )}
+
+        <Dialog
+          open={openExtendDialog}
+          onClose={() => setOpenExtendDialog(false)}
+        >
+          <DialogTitle>Extension Request</DialogTitle>
+          <DialogContent>
+            Patient is requesting to extend the video call by 10 minutes. Do you
+            want to allow it?
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleRejectExtension} color="error">
+              Reject
+            </Button>
+            <Button onClick={handleAcceptExtension} autoFocus>
+              Accept
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* No rooms message */}
         {rooms.activeRooms.length === 0 &&
