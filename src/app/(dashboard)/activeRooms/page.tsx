@@ -115,7 +115,7 @@ const DoctorDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [notificationPermission, setNotificationPermission] =
     useState("default");
-
+  const [activeCalls, setActiveCalls] = useState<Set<string>>(new Set());
   // useEffect(() => {
   //   if (!doctorId) {
   //     setDocterId(decodedToken().id);
@@ -167,6 +167,27 @@ const DoctorDashboard = () => {
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket with ID:", newSocket.id);
       setIsConnected(true);
+
+      // Add these new handlers right after your existing room event handlers
+      newSocket.on("roomCompleted", (data) => {
+        console.log("Room completed:", data);
+        setActiveCalls((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(data.roomId);
+          return newSet;
+        });
+        setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
+        fetchRooms();
+      });
+
+      newSocket.on("disconnectFromRoom", (data) => {
+        setActiveCalls((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(data.roomId);
+          return newSet;
+        });
+        setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
+      });
 
       // Only join doctor room if doctorId is available
       if (doctorId) {
@@ -381,12 +402,21 @@ const DoctorDashboard = () => {
 
   const joinRoom = (roomId, url) => {
     if (url) {
+      // Add this room to active calls
+      setActiveCalls((prev) => new Set(prev).add(roomId));
       const newWindow = window.open(url, "_blank");
       const roomIdToTrack = roomId;
 
       const interval = setInterval(() => {
         if (newWindow.closed) {
           console.log("Video tab closed, marking as disconnected");
+
+          // Remove from active calls when window is closed
+          setActiveCalls((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(roomIdToTrack);
+            return newSet;
+          });
 
           setDisconnectedRooms((prev) => {
             const newSet = new Set(prev);
@@ -822,10 +852,13 @@ const DoctorDashboard = () => {
                                 `https://baseerah.daily.co/${room.roomId}`
                               )
                             }
+                            disabled={activeCalls.has(room.roomId)}
                           >
-                            {disconnectedRooms.has(room.roomId)
-                              ? "Rejoin Call"
-                              : "Join Call"}
+                            {activeCalls.has(room.roomId)
+                              ? "Call In Progress"
+                              : disconnectedRooms.has(room.roomId)
+                                ? "Rejoin Call"
+                                : "Join Call"}
                           </GradientButton>
                           <GradientButton
                             gradient="linear-gradient( #4FC3F7)"
