@@ -7,8 +7,7 @@ export async function middleware(request: NextRequest) {
   const cookieStore = cookies();
   const token = cookieStore.get("token")?.value;
 
-  // const publicPaths = ["/login", "/img/f2Fintechlogo.png"];
-  const publicPaths = ["/login", "@/components/core/logo"];
+  const publicPaths = ["/login", "/signup-as-doctor"]; // Added /signup-as-doctor
   const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
 
   if (!isPublicPath) {

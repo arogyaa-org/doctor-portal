@@ -12,7 +12,7 @@ export const patientDatagridColumns = (): GridColDef[] => {
       field: "username",
       headerName: "Name",
       headerClassName: "super-app-theme--header",
-      headerAlign: "center",
+      headerAlign: "left",
       align: "center",
       flex: 1,
       minWidth: 150,
@@ -24,10 +24,13 @@ export const patientDatagridColumns = (): GridColDef[] => {
       field: "email",
       headerName: "Email",
       headerClassName: "super-app-theme--header",
-      headerAlign: "center",
+      headerAlign: "left",
       align: "center",
       flex: 1.5,
       minWidth: 200,
+      renderCell: ({ row: { email } }) => (
+        <Typography>{capitalizeFirstLetter(email) || "N/A"}</Typography>
+      ),
     },
     {
       field: "contact",
@@ -37,6 +40,17 @@ export const patientDatagridColumns = (): GridColDef[] => {
       align: "center",
       flex: 1,
       minWidth: 150,
+      renderCell: ({ row: { contact } }) => (
+        <Typography
+          sx={{
+            width: "100%",
+            textAlign: "center",
+            fontSize: "14px",
+          }}
+        >
+          {contact || "N/A"}
+        </Typography>
+      ),
     },
     {
       field: "medical_history",
@@ -60,9 +74,10 @@ export const patientDatagridColumns = (): GridColDef[] => {
             sx={{
               display: "flex",
               flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center", // center horizontally
               width: "100%",
-              whiteSpace: "normal",
-              minHeight:47,
+              minHeight: 47,
             }}
           >
             <Typography
@@ -70,6 +85,7 @@ export const patientDatagridColumns = (): GridColDef[] => {
                 whiteSpace: expanded ? "normal" : "nowrap",
                 overflow: expanded ? "visible" : "hidden",
                 textOverflow: "ellipsis",
+                textAlign: "center", // center text
                 width: "100%",
                 fontSize: "14px",
               }}
@@ -85,6 +101,8 @@ export const patientDatagridColumns = (): GridColDef[] => {
                   color: "#1976D2",
                   fontSize: "14px",
                   textDecoration: "underline",
+                  textAlign: "center",
+                  width: "100%",
                 }}
               >
                 {expanded ? "Show Less" : "Read More"}

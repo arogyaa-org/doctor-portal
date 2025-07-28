@@ -14,6 +14,7 @@ import {
   GridRowId,
   GridPaginationModel,
 } from "@mui/x-data-grid";
+import { Box } from "@mui/material";
 import LoadingSkeleton from "./LoadingSkeleton";
 import NoRows from "./NoRows";
 
@@ -83,10 +84,13 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
         fontSize: "14px",
         textAlign: "center",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: "center", // vertical center
+        justifyContent: "flex-start", // left align content
         whiteSpace: "normal",
-        transition: "all 0.3s ease",
+        textAlign: "left",
+        lineHeight: 1.4,
+        paddingTop: "8px",
+        paddingBottom: "8px",
       },
       "& .MuiDataGrid-row": {
         backgroundColor: "#ffffff",
@@ -105,43 +109,47 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
   );
 
   function CustomNoRowsOverlay() {
-  return <NoRows
-      message={noRowsMessage}
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100%",
-      }}
-    />
-}
+    return (
+      <NoRows
+        message={noRowsMessage}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100%",
+        }}
+      />
+    );
+  }
 
   const minHeight = rows.length === 0 ? "400px" : "auto";
 
   return (
-    <div style={{ width: "100%" }}>
-      <DataGrid
-        sx={{ ...dataGridStyles, minHeight }}
-        slots={{
-          toolbar: GridToolbar,
-          loadingOverlay: LoadingSkeleton,
-          noRowsOverlay: CustomNoRowsOverlay,
-        }}
-        rows={rows}
-        columns={columns}
-        loading={loading}
-        getRowId={(row: { _id: GridRowId }) => row._id}
-        paginationMode="server"
-        rowCount={rowCountState}
-        pageSizeOptions={pageSizeOptions}
-        paginationModel={{ page, pageSize }}
-        onPaginationModelChange={handlePaginationModelChange}
-        disableRowSelectionOnClick
-        keepNonExistentRowsSelected
-        getRowHeight={() => "auto"}
-      />
-    </div>
+    <Box sx={{ width: "100%", overflowX: "auto" }}>
+      <Box sx={{ minWidth: "800px" }}>
+        <DataGrid
+          sx={{ ...dataGridStyles, minHeight }}
+          slots={{
+            toolbar: GridToolbar,
+            loadingOverlay: LoadingSkeleton,
+            noRowsOverlay: CustomNoRowsOverlay,
+          }}
+          rows={rows}
+          columns={columns}
+          loading={loading}
+          getRowId={(row: { _id: GridRowId }) => row._id}
+          paginationMode="server"
+          rowCount={rowCountState}
+          pageSizeOptions={pageSizeOptions}
+          paginationModel={{ page, pageSize }}
+          onPaginationModelChange={handlePaginationModelChange}
+          disableRowSelectionOnClick
+          keepNonExistentRowsSelected
+          getRowHeight={() => "auto"}
+        />
+      </Box>
+    </Box>
   );
 };
 
