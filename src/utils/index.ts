@@ -16,6 +16,16 @@ export const Utility = () => {
     }
   };
 
+  const formatDoctorName = (name: string | undefined) => {
+  if (!name) return "N/A";
+  const prefix = "Dr. ";
+  if (name.toLowerCase().startsWith("dr. ")) {
+    const rest = name.slice(4).trim();
+    return prefix + rest.charAt(0).toUpperCase() + rest.slice(1).toLowerCase();
+  }
+  return capitalizeFirstLetter(name);
+};
+
   /**
    * Fetches data from a given API endpoint.
    * @param {string} url - The base URL of the API endpoint.
@@ -274,6 +284,7 @@ export const Utility = () => {
 
   return {
     capitalizeFirstLetter,
+    formatDoctorName,
     decodedToken,
     fetchData,
     findMultipleById,
