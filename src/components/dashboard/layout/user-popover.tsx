@@ -157,6 +157,22 @@ export function UserPopover({
           >
             {email}
           </Typography>
+
+          {/* user role */}
+          <Typography
+            variant="body2"
+            color="inherit"
+            sx={{
+              opacity: 0.8,
+              overflowWrap: "break-word",
+              wordWrap: "break-word",
+              whiteSpace: "normal",
+              width: "100%",
+            }}
+          >
+            {role ? capitalizeFirstLetter(role) : "N/A"}
+          </Typography>
+
         </Box>
       </Box>
 

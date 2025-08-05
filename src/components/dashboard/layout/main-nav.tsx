@@ -9,7 +9,6 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 import { List as ListIcon } from '@phosphor-icons/react/dist/ssr/List';
-import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
 import { usePopover } from '@/hooks/use-popover';
 import { MobileNav } from './mobile-nav';
@@ -100,11 +99,6 @@ export function MainNav(): React.JSX.Element {
             </IconButton>
           </Stack>
           <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
-            <Tooltip title="Contacts">
-              <IconButton>
-                <UsersIcon />
-              </IconButton>
-            </Tooltip>
             <Tooltip title="Notifications">
               <Badge
                 badgeContent={unreadCount}

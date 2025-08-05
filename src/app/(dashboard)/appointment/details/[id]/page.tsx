@@ -101,7 +101,7 @@ const statusOptions = [
 // eslint-disable-next-line react/function-component-definition
 const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState("info");
-  const [showVideo, setShowVideo] = useState(false);
+  const [showVideo, setShowVideo] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
@@ -569,7 +569,7 @@ const AppointmentDetails = () => {
       content: (
         <VisitsHistory
           patientId={patientId}
-          doctorID={appointmentData?.data?.doctorId._id}
+          doctorID={appointmentData?.data?.doctorId?._id}
           onTabChange={handleTabChange}
         />
       ),
