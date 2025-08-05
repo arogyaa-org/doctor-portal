@@ -15,7 +15,7 @@ export const paths = {
     qualification: '/qualification',
     symptom: '/symptom',
     integrations: '/integrations',
-    settings: '/settings',
+    //settings: '/settings',  because settings have update password which we don't need
     activeRooms: '/activeRooms',
     user: '/user',
     userCreate: '/user/create',

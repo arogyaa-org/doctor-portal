@@ -40,15 +40,27 @@ export function SideNav(): React.JSX.Element {
         color: "var(--SideNav-color)",
         display: { xs: "none", lg: "flex" },
         flexDirection: "column",
-        height: "100%",
+        height: "100vh",
         left: 0,
         maxWidth: "100%",
         position: "fixed",
-        scrollbarWidth: "none",
         top: 0,
         width: "var(--SideNav-width)",
         zIndex: "var(--SideNav-zIndex)",
-        "&::-webkit-scrollbar": { display: "none" },
+        overflowY: "auto",
+        overflowX: "hidden",
+        "&::-webkit-scrollbar": {
+          width: "6px",
+        },
+        "&::-webkit-scrollbar-track": {
+          background: "#0b1126", 
+        },
+        "&::-webkit-scrollbar-thumb": {
+          backgroundColor: "#3e4a6a", 
+          borderRadius: "8px",
+        },
+        scrollbarWidth: "thin", 
+        scrollbarColor: "#3e4a6a #0b1126",
       }}
     >
       <Stack sx={{ alignItems: "center" }}>
@@ -160,13 +172,13 @@ function NavItem({
           ...(active && {
             bgcolor: "var(--NavItem-active-background)",
             transform: "scale(1.03)",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)", 
+            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
             color: "var(--NavItem-active-color)",
           }),
           "&:hover": {
-            bgcolor: "rgba(255, 255, 255, 0.1)", 
+            bgcolor: "rgba(255, 255, 255, 0.1)",
             transform: "scale(1.03)",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)", 
+            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
           },
         }}
       >

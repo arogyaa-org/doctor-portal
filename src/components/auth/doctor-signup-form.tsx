@@ -150,7 +150,7 @@ export function DoctorSignup({
   }, [step]);
 
   const setUpRecaptcha = async (phone: string): Promise<ConfirmationResult> => {
-    // 🧼 Fully remove and recreate the container element
+    // Fully remove and recreate the container element
     const oldContainer = document.getElementById("recaptcha-container");
     if (oldContainer) {
       oldContainer.remove();
@@ -160,7 +160,7 @@ export function DoctorSignup({
       document.body.appendChild(newContainer); // Append outside React control
     }
 
-    // ✅ Create verifier
+    // Create verifier
     window.recaptchaVerifier = new RecaptchaVerifier(
       auth,
       "recaptcha-container",
