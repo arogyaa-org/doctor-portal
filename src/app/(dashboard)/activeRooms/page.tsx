@@ -37,9 +37,9 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import type { Socket } from "socket.io-client";
 import { paths } from "@/paths";
 import { useRouter } from "next/navigation";
+
 
 // Custom styled components
 const GradientCard = styled(Card)(({ theme, gradient }) => ({
@@ -477,29 +477,63 @@ const DoctorDashboard = () => {
     });
   };
 
-  // Accept handler
-  const handleAcceptExtension = () => {
-    if (!extendRequestData || !socket) return;
-    socket.emit("doctor-accepted-extension", {
-      appointmentId: extendRequestData.appointmentId,
-      doctorId: extendRequestData.doctorId,
-    });
-    setOpenExtendDialog(false);
-    alert(
-      "You accepted the extension request. Patient will proceed to payment."
-    );
+  const handleAcceptExtension = async (appointmentId: string) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_CHAT_URL}/approve-extension/${appointmentId}`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        alert("Accepted. Patient can now pay.");
+        fetchRooms(); // refresh UI
+      }
+    } catch (e) {
+      console.error("Error accepting extension", e);
+    }
   };
 
-  // Reject handler
-  const handleRejectExtension = () => {
-    if (!extendRequestData || !socket) return;
-    socket.emit("doctor-rejected-extension", {
-      appointmentId: extendRequestData.appointmentId,
-      doctorId: extendRequestData.doctorId,
-    });
-    setOpenExtendDialog(false);
-    alert("You rejected the extension request.");
+  const handleRejectExtension = async (appointmentId: string) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_CHAT_URL}/reject-extension/${appointmentId}`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        alert("Rejected extension.");
+        fetchRooms(); // refresh UI
+      }
+    } catch (e) {
+      console.error("Error rejecting extension", e);
+    }
   };
+
+  // Accept handler
+  // const handleAcceptExtension = () => {
+  //   if (!extendRequestData || !socket) return;
+  //   socket.emit("doctor-accepted-extension", {
+  //     appointmentId: extendRequestData.appointmentId,
+  //     doctorId: extendRequestData.doctorId,
+  //   });
+  //   setOpenExtendDialog(false);
+  //   alert(
+  //     "You accepted the extension request. Patient will proceed to payment."
+  //   );
+  // };
+
+  // Reject handler
+  // const handleRejectExtension = () => {
+  //   if (!extendRequestData || !socket) return;
+  //   socket.emit("doctor-rejected-extension", {
+  //     appointmentId: extendRequestData.appointmentId,
+  //     doctorId: extendRequestData.doctorId,
+  //   });
+  //   setOpenExtendDialog(false);
+  //   alert("You rejected the extension request.");
+  // };
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -896,28 +930,33 @@ const DoctorDashboard = () => {
                           </GradientButton>
                         </Stack>
                       </Stack>
+                      {room.extensionStatus === "pending" && (
+                        <Stack direction="row" spacing={1} mt={2}>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            onClick={() =>
+                              handleAcceptExtension(room.appointmentId)
+                            }
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() =>
+                              handleRejectExtension(room.appointmentId)
+                            }
+                          >
+                            Reject
+                          </Button>
+                        </Stack>
+                      )}
                     </CardContent>
                   </GradientCard>
                 ))}
               </Stack>
-              {extendRequestData && (
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={handleAcceptExtension}
-                  >
-                    Accept Extend
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={handleRejectExtension}
-                  >
-                    Reject Extend
-                  </Button>
-                </Stack>
-              )}
+           
             </Box>
           </Paper>
         )}
@@ -1216,25 +1255,6 @@ const DoctorDashboard = () => {
             </Box>
           </Paper>
         )}
-
-        <Dialog
-          open={openExtendDialog}
-          onClose={() => setOpenExtendDialog(false)}
-        >
-          <DialogTitle>Extension Request</DialogTitle>
-          <DialogContent>
-            Patient is requesting to extend the video call by 10 minutes. Do you
-            want to allow it?
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleRejectExtension} color="error">
-              Reject
-            </Button>
-            <Button onClick={handleAcceptExtension} autoFocus>
-              Accept
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         {/* No rooms message */}
         {rooms.activeRooms.length === 0 &&
