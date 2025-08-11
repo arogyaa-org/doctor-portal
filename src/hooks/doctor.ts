@@ -20,16 +20,19 @@ export const useGetDoctor = (
   pathKey: string,
   page: number = 1,
   limit: number = 5,
-  keyword?: string,
-  isVerified?: boolean
+  search?: string,
+  isVerified?: boolean,
+  createdFrom?: "admin" | "sales" | "arogyaa"
 ) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", String(page));
   queryParams.set("limit", String(limit));
-  if (keyword) queryParams.set("keyword", keyword);
+
+  if (search) queryParams.set("search", search);
   if (typeof isVerified === "boolean") {
     queryParams.set("isVerified", String(isVerified));
   }
+  if (createdFrom) queryParams.set("createdFrom", createdFrom);
 
   const url = `${pathKey}?${queryParams.toString()}`;
 
@@ -43,10 +46,11 @@ export const useGetDoctor = (
     revalidateOnFocus: false,
   });
 
-  const refetch = async (customKeyword?: string) => {
+  const refetch = async (customSearch?: string) => {
     const params = new URLSearchParams(queryParams.toString());
-    if (customKeyword) {
-      params.set("keyword", customKeyword);
+    if (customSearch !== undefined) {
+      if (customSearch) params.set("search", customSearch);
+      else params.delete("search");
     }
     const refetchUrl = `${pathKey}?${params.toString()}`;
     return await mutate(refetchUrl);

@@ -10,11 +10,17 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import CancelIcon from "@mui/icons-material/Cancel";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
-import { ToggleButton, ToggleButtonGroup } from "@mui/material";
+import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
+import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import CreateIcon from "@mui/icons-material/Create";
 import { isEqual } from "lodash";
 
@@ -35,9 +41,13 @@ const Page: React.FC = () => {
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [inputValue, setInputValue] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [verifiedFilter, setVerifiedFilter] = useState<
-    "all" | "verified" | "not_verified"
-  >("all");
+
+  type FilterType = "all" | "verified" | "not_verified" | "arogyaa";
+  const [verifiedFilter, setVerifiedFilter] = useState<FilterType>("all");
+
+  // dropdown anchor
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
   const { doctor, reduxLoading } = useSelector(
     (state: RootState) => state.doctor
@@ -50,17 +60,20 @@ const Page: React.FC = () => {
 
   const apiParams = useMemo(() => {
     const isVerified =
-      verifiedFilter === "all"
-        ? undefined
-        : verifiedFilter === "verified"
-          ? true
-          : false;
+      verifiedFilter === "verified"
+        ? true
+        : verifiedFilter === "not_verified"
+          ? false
+          : undefined;
+
+    const createdFrom = verifiedFilter === "arogyaa" ? "arogyaa" : undefined;
 
     return {
       page: currentPage + 1,
       limit: pageSize,
       search: inputValue,
       isVerified,
+      createdFrom,
     };
   }, [currentPage, pageSize, inputValue, verifiedFilter]);
 
@@ -70,7 +83,8 @@ const Page: React.FC = () => {
     apiParams.page,
     apiParams.limit,
     apiParams.search,
-    apiParams.isVerified
+    apiParams.isVerified,
+    apiParams.createdFrom
   );
 
   useEffect(() => {
@@ -111,6 +125,78 @@ const Page: React.FC = () => {
     setCurrentPage(0);
   };
 
+  const handleFilterChange = (next: FilterType | null) => {
+    if (!next) return;
+    setVerifiedFilter(next);
+    setCurrentPage(0);
+  };
+
+  const COLOR: Record<FilterType, string> = {
+    all: "#1976D2", // blue
+    verified: "#2E7D32", // green
+    not_verified: "#D32F2F", // red
+    arogyaa: "#EF6C00", // amber/orange
+  };
+
+  const LABEL: Record<FilterType, string> = {
+    all: "All",
+    verified: "Verified",
+    not_verified: "Not Verified",
+    arogyaa: "Arogyaa",
+  };
+
+  const ICON: Record<FilterType, React.ReactNode> = {
+    all: <PeopleAltIcon fontSize="small" />,
+    verified: <VerifiedIcon fontSize="small" />,
+    not_verified: <CancelIcon fontSize="small" />,
+    arogyaa: <LocalHospitalIcon fontSize="small" />,
+  };
+
+  const ActiveIcon = useMemo(() => {
+    const el = ICON[verifiedFilter] as React.ReactElement;
+    return React.cloneElement(el, {
+      sx: { color: COLOR[verifiedFilter] },
+      fontSize: "small",
+    });
+  }, [verifiedFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const FilterButton = (
+    <Button
+      variant="contained"
+      disableElevation
+      startIcon={<AssignmentTurnedInOutlinedIcon />}
+      endIcon={
+        <ArrowDropDownIcon
+          sx={{
+            transform: open ? "rotate(180deg)" : "none",
+            transition: "0.2s",
+          }}
+        />
+      }
+      onClick={(e) => setAnchorEl(e.currentTarget)}
+      sx={{
+        textTransform: "none",
+        borderRadius: 2,
+        px: 1.5,
+        py: 0.5,
+        backgroundColor: "#ECECEC",
+        color: "#3A3A3A",
+        boxShadow: "none",
+        "&:hover": { backgroundColor: "#E6E6E6", boxShadow: "none" },
+      }}
+    >
+      <Stack direction="row" spacing={1.25} alignItems="center">
+        <Typography fontWeight={600}>Is Verified</Typography>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          {ActiveIcon}
+          <Typography fontWeight={700} sx={{ color: COLOR[verifiedFilter] }}>
+            {LABEL[verifiedFilter]}
+          </Typography>
+        </Stack>
+      </Stack>
+    </Button>
+  );
+
   return (
     <Stack spacing={3}>
       {isMobile ? (
@@ -119,47 +205,41 @@ const Page: React.FC = () => {
             Doctor
           </Typography>
 
-          <ToggleButtonGroup
-            value={verifiedFilter}
-            exclusive
-            onChange={(_event, newValue) => {
-              if (newValue !== null) {
-                setVerifiedFilter(newValue);
-                setCurrentPage(0);
-              }
-            }}
-            size="small"
-            fullWidth
-            sx={{
-              background: "#f5f5f5",
-              borderRadius: 2,
-              "& .MuiToggleButton-root": {
-                textTransform: "none",
-                fontWeight: 500,
-                px: 2,
-                py: 0.8,
-                border: 0,
-                color: "#333",
-                "&.Mui-selected": {
-                  color: verifiedFilter === "verified" ? "#2E7D32" : verifiedFilter === "not_verified" ? "#D32F2F" : "#1976D2",
-                  backgroundColor: verifiedFilter === "verified" ? "#E8F5E9" : verifiedFilter === "not_verified" ? "#FFEBEE" : "#E3F2FD",
-                },
-                "&:hover": {
-                  backgroundColor: verifiedFilter === "verified" ? "#E8F5E9" : verifiedFilter === "not_verified" ? "#FFEBEE" : "#E3F2FD",
-                },
-              },
+          {FilterButton}
+
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={() => setAnchorEl(null)}
+            PaperProps={{
+              elevation: 8,
+              sx: { mt: 1, borderRadius: 2, py: 0.5, minWidth: 220 },
             }}
           >
-            <ToggleButton value="all">
-              <PeopleAltIcon sx={{ mr: 1 }} fontSize="small" /> All
-            </ToggleButton>
-            <ToggleButton value="verified">
-              <VerifiedIcon sx={{ mr: 1 }} fontSize="small" /> Verified
-            </ToggleButton>
-            <ToggleButton value="not_verified">
-              <CancelIcon sx={{ mr: 1 }} fontSize="small" /> Not Verified
-            </ToggleButton>
-          </ToggleButtonGroup>
+            {(
+              ["all", "verified", "not_verified", "arogyaa"] as FilterType[]
+            ).map((k) => (
+              <MenuItem
+                key={k}
+                onClick={() => {
+                  handleFilterChange(k);
+                  setAnchorEl(null);
+                }}
+                sx={{
+                  py: 1,
+                  "& .MuiListItemIcon-root": { minWidth: 34 },
+                }}
+              >
+                <ListItemIcon sx={{ color: COLOR[k] }}>{ICON[k]}</ListItemIcon>
+                <ListItemText
+                  primary={LABEL[k]}
+                  primaryTypographyProps={{
+                    sx: { color: COLOR[k], fontWeight: 600 },
+                  }}
+                />
+              </MenuItem>
+            ))}
+          </Menu>
 
           <Search refetchAPI={handleSearch} holderText="Doctor" />
 
@@ -197,46 +277,41 @@ const Page: React.FC = () => {
             Doctor
           </Typography>
 
-          <ToggleButtonGroup
-            value={verifiedFilter}
-            exclusive
-            onChange={(_event, newValue) => {
-              if (newValue !== null) {
-                setVerifiedFilter(newValue);
-                setCurrentPage(0);
-              }
-            }}
-            size="small"
-            sx={{
-              background: "#f5f5f5",
-              borderRadius: 2,
-              "& .MuiToggleButton-root": {
-                textTransform: "none",
-                fontWeight: 500,
-                px: 2,
-                py: 0.8,
-                border: 0,
-                color: "#333",
-                "&.Mui-selected": {
-                  color: verifiedFilter === "verified" ? "#2E7D32" : verifiedFilter === "not_verified" ? "#D32F2F" : "#1976D2",
-                  backgroundColor: verifiedFilter === "verified" ? "#E8F5E9" : verifiedFilter === "not_verified" ? "#FFEBEE" : "#E3F2FD",
-                },
-                "&:hover": {
-                  backgroundColor: verifiedFilter === "verified" ? "#E8F5E9" : verifiedFilter === "not_verified" ? "#FFEBEE" : "#E3F2FD",
-                },
-              },
+          {FilterButton}
+
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={() => setAnchorEl(null)}
+            PaperProps={{
+              elevation: 8,
+              sx: { mt: 1, borderRadius: 2, py: 0.5, minWidth: 220 },
             }}
           >
-            <ToggleButton value="all">
-              <PeopleAltIcon sx={{ mr: 1 }} fontSize="small" /> All
-            </ToggleButton>
-            <ToggleButton value="verified">
-              <VerifiedIcon sx={{ mr: 1 }} fontSize="small" /> Verified
-            </ToggleButton>
-            <ToggleButton value="not_verified">
-              <CancelIcon sx={{ mr: 1 }} fontSize="small" /> Not Verified
-            </ToggleButton>
-          </ToggleButtonGroup>
+            {(
+              ["all", "verified", "not_verified", "arogyaa"] as FilterType[]
+            ).map((k) => (
+              <MenuItem
+                key={k}
+                onClick={() => {
+                  handleFilterChange(k);
+                  setAnchorEl(null);
+                }}
+                sx={{
+                  py: 1,
+                  "& .MuiListItemIcon-root": { minWidth: 34 },
+                }}
+              >
+                <ListItemIcon sx={{ color: COLOR[k] }}>{ICON[k]}</ListItemIcon>
+                <ListItemText
+                  primary={LABEL[k]}
+                  primaryTypographyProps={{
+                    sx: { color: COLOR[k], fontWeight: 600 },
+                  }}
+                />
+              </MenuItem>
+            ))}
+          </Menu>
 
           <Stack direction="row" spacing={2} alignItems="center">
             <Search refetchAPI={handleSearch} holderText="Doctor" />
