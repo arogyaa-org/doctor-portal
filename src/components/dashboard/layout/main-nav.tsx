@@ -1,32 +1,35 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import Avatar from '@mui/material/Avatar';
-import Badge from '@mui/material/Badge';
-import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
-import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
-import { List as ListIcon } from '@phosphor-icons/react/dist/ssr/List';
+import * as React from "react";
+import Avatar from "@mui/material/Avatar";
+import Badge from "@mui/material/Badge";
+import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
+import { Bell as BellIcon } from "@phosphor-icons/react/dist/ssr/Bell";
+import { List as ListIcon } from "@phosphor-icons/react/dist/ssr/List";
 
-import { usePopover } from '@/hooks/use-popover';
-import { MobileNav } from './mobile-nav';
-import { UserPopover } from './user-popover';
-import { Utility } from '@/utils';
+import { usePopover } from "@/hooks/use-popover";
+import { MobileNav } from "./mobile-nav";
+import { UserPopover } from "./user-popover";
+import { Utility } from "@/utils";
 import { useGetDoctor } from "@/hooks/doctor";
 import { useGetUser } from "@/hooks/user";
 
-import { useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
-import DoctorNotificationPopover from '../settings/notifications';
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import DoctorNotificationPopover from "../settings/notifications";
+import { getToken } from "next-auth/jwt";
+
 export function MainNav(): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState<boolean>(false);
 
   const userPopover = usePopover<HTMLDivElement>();
   const { decodedToken } = Utility();
   const { role, userName, doctorName, id } = decodedToken() || {};
-  const displayName = role === "admin" || role === "sub_admin" ? userName : doctorName;
+  const displayName =
+    role === "admin" || role === "sub_admin" ? userName : doctorName;
 
   const { value: doctorData } = useGetDoctor(
     null,
@@ -37,7 +40,9 @@ export function MainNav(): React.JSX.Element {
 
   const { value: userData } = useGetUser(
     null,
-    id && (role === "admin" || role === "sub_admin") ? `/get-user-by-id/${id}` : "",
+    id && (role === "admin" || role === "sub_admin")
+      ? `/get-user-by-id/${id}`
+      : "",
     1,
     1
   );
@@ -45,7 +50,7 @@ export function MainNav(): React.JSX.Element {
   const profileImage =
     role === "doctor"
       ? doctorData?.data?.profilePicture || null
-      : (role === "admin" || role === "sub_admin")
+      : role === "admin" || role === "sub_admin"
         ? userData?.data?.profilePicture || null
         : null;
 
@@ -63,7 +68,8 @@ export function MainNav(): React.JSX.Element {
   // Get unread notification count from redux
   const unreadCount = useSelector(
     (state: RootState) =>
-      state.notifications.notifications.filter((n) => n.status === 'unread').length
+      state.notifications.notifications.filter((n) => n.status === "unread")
+        .length
   );
 
   return (
@@ -71,39 +77,39 @@ export function MainNav(): React.JSX.Element {
       <Box
         component="header"
         sx={{
-          borderBottom: '1px solid var(--mui-palette-divider)',
-          backgroundColor: 'var(--mui-palette-background-paper)',
-          position: 'sticky',
+          borderBottom: "1px solid var(--mui-palette-divider)",
+          backgroundColor: "var(--mui-palette-background-paper)",
+          position: "sticky",
           top: 0,
-          zIndex: 'var(--mui-zIndex-appBar)',
+          zIndex: "var(--mui-zIndex-appBar)",
         }}
       >
         <Stack
           direction="row"
           spacing={2}
           sx={{
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            minHeight: '64px',
+            alignItems: "center",
+            justifyContent: "space-between",
+            minHeight: "64px",
             px: 2,
           }}
         >
-          <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
+          <Stack sx={{ alignItems: "center" }} direction="row" spacing={2}>
             <IconButton
               onClick={(): void => {
                 setOpenNav(true);
               }}
-              sx={{ display: { lg: 'none' } }}
+              sx={{ display: { lg: "none" } }}
             >
               <ListIcon />
             </IconButton>
           </Stack>
-          <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
+          <Stack sx={{ alignItems: "center" }} direction="row" spacing={2}>
             <Tooltip title="Notifications">
               <Badge
                 badgeContent={unreadCount}
                 color="success"
-                variant={unreadCount > 0 ? 'dot' : 'standard'}
+                variant={unreadCount > 0 ? "dot" : "standard"}
               >
                 <IconButton onClick={handleNotificationOpen}>
                   <BellIcon />
