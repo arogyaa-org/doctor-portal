@@ -534,7 +534,7 @@ const DoctorDashboard = () => {
               <Activity size={24} color="white" />
             </Box>
             <Typography variant="h4" fontWeight="bold" color="text.primary">
-              Active Rooms
+              Active Calls
             </Typography>
           </Stack>
           <Stack direction="row" alignItems="center" spacing={1} mb={4}>
@@ -655,7 +655,7 @@ const DoctorDashboard = () => {
                   color="text.secondary"
                   fontWeight="bold"
                 >
-                  Scheduled
+                  Scheduled Calls
                 </Typography>
                 <Typography variant="h3" fontWeight="bold" color="text.primary">
                   {rooms.summary.totalScheduled}

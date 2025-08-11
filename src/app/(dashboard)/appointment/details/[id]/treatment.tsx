@@ -159,7 +159,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
   patientId,
 }) => {
   const dispatch: AppDispatch = useDispatch();
-  const { toastAndNavigate } = Utility();
+  const { toastAndNavigate, decodedToken } = Utility();
 
   const [treatmentItems, setTreatmentItems] = useState<TreatmentItem[]>([
     { ...initialTreatmentItem },
@@ -167,6 +167,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
 
   const [formData, setFormData] = useState({ ...initialFormData });
   const [errors, setErrors] = useState({ ...initialErrors });
+  const token = decodedToken();
 
   // Reset form when modal opens or closes
   useEffect(() => {
@@ -263,8 +264,25 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+
+    // Decode token freshly on every submit
+    const { decodedToken } = Utility();
+    const token = decodedToken();
+
+    if (!token || token?.role !== "doctor") {
+      console.error("Current user is not a doctor");
+      toastAndNavigate(
+        dispatch,
+        true,
+        "error",
+        "Unauthorized: Doctor login required"
+      );
+      return;
+    }
+
     try {
       const payload = {
+        doctorId: token.id,
         patientId,
         treatments: treatmentItems.map((item) => ({
           name: item.name,
@@ -275,7 +293,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
           isEmptyStomach: item.isEmptyStomach,
           routeOfAdministration: item.routeOfAdministration,
           startDate: item.startDate,
-          isSubstitutionAllowed: item.isSubstitutionAllowed, // Fixed capitalization
+          isSubstitutionAllowed: item.isSubstitutionAllowed,
         })),
         type: formData.type,
         diagnosis: formData.diagnosis,
@@ -291,11 +309,15 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
         formDataInstance.append("photo", formData.photo);
       }
 
+      //Include token in Authorization header
       const response = await creator(
         "treatment",
         "create-treatment",
         formDataInstance,
-        { "Content-Type": "multipart/form-data" }
+        {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        }
       );
 
       if (response.statusCode === 201) {
