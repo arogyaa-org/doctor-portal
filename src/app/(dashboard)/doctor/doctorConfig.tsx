@@ -109,24 +109,68 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "center",
-      flex: 0.5,
-      renderCell: ({ row: { isVerified } }) => (
-        <Box
-          sx={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center", // vertical center
-            justifyContent: "center", // horizontal center
-          }}
-        >
-          {isVerified ? (
-            <VerifiedIcon sx={{ color: green[600] }} titleAccess="Verified" />
-          ) : (
-            <CancelIcon sx={{ color: red[600] }} titleAccess="Not Verified" />
-          )}
-        </Box>
-      ),
+      flex: 0.7,
+      renderCell: ({ row: { isVerified, createdFrom } }) => {
+        const hasAarogyaa =
+          typeof createdFrom === "string" &&
+          /(arogyaa)/i.test(createdFrom);
+
+        return (
+          <Box
+            sx={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 0.4,
+              }}
+            >
+              {isVerified ? (
+                <VerifiedIcon
+                  sx={{ color: green[600] }}
+                  titleAccess="Verified"
+                />
+              ) : (
+                <CancelIcon
+                  sx={{ color: red[600] }}
+                  titleAccess="Not Verified"
+                />
+              )}
+
+              {hasAarogyaa && (
+                <Box
+                  sx={{
+                    px: 1,
+                    height: 20,
+                    borderRadius: "999px", 
+                    backgroundColor: "black",
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    whiteSpace: "nowrap",
+                  }}
+                  title="Aarogyaa Origin"
+                >
+                  Arogyaa
+                </Box>
+              )}
+            </Box>
+          </Box>
+        );
+      },
     },
     {
       field: "action",

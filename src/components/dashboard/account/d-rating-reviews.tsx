@@ -8,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import FeedbackOutlinedIcon from "@mui/icons-material/FeedbackOutlined";
 import { fetcher } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 
@@ -90,7 +91,34 @@ export default function DoctorRatingsAndReviews(): React.JSX.Element {
   }
 
   if (testimonials.length === 0) {
-    return <Typography>No testimonials available.</Typography>;
+    return (
+      <Card
+        variant="outlined"
+        sx={{
+          transition: "transform 0.3s, box-shadow 0.3s",
+          "&:hover": {
+            boxShadow: 14,
+            transform: "scale(1.02)",
+          },
+        }}
+      >
+        <CardContent>
+          <Box
+            textAlign="center"
+            py={3}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={1}
+          >
+            <FeedbackOutlinedIcon color="disabled" fontSize="large" />
+            <Typography variant="body1" color="textSecondary">
+              No ratings and reviews available.
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

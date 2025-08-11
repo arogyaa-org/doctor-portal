@@ -6,10 +6,10 @@ import {
   Button,
   TextField,
   Autocomplete,
-  CircularProgress,
+  MenuItem,
   Typography,
-  Chip,
   InputAdornment,
+  FormControl,
 } from "@mui/material";
 import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import PhoneIcon from "@mui/icons-material/Phone";
@@ -17,24 +17,25 @@ import EmailIcon from "@mui/icons-material/Email";
 import PersonIcon from "@mui/icons-material/Person";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import SchoolIcon from "@mui/icons-material/School";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
+import LockIcon from "@mui/icons-material/Lock";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import ManIcon from "@mui/icons-material/Man";
-import WomanIcon from "@mui/icons-material/Woman";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import { useTheme, useMediaQuery } from "@mui/material";
+import TodayIcon from "@mui/icons-material/Today";
+import WcIcon from "@mui/icons-material/Wc";
 import SickIcon from "@mui/icons-material/Sick";
 import WorkIcon from "@mui/icons-material/Work";
 import HistoryIcon from "@mui/icons-material/History";
 import PasswordIcon from "@mui/icons-material/Lock";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { Tabs, Tab } from "@mui/material";
 import {
   DatePicker,
   LocalizationProvider,
   TimePicker,
 } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 
 import Toast from "@/components/common/Toast";
 import { DoctorData } from "@/types/doctor";
@@ -51,12 +52,10 @@ import * as yup from "yup";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 
-// Define validation schema
 const phoneRegExp =
   /^((\+[1-9]{1,4}[ -]?)|(\([0-9]{2,3}\)[ -]?)|([0-9]{2,4})[ -]?)*?[0-9]{3,4}[ -]?[0-9]{3,4}$/;
 const emailRegExp = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
 
-// Define days of the week for dropdown
 const daysOfWeek = [
   "Monday",
   "Tuesday",
@@ -81,6 +80,26 @@ interface DoctorProfileEditProps {
   role: string | undefined;
 }
 
+const TabPanel: React.FC<{
+  children: React.ReactNode;
+  value: number;
+  index: number;
+}> = ({ children, value, index }) => {
+  return (
+    <div
+      role="tabpanel"
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${index}`}
+      style={{
+        display: value === index ? "block" : "none",
+        width: "100%",
+      }}
+    >
+      <Box sx={{ pt: 2 }}>{children}</Box>
+    </div>
+  );
+};
+
 // eslint-disable-next-line react/function-component-definition
 const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
   editFields,
@@ -95,6 +114,22 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const bioInputRef = useRef<HTMLTextAreaElement | null>(null);
   const pwFieldRef = useRef<HTMLInputElement | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [isApplyToAllActive, setIsApplyToAllActive] = useState(false);
+  const originalAvailabilityRef = useRef<DoctorData["availability"]>([]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+    setTimeout(() => {
+      const firstInput = document.querySelector(`#tabpanel-${newValue} input`);
+      if (firstInput) {
+        (firstInput as HTMLInputElement).focus();
+      }
+    }, 0);
+  };
+
   const { modifyDoctor } = useModifyDoctor("update-doctor");
   const { value: specialities, loading: specialitiesLoading } =
     useGetSpeciality(null, "get-specialities", 1, 200, "");
@@ -206,12 +241,35 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
     }),
   });
 
-  const [isQualificationEditing, setIsQualificationEditing] = useState(false);
-  const [isSpecializationEditing, setIsSpecializationEditing] = useState(false);
-  const [isSymptomsEditing, setIsSymptomsEditing] = useState(false);
   const [updatePassword, setUpdatePassword] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const { toast } = useSelector((state: RootState) => state.toast);
+
+  const handleApplyToAll = () => {
+    const first = editFields.availability?.[0];
+    if (!first) return;
+
+    // Backup original availability
+    originalAvailabilityRef.current = [...editFields.availability];
+
+    const appliedSlots = daysOfWeek.map((day) => ({
+      day,
+      startTime: first.startTime,
+      endTime: first.endTime,
+      hospital: {
+        name: first.hospital?.name || "",
+        location: first.hospital?.location || "",
+      },
+    }));
+
+    handleFieldChange("availability", appliedSlots);
+    setIsApplyToAllActive(true);
+  };
+
+  const handleCancelApplyToAll = () => {
+    handleFieldChange("availability", originalAvailabilityRef.current);
+    setIsApplyToAllActive(false);
+  };
 
   const {
     control,
@@ -222,6 +280,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
     watch,
   } = useForm<DoctorData & { updatePassword?: boolean }>({
     resolver: yupResolver(validationSchema),
+    mode: "onChange",
     context: { updatePassword },
     defaultValues: {
       ...editFields,
@@ -399,44 +458,23 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
         formData.append("consultationFee", data.consultationFee || "");
 
         data.qualificationIds.forEach((qual, index) => {
-          let qualId = "";
-          if (typeof qual === "string") {
-            qualId = qual;
-          } else if (typeof qual === "object" && qual._id) {
-            qualId = qual._id;
-          }
-          if (qualId && typeof qualId === "string" && qualId.length > 0) {
+          const qualId = typeof qual === "string" ? qual : qual?._id || "";
+          if (qualId) {
             formData.append(`qualificationIds[${index}]`, qualId);
-          } else {
-            console.warn(`Invalid qualification ID at index ${index} skipped`);
           }
         });
 
         data.specializationIds.forEach((spec, index) => {
-          let specId = "";
-          if (typeof spec === "string") {
-            specId = spec;
-          } else if (typeof spec === "object" && spec._id) {
-            specId = spec._id;
-          }
-          if (specId && typeof specId === "string" && specId.length > 0) {
+          const specId = typeof spec === "string" ? spec : spec?._id || "";
+          if (specId) {
             formData.append(`specializationIds[${index}]`, specId);
-          } else {
-            console.warn(`Invalid specialization ID at index ${index} skipped`);
           }
         });
 
         data.symptomIds.forEach((sym, index) => {
-          let symId = "";
-          if (typeof sym === "string") {
-            symId = sym;
-          } else if (typeof sym === "object" && sym._id) {
-            symId = sym._id;
-          }
-          if (symId && typeof symId === "string" && symId.length > 0) {
+          const symId = typeof sym === "string" ? sym : sym?._id || "";
+          if (symId) {
             formData.append(`symptomIds[${index}]`, symId);
-          } else {
-            console.warn(`Invalid symptom ID at index ${index} skipped`);
           }
         });
 
@@ -450,6 +488,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
             `availability[${index}][endTime]`,
             slot.endTime || ""
           );
+
           if (slot.hospital?.name || slot.hospital?.location) {
             formData.append(
               `availability[${index}][hospital][name]`,
@@ -460,6 +499,7 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
               slot.hospital?.location || ""
             );
           }
+
           if (slot._id) {
             formData.append(`availability[${index}][_id]`, slot._id);
           }
@@ -480,15 +520,19 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
           "Profile updated successfully!"
         );
 
+        const updatedData: DoctorData = {
+          ...response.data,
+          password: undefined,
+          updatePassword: undefined,
+          profilePicture:
+            response.data.profilePicture || editFields.profilePicture,
+          _id: editFields._id,
+        };
+
+        setDoctorProfileData(updatedData);
+        setEditFields(updatedData);
+
         setTimeout(() => {
-          setDoctorProfileData({
-            ...response.data,
-            password: undefined,
-            updatePassword: undefined,
-            profilePicture:
-              response.data.profilePicture || editFields.profilePicture,
-            _id: editFields._id,
-          });
           setIsEditOpen(false);
           setUpdatePassword(false);
           setValue("password", "");
@@ -620,686 +664,348 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
         {(role === "doctor" || role === "admin") && (
           <Box
             sx={{
-              textAlign: "center",
+              width: "100%",
+              px: { xs: 2, sm: 4 },
               mt: 1,
-              px: 2,
-              width: "90%",
               display: "flex",
               justifyContent: "center",
             }}
           >
-            <Controller
-              name="bio"
-              control={control}
-              render={({ field }) => (
-                <textarea
-                  ref={bioInputRef}
-                  {...field}
-                  placeholder="Enter your bio..."
-                  style={{
-                    padding: "8px",
-                    borderRadius: "8px",
-                    border: errors.bio ? "2px solid red" : "2px solid #8F44FD",
-                    fontSize: "16px",
-                    textAlign: "center",
-                    width: "100%",
-                    minHeight: "40px",
-                    resize: "none",
-                    background: "transparent",
-                    outline: "none",
-                    cursor: "text",
-                    overflow: "hidden",
-                  }}
-                />
-              )}
-            />
+            <Box sx={{ width: "100%", maxWidth: 600 }}>
+              <Controller
+                name="bio"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Bio"
+                    placeholder="Enter your bio..."
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    maxRows={6}
+                    error={!!errors.bio}
+                    helperText={errors.bio?.message}
+                  />
+                )}
+              />
+            </Box>
           </Box>
         )}
       </Box>
 
-      <Box
-        sx={{
-          p: 3,
-          border: "1px solid #DDD",
-          borderRadius: "12px",
-          backgroundColor: "#FFF",
-        }}
-      >
-        <Box
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          variant={isMobile ? "scrollable" : "fullWidth"}
+          scrollButtons={isMobile ? "auto" : false}
+          centered // <--- Always center, regardless of screen size
+          textColor="primary"
+          indicatorColor="primary"
           sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
-            gap: 3,
-            mt: 2,
+            width: "100%",
+            justifyContent: "center",
+            "& .MuiTabs-flexContainer": {
+              justifyContent: "center",
+            },
           }}
         >
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-              Phone
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <PhoneIcon sx={{ color: "#8F44FD" }} />
+          <Tab
+            label={
+              <Box
+                display="flex"
+                flexDirection={isMobile ? "column" : "row"}
+                alignItems="center"
+                justifyContent="center"
+                gap={1}
+                textAlign="center"
+              >
+                <PersonIcon color="primary" fontSize="small" />
+                <span style={{ fontSize: isMobile ? 12 : 14 }}>Personal</span>
+              </Box>
+            }
+          />
+          <Tab
+            label={
+              <Box
+                display="flex"
+                flexDirection={isMobile ? "column" : "row"}
+                alignItems="center"
+                justifyContent="center"
+                gap={1}
+                textAlign="center"
+              >
+                <AccessTimeIcon color="primary" fontSize="small" />
+                <span style={{ fontSize: isMobile ? 12 : 14 }}>
+                  Availability
+                </span>
+              </Box>
+            }
+          />
+          <Tab
+            label={
+              <Box
+                display="flex"
+                flexDirection={isMobile ? "column" : "row"}
+                alignItems="center"
+                justifyContent="center"
+                gap={1}
+                textAlign="center"
+              >
+                <WorkIcon color="primary" fontSize="small" />
+                <span style={{ fontSize: isMobile ? 12 : 14 }}>
+                  Professional
+                </span>
+              </Box>
+            }
+          />
+        </Tabs>
+      </Box>
+
+      <TabPanel value={activeTab} index={0}>
+        <Box
+          sx={{
+            p: 3,
+            border: "1px solid #DDD",
+            borderRadius: "12px",
+            backgroundColor: "#FFF",
+          }}
+        >
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(auto-fit, minmax(240px, 1fr))",
+              },
+              gap: 3,
+            }}
+          >
+            <Controller
+              name="contact"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Phone"
+                  onChange={(e) => {
+                    field.onChange(e);
+                    trigger("contact");
+                  }}
+                  error={!!errors.contact}
+                  helperText={errors.contact?.message}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PhoneIcon color="primary" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+            />
+
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Email"
+                  error={!!errors.email}
+                  helperText={errors.email?.message}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <EmailIcon color="primary" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+            />
+
+            <Controller
+              name="gender"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  select
+                  label="Gender"
+                  error={!!errors.gender}
+                  helperText={errors.gender?.message}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <WcIcon color="primary" />
+                      </InputAdornment>
+                    ),
+                  }}
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </TextField>
+              )}
+            />
+
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
               <Controller
-                name="contact"
+                name="dob"
                 control={control}
                 render={({ field }) => (
-                  <input
-                    {...field}
-                    type="text"
-                    style={{
-                      fontSize: "16px",
-                      color: "#555",
-                      border: errors.contact
-                        ? "2px solid red"
-                        : "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      width: "150px",
-                      outline: "none",
-                      background: "transparent",
-                      transition: "border 0.2s ease-in-out",
+                  <DatePicker
+                    label="Date of Birth"
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(newValue) => {
+                      const formattedDate = newValue
+                        ? newValue.format("YYYY-MM-DD")
+                        : "";
+                      field.onChange(formattedDate);
+                      handleFieldChange("dob", formattedDate);
+                    }}
+                    format="DD/MM/YYYY"
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: !!errors.dob,
+                        helperText: errors.dob?.message,
+                        InputProps: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <TodayIcon color="primary" />
+                            </InputAdornment>
+                          ),
+                        },
+                      },
                     }}
                   />
                 )}
               />
-            </Box>
-          </Box>
+            </LocalizationProvider>
 
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-              Email
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <EmailIcon sx={{ color: "#8F44FD" }} />
-              <Controller
-                name="email"
-                control={control}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type="email"
-                    style={{
-                      fontSize: "16px",
-                      color: "#555",
-                      border: errors.email
-                        ? "2px solid red"
-                        : "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      width: "200px",
-                      outline: "none",
-                      background: "transparent",
-                      transition: "border 0.2s ease-in-out",
-                    }}
-                  />
-                )}
-              />
-            </Box>
-          </Box>
-
-          {updatePassword && (
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                New Password
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <PasswordIcon sx={{ color: "#8F44FD" }} />
-                <Controller
-                  name="password"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      type={showPassword ? "text" : "password"}
-                      inputRef={pwFieldRef}
-                      sx={{
-                        width: "200px",
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": {
-                            border: errors.password
-                              ? "2px solid red"
-                              : "2px solid #8F44FD",
-                          },
-                          "&:hover fieldset": {
-                            border: errors.password
-                              ? "2px solid red"
-                              : "2px solid #8F44FD",
-                          },
-                          "&.Mui-focused fieldset": {
-                            border: errors.password
-                              ? "2px solid red"
-                              : "2px solid #8F44FD",
-                          },
-                        },
-                      }}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              aria-label="toggle password visibility"
-                              onClick={togglePasswordVisibility}
-                            >
-                              {showPassword ? (
-                                <VisibilityIcon sx={{ color: "#8F44FD" }} />
-                              ) : (
-                                <VisibilityOffIcon sx={{ color: "#8F44FD" }} />
-                              )}
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                      error={!!errors.password}
-                      helperText={errors.password?.message}
-                    />
-                  )}
-                />
-              </Box>
-            </Box>
-          )}
-
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-              Gender
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {editFields.gender === "Male" && (
-                <ManIcon sx={{ color: "#8F44FD" }} />
-              )}
-              {editFields.gender === "Female" && (
-                <WomanIcon sx={{ color: "#8F44FD" }} />
-              )}
-              {!editFields.gender || editFields.gender === "Other" ? (
-                <PersonIcon sx={{ color: "#8F44FD" }} />
-              ) : null}
-              <Controller
-                name="gender"
-                control={control}
-                render={({ field }) => (
-                  <select
-                    {...field}
-                    style={{
-                      fontSize: "16px",
-                      color: "#555",
-                      border: errors.gender
-                        ? "2px solid red"
-                        : "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      background: "transparent",
-                      cursor: "pointer",
-                      width: "200px",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                )}
-              />
-            </Box>
-          </Box>
-
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-              Date of Birth
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <Controller
-                  name="dob"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      label="Date of Birth *"
-                      value={field.value ? dayjs(field.value) : null}
-                      onChange={(newValue) => {
-                        const formattedDate = newValue
-                          ? newValue.format("YYYY-MM-DD")
-                          : "";
-                        field.onChange(formattedDate);
-                        handleFieldChange("dob", formattedDate);
-                      }}
-                      slotProps={{
-                        textField: {
-                          fullWidth: false,
-                          sx: {
-                            width: "200px",
-                            "& .MuiOutlinedInput-root": {
-                              "& fieldset": {
-                                border: errors.dob
-                                  ? "2px solid red"
-                                  : "2px solid #8F44FD",
-                              },
-                              "&:hover fieldset": {
-                                border: errors.dob
-                                  ? "2px solid red"
-                                  : "2px solid #8F44FD",
-                              },
-                              "&.Mui-focused fieldset": {
-                                border: errors.dob
-                                  ? "2px solid red"
-                                  : "2px solid #8F44FD",
-                              },
-                            },
-                          },
-                          error: !!errors.dob,
-                          helperText: errors.dob?.message,
-                        },
-                        inputAdornment: {
-                          position: "start",
-                        },
-                      }}
-                      slots={{
-                        openPickerIcon: CalendarMonthIcon,
-                      }}
-                      sx={{
-                        "& .MuiIconButton-root": {
-                          color: "#8F44FD",
-                          marginRight: "-16px",
-                        },
-                        "& .MuiInputBase-input": {
-                          paddingLeft: "32px !important",
-                          marginLeft: "-4px",
-                        },
-                        "& .MuiInputAdornment-positionStart": {
-                          marginRight: "0px",
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </LocalizationProvider>
-            </Box>
-          </Box>
-
-          {role === "doctor" && (
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Experience
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <HistoryIcon sx={{ color: "#8F44FD" }} />
-                <Controller
-                  name="experience"
-                  control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type="number"
-                      value={field.value || ""}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      style={{
-                        fontSize: "16px",
-                        color: "#555",
-                        border: errors.experience
-                          ? "2px solid red"
-                          : "2px solid #8F44FD",
-                        borderRadius: "6px",
-                        padding: "6px 10px",
-                        background: "transparent",
-                        cursor: "pointer",
-                        width: "100px",
-                        outline: "none",
-                      }}
-                    />
-                  )}
-                />
-              </Box>
-            </Box>
-          )}
-
-          {role === "doctor" && (
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Consultation Fee
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <CurrencyRupeeIcon sx={{ color: "#8F44FD" }} />
-                <Controller
-                  name="consultationFee"
-                  control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type="text"
-                      style={{
-                        fontSize: "16px",
-                        color: "#555",
-                        border: errors.consultationFee
-                          ? "2px solid red"
-                          : "2px solid #8F44FD",
-                        borderRadius: "6px",
-                        padding: "6px 10px",
-                        background: "transparent",
-                        cursor: "text",
-                        width: "100px",
-                        outline: "none",
-                      }}
-                    />
-                  )}
-                />
-              </Box>
-            </Box>
-          )}
-
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-              Status
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {editFields.status === "active" && (
-                <CheckCircleIcon sx={{ color: "success.main" }} />
-              )}
-              {editFields.status === "inactive" && (
-                <CancelIcon sx={{ color: "red" }} />
-              )}
-              {editFields.status === "on leave" && (
-                <CancelIcon sx={{ color: "yellow" }} />
-              )}
+            <Box mb={3}>
               <Controller
                 name="status"
                 control={control}
                 render={({ field }) => (
-                  <select
+                  <TextField
                     {...field}
-                    style={{
-                      fontSize: "16px",
-                      color: "#555",
-                      border: errors.status
-                        ? "2px solid red"
-                        : "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      background: "transparent",
-                      cursor: "pointer",
-                      width: "200px",
-                      outline: "none",
+                    fullWidth
+                    select
+                    label="Status"
+                    error={!!errors.status}
+                    helperText={errors.status?.message}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LockIcon color="primary" />
+                        </InputAdornment>
+                      ),
                     }}
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="on leave">On Leave</option>
-                  </select>
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                    <MenuItem value="on leave">On Leave</MenuItem>
+                  </TextField>
                 )}
               />
             </Box>
+
+            <Box>
+              {!updatePassword ? (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  color="info"
+                  onClick={handleUpdatePasswordToggle}
+                  sx={{
+                    height: "56px", // Match other input heights
+                    textTransform: "none",
+                  }}
+                >
+                  Update Password
+                </Button>
+              ) : (
+                <Box>
+                  <Controller
+                    name="password"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        placeholder="Enter new password"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          trigger("password"); // Force validation update
+                        }}
+                        fullWidth
+                        type={showPassword ? "text" : "password"}
+                        label="New Password"
+                        inputRef={pwFieldRef}
+                        error={!!errors.password}
+                        helperText={errors.password?.message}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <PasswordIcon color="primary" />
+                            </InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={togglePasswordVisibility}
+                                edge="end"
+                              >
+                                {showPassword ? (
+                                  <VisibilityIcon color="primary" />
+                                ) : (
+                                  <VisibilityOffIcon color="primary" />
+                                )}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                  <Box sx={{ textAlign: "right", mt: 1 }}>
+                    <Button
+                      color="error"
+                      variant="text"
+                      size="small"
+                      onClick={handleUpdatePasswordToggle}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+            </Box>
           </Box>
+        </Box>
+      </TabPanel>
 
+      <TabPanel value={activeTab} index={1}>
+        <Box
+          sx={{
+            p: 3,
+            border: "1px solid #DDD",
+            borderRadius: "12px",
+            backgroundColor: "#FFF",
+          }}
+        >
           {role === "doctor" && (
             <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Qualification
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <SchoolIcon sx={{ color: "#8F44FD" }} />
-                {qualificationsLoading ? (
-                  <CircularProgress size={20} />
-                ) : !isQualificationEditing ? (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      width: "220px",
-                      border: errors.qualificationIds
-                        ? "2px solid red"
-                        : "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      minHeight: "32px",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => setIsQualificationEditing(true)}
-                  >
-                    {Array.isArray(editFields?.qualificationIds) &&
-                    editFields.qualificationIds.length > 0 ? (
-                      getItemsFromIds(
-                        editFields.qualificationIds,
-                        qualifications?.results || []
-                      ).map((qual) => (
-                        <Chip
-                          key={qual._id}
-                          label={qual.name}
-                          size="small"
-                          sx={{
-                            bgcolor: "#E0E7FF",
-                            color: "#1E3A8A",
-                            "&:hover": { bgcolor: "#C7D2FE" },
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "#555", fontSize: "16px" }}
-                      >
-                        Not Specified
-                      </Typography>
-                    )}
-                  </Box>
-                ) : (
-                  <Controller
-                    name="qualificationIds"
-                    control={control}
-                    render={({ field }) => (
-                      <Autocomplete
-                        multiple
-                        options={qualifications?.results || []}
-                        getOptionLabel={(option) => option?.name || ""}
-                        value={getItemsFromIds(
-                          field.value,
-                          qualifications?.results || []
-                        )}
-                        onChange={(event, newValue) => {
-                          const newIds = newValue.map(
-                            (qualification) => qualification._id
-                          );
-                          field.onChange(newIds);
-                          handleFieldChange("qualificationIds", newIds);
-                        }}
-                        onBlur={() => setIsQualificationEditing(false)}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Select Qualifications"
-                            variant="outlined"
-                            sx={{ width: "220px" }}
-                            error={!!errors.qualificationIds}
-                            helperText={errors.qualificationIds?.message}
-                          />
-                        )}
-                      />
-                    )}
-                  />
-                )}
-              </Box>
-            </Box>
-          )}
-
-          {role === "doctor" && (
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Specialization
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <WorkIcon sx={{ color: "#8F44FD" }} />
-                {specialitiesLoading ? (
-                  <CircularProgress size={20} />
-                ) : !isSpecializationEditing ? (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      width: "220px",
-                      border: errors.specializationIds
-                        ? "2px solid red"
-                        : "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      minHeight: "32px",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => setIsSpecializationEditing(true)}
-                  >
-                    {Array.isArray(editFields?.specializationIds) &&
-                    editFields.specializationIds.length > 0 ? (
-                      getItemsFromIds(
-                        editFields.specializationIds,
-                        specialities?.results || []
-                      ).map((spec) => (
-                        <Chip
-                          key={spec._id}
-                          label={spec.name}
-                          size="small"
-                          sx={{
-                            bgcolor: "#E0E7FF",
-                            color: "#1E3A8A",
-                            "&:hover": { bgcolor: "#C7D2FE" },
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "#555", fontSize: "16px" }}
-                      >
-                        Not Specified
-                      </Typography>
-                    )}
-                  </Box>
-                ) : (
-                  <Controller
-                    name="specializationIds"
-                    control={control}
-                    render={({ field }) => (
-                      <Autocomplete
-                        multiple
-                        options={specialities?.results || []}
-                        getOptionLabel={(option) => option?.name || ""}
-                        value={getItemsFromIds(
-                          field.value,
-                          specialities?.results || []
-                        )}
-                        onChange={(event, newValue) => {
-                          const newIds = newValue.map((spec) => spec._id);
-                          field.onChange(newIds);
-                          handleFieldChange("specializationIds", newIds);
-                        }}
-                        onBlur={() => setIsSpecializationEditing(false)}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Select Specializations"
-                            variant="outlined"
-                            sx={{ width: "220px" }}
-                            error={!!errors.specializationIds}
-                            helperText={errors.specializationIds?.message}
-                          />
-                        )}
-                      />
-                    )}
-                  />
-                )}
-              </Box>
-            </Box>
-          )}
-
-          {role === "doctor" && (
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
-                Symptoms
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <SickIcon sx={{ color: "#8F44FD" }} />
-                {symptomsLoading ? (
-                  <CircularProgress size={20} />
-                ) : !isSymptomsEditing ? (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      width: "220px",
-                      border: errors.symptomIds
-                        ? "2px solid red"
-                        : "2px solid #8F44FD",
-                      borderRadius: "6px",
-                      padding: "6px 10px",
-                      minHeight: "32px",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => setIsSymptomsEditing(true)}
-                  >
-                    {Array.isArray(editFields?.symptomIds) &&
-                    editFields.symptomIds.length > 0 ? (
-                      getItemsFromIds(
-                        editFields.symptomIds,
-                        symptoms?.results || []
-                      ).map((sym) => (
-                        <Chip
-                          key={sym._id}
-                          label={sym.name}
-                          size="small"
-                          sx={{
-                            bgcolor: "#E0E7FF",
-                            color: "#1E3A8A",
-                            "&:hover": { bgcolor: "#C7D2FE" },
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "#555", fontSize: "16px" }}
-                      >
-                        Not Specified
-                      </Typography>
-                    )}
-                  </Box>
-                ) : (
-                  <Controller
-                    name="symptomIds"
-                    control={control}
-                    render={({ field }) => (
-                      <Autocomplete
-                        multiple
-                        options={symptoms?.results || []}
-                        getOptionLabel={(option) => option?.name || ""}
-                        value={getItemsFromIds(
-                          field.value,
-                          symptoms?.results || []
-                        )}
-                        onChange={(event, newValue) => {
-                          const newIds = newValue.map((sym) => sym._id);
-                          field.onChange(newIds);
-                          handleFieldChange("symptomIds", newIds);
-                        }}
-                        onBlur={() => setIsSymptomsEditing(false)}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Select Symptoms"
-                            variant="outlined"
-                            sx={{ width: "220px" }}
-                            error={!!errors.symptomIds}
-                            helperText={errors.symptomIds?.message}
-                          />
-                        )}
-                      />
-                    )}
-                  />
-                )}
-              </Box>
-            </Box>
-          )}
-
-          {role === "doctor" && (
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: "bold", mb: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
                 Availability
               </Typography>
+
               {Array.isArray(editFields.availability) &&
               editFields.availability.length > 0 ? (
                 editFields.availability.map((slot, index) => (
@@ -1307,229 +1013,261 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                     key={index}
                     sx={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 2,
+                      flexDirection: "column",
+                      gap: 2,
+                      mb: 3,
+                      p: 2,
+                      border: "1px solid #E0E0E0",
+                      borderRadius: "12px",
+                      backgroundColor: "#FAFAFA",
                     }}
                   >
-                    <AccessTimeIcon sx={{ color: "#8F44FD" }} />
+                    {/* Two-column layout */}
+                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                      {/* Column 1: Day + Hospital Location */}
+                      <Box
+                        sx={{
+                          flex: "1 1 100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 2,
+                        }}
+                      >
+                        <FormControl sx={{ flex: 1 }}>
+                          <TextField
+                            select
+                            label="Day"
+                            value={slot.day || ""}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                "availability",
+                                e.target.value,
+                                index,
+                                "day"
+                              )
+                            }
+                            error={!!errors.availability?.[index]?.day}
+                            helperText={
+                              errors.availability?.[index]?.day?.message
+                            }
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <TodayIcon color="primary" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          >
+                            <MenuItem value="" disabled>
+                              Select Day
+                            </MenuItem>
+                            {daysOfWeek.map((day) => (
+                              <MenuItem key={day} value={day}>
+                                {day}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        </FormControl>
+
+                        <TextField
+                          label="Hospital Name"
+                          value={slot.hospital?.name || ""}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              "availability",
+                              e.target.value,
+                              index,
+                              "hospital.name"
+                            )
+                          }
+                          sx={{ flex: 1 }}
+                          error={!!errors.availability?.[index]?.hospital?.name}
+                          helperText={
+                            errors.availability?.[index]?.hospital?.name
+                              ?.message
+                          }
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <WorkIcon color="primary" />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+
+                        <TextField
+                          label="Hospital Location"
+                          value={slot.hospital?.location || ""}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              "availability",
+                              e.target.value,
+                              index,
+                              "hospital.location"
+                            )
+                          }
+                          sx={{ flex: 1 }}
+                          error={
+                            !!errors.availability?.[index]?.hospital?.location
+                          }
+                          helperText={
+                            errors.availability?.[index]?.hospital?.location
+                              ?.message
+                          }
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <LocationOnIcon color="primary" />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </Box>
+
+                      {/* Column 2: Hospital Name + (Start Time + End Time) */}
+                      <Box
+                        sx={{
+                          flex: "1 1 100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 2,
+                        }}
+                      >
+                        {/* Row for Start Time and End Time */}
+                        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                          <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <TimePicker
+                              label="Start Time"
+                              ampm
+                              value={
+                                slot.startTime
+                                  ? dayjs(slot.startTime, "h:mm A")
+                                  : null
+                              }
+                              onChange={(newValue) => {
+                                const formatted = parseTimeTo12Hour(newValue);
+                                handleFieldChange(
+                                  "availability",
+                                  formatted,
+                                  index,
+                                  "startTime"
+                                );
+                              }}
+                              slotProps={{
+                                textField: {
+                                  sx: { flex: 1, minWidth: "150px" },
+                                  error:
+                                    !!errors.availability?.[index]?.startTime,
+                                  helperText:
+                                    errors.availability?.[index]?.startTime
+                                      ?.message,
+                                  InputProps: {
+                                    startAdornment: (
+                                      <InputAdornment position="start">
+                                        <AccessTimeIcon color="primary" />
+                                      </InputAdornment>
+                                    ),
+                                  },
+                                },
+                              }}
+                            />
+                          </LocalizationProvider>
+
+                          <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <TimePicker
+                              label="End Time"
+                              ampm
+                              value={
+                                slot.endTime
+                                  ? dayjs(slot.endTime, "h:mm A")
+                                  : null
+                              }
+                              onChange={(newValue) => {
+                                const formatted = parseTimeTo12Hour(newValue);
+                                handleFieldChange(
+                                  "availability",
+                                  formatted,
+                                  index,
+                                  "endTime"
+                                );
+                              }}
+                              slotProps={{
+                                textField: {
+                                  sx: { flex: 1, minWidth: "150px" },
+                                  error:
+                                    !!errors.availability?.[index]?.endTime,
+                                  helperText:
+                                    errors.availability?.[index]?.endTime
+                                      ?.message,
+                                  InputProps: {
+                                    startAdornment: (
+                                      <InputAdornment position="start">
+                                        <AccessTimeIcon color="primary" />
+                                      </InputAdornment>
+                                    ),
+                                  },
+                                },
+                              }}
+                            />
+                          </LocalizationProvider>
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    {/* Buttons */}
                     <Box
                       sx={{
                         display: "flex",
-                        gap: 1,
-                        flexDirection: "column",
+                        justifyContent: "flex-end",
+                        gap: 2,
+                        flexWrap: "wrap",
+                        mt: 1,
                       }}
                     >
-                      <select
-                        value={slot.day || ""}
-                        onChange={(e) =>
-                          handleFieldChange(
-                            "availability",
-                            e.target.value,
-                            index,
-                            "day"
-                          )
-                        }
-                        style={{
-                          fontSize: "16px",
-                          color: "#555",
-                          border: errors.availability?.[index]?.day
-                            ? "2px solid red"
-                            : "2px solid #8F44FD",
-                          borderRadius: "6px",
-                          padding: "6px 10px",
-                          background: "transparent",
-                          cursor: "pointer",
-                          width: "200px",
-                          outline: "none",
-                        }}
-                      >
-                        <option value="" disabled>
-                          Select Day
-                        </option>
-                        {daysOfWeek.map((day) => (
-                          <option key={day} value={day}>
-                            {day}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        value={slot.hospital?.name || ""}
-                        onChange={(e) =>
-                          handleFieldChange(
-                            "availability",
-                            e.target.value,
-                            index,
-                            "hospital.name"
-                          )
-                        }
-                        placeholder="Hospital Name (Optional)"
-                        style={{
-                          fontSize: "16px",
-                          color: "#555",
-                          border: errors.availability?.[index]?.hospital?.name
-                            ? "2px solid red"
-                            : "2px solid #8F44FD",
-                          borderRadius: "6px",
-                          padding: "6px 10px",
-                          background: "transparent",
-                          cursor: "pointer",
-                          width: "200px",
-                          outline: "none",
-                        }}
-                      />
-                      <input
-                        type="text"
-                        value={slot.hospital?.location || ""}
-                        onChange={(e) =>
-                          handleFieldChange(
-                            "availability",
-                            e.target.value,
-                            index,
-                            "hospital.location"
-                          )
-                        }
-                        placeholder="Hospital Location (Optional)"
-                        style={{
-                          fontSize: "16px",
-                          color: "#555",
-                          border: errors.availability?.[index]?.hospital
-                            ?.location
-                            ? "2px solid red"
-                            : "2px solid #8F44FD",
-                          borderRadius: "6px",
-                          padding: "6px 10px",
-                          background: "transparent",
-                          cursor: "pointer",
-                          width: "200px",
-                          outline: "none",
-                        }}
-                      />
-                      <TimePicker
-                        label="Start Time"
-                        value={
-                          slot.startTime
-                            ? dayjs(slot.startTime, "h:mm A")
-                            : null
-                        }
-                        onChange={(newValue) => {
-                          const formattedTime = parseTimeTo12Hour(newValue);
-                          handleFieldChange(
-                            "availability",
-                            formattedTime,
-                            index,
-                            "startTime"
-                          );
-                        }}
-                        ampm
-                        slotProps={{
-                          textField: {
-                            sx: {
-                              width: "200px",
-                              "& .MuiOutlinedInput-root": {
-                                "& fieldset": {
-                                  border: errors.availability?.[index]
-                                    ?.startTime
-                                    ? "2px solid red"
-                                    : "2px solid #8F44FD",
-                                },
-                                "&:hover fieldset": {
-                                  border: errors.availability?.[index]
-                                    ?.startTime
-                                    ? "2px solid red"
-                                    : "2px solid #8F44FD",
-                                },
-                                "&.Mui-focused fieldset": {
-                                  border: errors.availability?.[index]
-                                    ?.startTime
-                                    ? "2px solid red"
-                                    : "2px solid #8F44FD",
-                                },
-                              },
-                            },
-                            error: !!errors.availability?.[index]?.startTime,
-                            helperText:
-                              errors.availability?.[index]?.startTime?.message,
-                          },
-                        }}
-                      />
-                      <TimePicker
-                        label="End Time"
-                        value={
-                          slot.endTime ? dayjs(slot.endTime, "h:mm A") : null
-                        }
-                        onChange={(newValue) => {
-                          const formattedTime = parseTimeTo12Hour(newValue);
-                          handleFieldChange(
-                            "availability",
-                            formattedTime,
-                            index,
-                            "endTime"
-                          );
-                        }}
-                        ampm
-                        slotProps={{
-                          textField: {
-                            sx: {
-                              width: "200px",
-                              "& .MuiOutlinedInput-root": {
-                                "& fieldset": {
-                                  border: errors.availability?.[index]?.endTime
-                                    ? "2px solid red"
-                                    : "2px solid #8F44FD",
-                                },
-                                "&:hover fieldset": {
-                                  border: errors.availability?.[index]?.endTime
-                                    ? "2px solid red"
-                                    : "2px solid #8F44FD",
-                                },
-                                "&.Mui-focused fieldset": {
-                                  border: errors.availability?.[index]?.endTime
-                                    ? "2px solid red"
-                                    : "2px solid #8F44FD",
-                                },
-                              },
-                            },
-                            error: !!errors.availability?.[index]?.endTime,
-                            helperText:
-                              errors.availability?.[index]?.endTime?.message,
-                          },
-                        }}
-                      />
-                      <button
+                      <Button
+                        variant="outlined"
+                        color="error"
                         onClick={() => {
-                          const updatedAvailability =
-                            editFields.availability.filter(
-                              (_, idx) => idx !== index
-                            );
-                          handleFieldChange(
-                            "availability",
-                            updatedAvailability
+                          const updated = editFields.availability.filter(
+                            (_, idx) => idx !== index
                           );
-                        }}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "red",
-                          marginTop: "8px",
+                          handleFieldChange("availability", updated);
                         }}
                       >
                         Remove
-                      </button>
+                      </Button>
+
+                      {isApplyToAllActive ? (
+                        <Button
+                          variant="outlined"
+                          color="warning"
+                          onClick={handleCancelApplyToAll}
+                        >
+                          Cancel Apply to All
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          disabled={!editFields.availability?.[0]}
+                          onClick={handleApplyToAll}
+                        >
+                          Apply Entry to All Days
+                        </Button>
+                      )}
                     </Box>
                   </Box>
                 ))
               ) : (
-                <Typography variant="body2" sx={{ color: "red" }}>
-                  Not Available
+                <Typography variant="body2" color="textSecondary">
+                  No availability slots added.
                 </Typography>
               )}
+
               <Button
-                variant="outlined"
+                variant="contained"
                 color="primary"
-                sx={{ mt: -4 }}
+                sx={{ mt: 2 }}
                 onClick={() =>
                   handleFieldChange("availability", [
                     ...editFields.availability,
@@ -1542,12 +1280,210 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
                   ])
                 }
               >
-                Add
+                Add Availability
               </Button>
             </Box>
           )}
         </Box>
-      </Box>
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={2}>
+        <Box
+          sx={{
+            p: 3,
+            mb: 2,
+            border: "1px solid #DDD",
+            borderRadius: "12px",
+            backgroundColor: "#FFF",
+          }}
+        >
+          {role === "doctor" && (
+            <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+              <Box sx={{ flex: 1 }}>
+                <Controller
+                  name="experience"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="Experience (in years)"
+                      error={!!errors.experience}
+                      helperText={errors.experience?.message}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <HistoryIcon color="primary" />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Controller
+                  name="consultationFee"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="Consultation Fee"
+                      type="text"
+                      error={!!errors.consultationFee}
+                      helperText={errors.consultationFee?.message}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <CurrencyRupeeIcon color="primary" />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              </Box>
+            </Box>
+          )}
+
+          {role === "doctor" && (
+            <Box mb={3}>
+              <Controller
+                name="qualificationIds"
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    multiple
+                    options={qualifications?.results || []}
+                    getOptionLabel={(option) => option?.name || ""}
+                    value={getItemsFromIds(
+                      field.value,
+                      qualifications?.results || []
+                    )}
+                    onChange={(event, newValue) => {
+                      const newIds = newValue.map((q) => q._id);
+                      field.onChange(newIds);
+                      handleFieldChange("qualificationIds", newIds);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        label="Select Qualifications"
+                        error={!!errors.qualificationIds}
+                        helperText={errors.qualificationIds?.message}
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>
+                              <InputAdornment position="start">
+                                <SchoolIcon color="primary" />
+                              </InputAdornment>
+                              {params.InputProps.startAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                )}
+              />
+            </Box>
+          )}
+
+          {role === "doctor" && (
+            <Box mb={3}>
+              <Controller
+                name="specializationIds"
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    multiple
+                    options={specialities?.results || []}
+                    getOptionLabel={(option) => option?.name || ""}
+                    value={getItemsFromIds(
+                      field.value,
+                      specialities?.results || []
+                    )}
+                    onChange={(event, newValue) => {
+                      const newIds = newValue.map((s) => s._id);
+                      field.onChange(newIds);
+                      handleFieldChange("specializationIds", newIds);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        label="Select Specializations"
+                        error={!!errors.specializationIds}
+                        helperText={errors.specializationIds?.message}
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>
+                              <InputAdornment position="start">
+                                <WorkIcon color="primary" />
+                              </InputAdornment>
+                              {params.InputProps.startAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                )}
+              />
+            </Box>
+          )}
+
+          {role === "doctor" && (
+            <Box mb={2}>
+              <Controller
+                name="symptomIds"
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    multiple
+                    options={symptoms?.results || []}
+                    getOptionLabel={(option) => option?.name || ""}
+                    value={getItemsFromIds(
+                      field.value,
+                      symptoms?.results || []
+                    )}
+                    onChange={(event, newValue) => {
+                      const newIds = newValue.map((s) => s._id);
+                      field.onChange(newIds);
+                      handleFieldChange("symptomIds", newIds);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        label="Select Symptoms"
+                        error={!!errors.symptomIds}
+                        helperText={errors.symptomIds?.message}
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>
+                              <InputAdornment position="start">
+                                <SickIcon color="primary" />
+                              </InputAdornment>
+                              {params.InputProps.startAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                )}
+              />
+            </Box>
+          )}
+        </Box>
+      </TabPanel>
 
       <Box
         sx={{
@@ -1563,18 +1499,6 @@ const DoctorProfileEdit: React.FC<DoctorProfileEditProps> = ({
           mt: { xs: 2, sm: 0 },
         }}
       >
-        <Button
-          type="button"
-          variant="contained"
-          color={updatePassword ? "error" : "info"}
-          onClick={handleUpdatePasswordToggle}
-          sx={{
-            minWidth: { xs: "100px", sm: "150px" },
-            flex: 1,
-          }}
-        >
-          {updatePassword ? "Cancel Password Update" : "Update Password"}
-        </Button>
         <Button
           type="button"
           variant="contained"

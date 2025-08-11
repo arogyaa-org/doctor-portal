@@ -20,7 +20,7 @@ import { navIcons } from "./nav-icons";
 export function SideNav(): React.JSX.Element {
   const pathname = usePathname();
   const navItems = useNavItems();
-  const role = Utility()?.decodedToken()?.role; // Get the role using Utility
+  const role = Utility()?.decodedToken()?.role; // "admin" | "sub_admin" | "doctor" | "sales" | etc.
 
   return (
     <Box
@@ -49,17 +49,13 @@ export function SideNav(): React.JSX.Element {
         zIndex: "var(--SideNav-zIndex)",
         overflowY: "auto",
         overflowX: "hidden",
-        "&::-webkit-scrollbar": {
-          width: "6px",
-        },
-        "&::-webkit-scrollbar-track": {
-          background: "#0b1126", 
-        },
+        "&::-webkit-scrollbar": { width: "6px" },
+        "&::-webkit-scrollbar-track": { background: "#0b1126" },
         "&::-webkit-scrollbar-thumb": {
-          backgroundColor: "#3e4a6a", 
+          backgroundColor: "#3e4a6a",
           borderRadius: "8px",
         },
-        scrollbarWidth: "thin", 
+        scrollbarWidth: "thin",
         scrollbarColor: "#3e4a6a #0b1126",
       }}
     >
@@ -72,21 +68,25 @@ export function SideNav(): React.JSX.Element {
           <Logo color="light" height={122} width={142} />
         </Box>
       </Stack>
+
       <Box component="nav" sx={{ flex: "1 1 auto", p: "12px" }}>
-        {renderNavItems({
-          pathname,
-          items: navItems.slice(0, 4),
-        })}
-        {/* Conditionally render Divider if role is not sub_admin */}
-        {role !== "sub_admin" && (
-          <Divider
-            sx={{ borderColor: "var(--mui-palette-neutral-700)", my: 2 }}
-          />
+        {role === "admin" ? (
+          // Admin: inject divider after "user" and after "activeRooms"
+          renderNavItemsWithAdminDividers({ pathname, items: navItems })
+        ) : (
+          // Others: keep your previous layout (first 4, divider if not sub_admin, rest)
+          <>
+            {renderNavItems({ pathname, items: navItems.slice(0, 4) })}
+
+            {role !== "sub_admin" && (
+              <Divider
+                sx={{ borderColor: "var(--mui-palette-neutral-700)", my: 2 }}
+              />
+            )}
+
+            {renderNavItems({ pathname, items: navItems.slice(4) })}
+          </>
         )}
-        {renderNavItems({
-          pathname,
-          items: navItems.slice(4),
-        })}
       </Box>
     </Box>
   );
@@ -102,13 +102,44 @@ function renderNavItems({
   const children = items.reduce(
     (acc: React.ReactNode[], curr: NavItemConfig): React.ReactNode[] => {
       const { key, ...item } = curr;
-
       acc.push(<NavItem key={key} pathname={pathname} {...item} />);
-
       return acc;
     },
     []
   );
+
+  return (
+    <Stack component="ul" spacing={1} sx={{ listStyle: "none", m: 0, p: 0 }}>
+      {children}
+    </Stack>
+  );
+}
+
+// Special renderer for admin: adds dividers after "user" and "activeRooms"
+function renderNavItemsWithAdminDividers({
+  items = [],
+  pathname,
+}: {
+  items?: NavItemConfig[];
+  pathname: string;
+}): React.JSX.Element {
+  const children: React.ReactNode[] = [];
+
+  items.forEach((curr, idx) => {
+    const { key, ...item } = curr;
+
+    children.push(<NavItem key={key} pathname={pathname} {...item} />);
+
+    // Insert divider after "user" and "activeRooms" if not the last item
+    if ((key === "user" || key === "activeRooms") && idx < items.length - 1) {
+      children.push(
+        <Divider
+          key={`${key}-divider`}
+          sx={{ borderColor: "var(--mui-palette-neutral-700)", my: 2 }}
+        />
+      );
+    }
+  });
 
   return (
     <Stack component="ul" spacing={1} sx={{ listStyle: "none", m: 0, p: 0 }}>

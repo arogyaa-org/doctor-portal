@@ -15,7 +15,7 @@ type CombinedIcon = Icon | typeof LocalPharmacyIcon | typeof MedicalServicesIcon
 
 export const navIcons = {
   'chart-pie': ChartPieIcon,
-  // 'gear-six': GearSixIcon,
+  'gear-six': GearSixIcon,
   'plugs-connected': PlugsConnectedIcon,
   'x-square': XSquare,
   user: UserIcon,
