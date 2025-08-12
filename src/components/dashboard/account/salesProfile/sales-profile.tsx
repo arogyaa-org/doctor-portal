@@ -170,7 +170,7 @@ const SalesProfilePage = () => {
     formData.append("address", form.address);
     formData.append("pincode", form.pincode);
 
-    if (form.profilePicture instanceof File) {
+    if (typeof File !== "undefined" && form.profilePicture instanceof File) {
       formData.append("profilePicture", form.profilePicture);
     }
 
@@ -331,7 +331,7 @@ const SalesProfilePage = () => {
           <Box sx={{ position: "relative", width: 130, height: 130 }}>
             <Avatar
               src={
-                form.profilePicture instanceof File
+                typeof File !== "undefined" && form.profilePicture instanceof File
                   ? URL.createObjectURL(form.profilePicture)
                   : form.profilePicture
               }
@@ -445,11 +445,11 @@ const SalesProfilePage = () => {
                     {...(["email", "contact"].includes(field.name)
                       ? {}
                       : {
-                          value: form[
-                            field.name as keyof typeof form
-                          ] as string,
-                          onChange: handleChange,
-                        })}
+                        value: form[
+                          field.name as keyof typeof form
+                        ] as string,
+                        onChange: handleChange,
+                      })}
                     error={!!errors[field.name as "email" | "contact"]}
                     helperText={
                       errors[field.name as "email" | "contact"]?.message
@@ -688,7 +688,7 @@ const SalesProfilePage = () => {
             <Avatar
               alt="User"
               src={
-                form.profilePicture instanceof File
+                typeof File !== "undefined" && form.profilePicture instanceof File
                   ? URL.createObjectURL(form.profilePicture)
                   : form.profilePicture
               }
