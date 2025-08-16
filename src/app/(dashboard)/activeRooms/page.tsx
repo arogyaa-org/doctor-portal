@@ -40,7 +40,6 @@ import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import { paths } from "@/paths";
 import { useRouter } from "next/navigation";
 
-
 // Custom styled components
 const GradientCard = styled(Card)(({ theme, gradient }) => ({
   background: gradient,
@@ -116,6 +115,21 @@ const DoctorDashboard = () => {
   const [notificationPermission, setNotificationPermission] =
     useState("default");
   const [activeCalls, setActiveCalls] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState(false);
+  const [expandedScheduled, setExpandedScheduled] = useState(false);
+  const [expandedExpired, setExpandedExpired] = useState(false);
+
+  const visibleRooms = expanded
+    ? rooms.recentRooms
+    : rooms.recentRooms.slice(0, 3); // show only 3 initially
+
+  const visibleScheduledRooms = expandedScheduled
+    ? rooms.scheduledRooms // full list
+    : rooms.scheduledRooms.slice(0, 3); // only first 3
+
+  const visibleExpiredRooms = expandedExpired
+    ? rooms.expiredRooms // full list from backend
+    : rooms.expiredRooms.slice(0, 3); // only first 3
   // useEffect(() => {
   //   if (!doctorId) {
   //     setDocterId(decodedToken().id);
@@ -703,6 +717,45 @@ const DoctorDashboard = () => {
                 </Typography>
               </CardContent>
             </GradientCard>
+
+            {/* Scheduled Calls List */}
+            {rooms.scheduledRooms.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                {/* <Stack spacing={2}>
+                  {visibleScheduledRooms.map((room) => (
+                    <GradientCard
+                      key={room._id}
+                      gradient="linear-gradient(to right, #f0f9ff, #e0f2fe)"
+                      sx={{ p: 2 }}
+                    >
+                      <CardContent sx={{ p: 0 }}>
+                        <Typography variant="body1" fontWeight="bold">
+                          Patient:{" "}
+                          {patientNames[room.patientId] || room.patientId}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Type: {room.type} | Starts at:{" "}
+                          {formatDate(room.startTime)}{" "}
+                          {formatTime(room.startTime)}
+                        </Typography>
+                      </CardContent>
+                    </GradientCard>
+                  ))}
+                </Stack> */}
+
+                {/* Expand/Collapse Button */}
+                {rooms.scheduledRooms.length > 3 && (
+                  <Box sx={{ textAlign: "center", mt: 2 }}>
+                    <Button
+                      variant="text"
+                      onClick={() => setExpandedScheduled(!expandedScheduled)}
+                    >
+                      {expandedScheduled ? "Show Less" : "Show More"}
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            )}
           </Grid>
 
           {/* Recent Calls Card */}
@@ -775,6 +828,44 @@ const DoctorDashboard = () => {
                 </Typography>
               </CardContent>
             </GradientCard>
+            {/* Expired Calls List */}
+            {rooms.expiredRooms.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                {/* <Stack spacing={2}>
+                  {visibleExpiredRooms.map((room) => (
+                    <GradientCard
+                      key={room._id}
+                      gradient="linear-gradient(to right, #fef2f2, #fee2e2)"
+                      sx={{ p: 2 }}
+                    >
+                      <CardContent sx={{ p: 0 }}>
+                        <Typography variant="body1" fontWeight="bold">
+                          Patient:{" "}
+                          {patientNames[room.patientId] || room.patientId}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Type: {room.type} | Scheduled for:{" "}
+                          {formatDate(room.startTime)}{" "}
+                          {formatTime(room.startTime)}
+                        </Typography>
+                      </CardContent>
+                    </GradientCard>
+                  ))}
+                </Stack> */}
+
+                {/* Expand/Collapse Button */}
+                {rooms.expiredRooms.length > 3 && (
+                  <Box sx={{ textAlign: "center", mt: 2 }}>
+                    <Button
+                      variant="text"
+                      onClick={() => setExpandedExpired(!expandedExpired)}
+                    >
+                      {expandedExpired ? "Show Less" : "Show More"}
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            )}
           </Grid>
         </Grid>
 
@@ -956,7 +1047,6 @@ const DoctorDashboard = () => {
                   </GradientCard>
                 ))}
               </Stack>
-           
             </Box>
           </Paper>
         )}
@@ -1116,7 +1206,7 @@ const DoctorDashboard = () => {
             </Box>
             <Box sx={{ p: 4 }}>
               <Stack spacing={2}>
-                {rooms.recentRooms.map((room) => (
+                {visibleRooms.map((room) => (
                   <GradientCard
                     key={room._id}
                     gradient="linear-gradient(to right, #f7f7f7, #e5e5e5)"
@@ -1159,6 +1249,14 @@ const DoctorDashboard = () => {
                   </GradientCard>
                 ))}
               </Stack>
+              {/* Expand/Collapse Button */}
+              {rooms.recentRooms.length > 3 && (
+                <Box sx={{ textAlign: "center", mt: 2 }}>
+                  <Button variant="text" onClick={() => setExpanded(!expanded)}>
+                    {expanded ? "Show Less" : "Show More"}
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Paper>
         )}
