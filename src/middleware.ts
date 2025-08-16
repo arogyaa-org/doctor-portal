@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   const cookieStore = cookies();
   const token = cookieStore.get("token")?.value;
 
-  const publicPaths = ["/login", "/signup-as-doctor"]; // Added /signup-as-doctor
+  const publicPaths = ["/login", "/signup-as-doctor", "/error"]; // Added /signup-as-doctor
   const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
 
   if (!isPublicPath) {
@@ -18,7 +18,12 @@ export async function middleware(request: NextRequest) {
         );
         const { payload } = await jwtVerify(token, jwtSecret);
         const role = payload.role;
-        if (role !== "admin" && role !== "sub_admin" && role !== "sales" && role !== "doctor") {
+        if (
+          role !== "admin" &&
+          role !== "sub_admin" &&
+          role !== "sales" &&
+          role !== "doctor"
+        ) {
           return NextResponse.redirect(new URL("/unauthorized", request.url));
         }
       } catch (error) {
@@ -36,7 +41,5 @@ export async function middleware(request: NextRequest) {
 
 // Specify the paths that this middleware should apply to
 export const config = {
-  matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

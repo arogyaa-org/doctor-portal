@@ -134,8 +134,19 @@ export function DoctorSignup({
   // URL parameter handling effect
   useEffect(() => {
     const status = searchParams.get("status");
+    const error = searchParams.get("error");
+
     if (status === "thank-you") {
       setStep("verificationPending");
+    }
+
+    if (error === "DoctorAlreadyExists") {
+      toastAndNavigate(
+        dispatch,
+        true,
+        "error",
+        "Account exists. Try with another google account."
+      );
     }
   }, [searchParams]);
 
@@ -303,21 +314,27 @@ export function DoctorSignup({
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      await signIn("google", {
-        callbackUrl: `/signup-as-doctor?status=thank-you`,
+      const result = await signIn("google", {
+        redirect: false,
       });
+
+      if (result?.url?.includes("error=DoctorAlreadyExists")) {
+        toastAndNavigate(
+          dispatch,
+          true,
+          "error",
+          "Account exists. Try with another google account."
+        );
+      } else if (result?.url?.includes("status=thank-you")) {
+        router.push("/doctor-signup?status=thank-you");
+      }
     } catch (error) {
-      console.error("Google sign-in failed:", error);
-      toastAndNavigate(
-        dispatch,
-        true,
-        "error",
-        "Google authentication failed. Please try again."
-      );
+      console.error(error);
     } finally {
       setGoogleLoading(false);
     }
   };
+
   console.log("Decoded Redirect:moniss", decodedRedirect);
 
   const getActiveStep = () => {
@@ -1120,23 +1137,11 @@ export function DoctorSignup({
       />
 
       {/* Toast Container */}
-      <Box
-        sx={{
-          position: "fixed",
-          top: 20,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 1300,
-          width: "auto",
-          maxWidth: "90%",
-        }}
-      >
-        <Toast
-          alerting={toast.toastAlert}
-          severity={toast.toastSeverity}
-          message={toast.toastMessage}
-        />
-      </Box>
+      <Toast
+        alerting={toast.toastAlert}
+        severity={toast.toastSeverity}
+        message={toast.toastMessage}
+      />
     </Box>
   );
 }

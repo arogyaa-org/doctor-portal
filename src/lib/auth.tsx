@@ -9,17 +9,17 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user }) {
       try {
         const userId = user.email;
 
-        // Check if the doctor exists
+        // 1. Check if doctor exists
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_DOCTOR_URL}/get-doctor-by-email/${userId}`
         );
         const response = await res.json();
 
-        // If doctor is not found, create a new one
+        // 2. If doctor not found → create
         if (
           response.statusCode === 404 ||
           response.message === "Doctor Not Found"
@@ -37,18 +37,24 @@ export const authOptions: NextAuthOptions = {
                 profilePicture: user.image,
                 type: "social",
                 role: "doctor",
-                specialization: "", // Default specialization
-                qualification: "", // Default qualification
-                consultationFee: "", // Default fee
-                password: process.env.NEXT_PUBLIC_DOCTOR_PASS, // Using env password
+                specialization: "",
+                qualification: "",
+                consultationFee: "",
+                password: process.env.NEXT_PUBLIC_DOCTOR_PASS,
                 status: "pending",
                 isVerified: false,
               }),
             }
           );
-          const createDoctorResponse = await createDoctorRes.json();
 
-          // Login after creation
+          const createDoctorData = await createDoctorRes.json();
+
+          if (createDoctorData.statusCode === 409) {
+            // Email already used → stay on signup page
+            return "/signup-as-doctor?error=DoctorAlreadyExists";
+          }
+
+          // 3. Auto login after creation
           const loginRes = await fetch(
             `${process.env.NEXT_PUBLIC_DOCTOR_URL}/login`,
             {
@@ -65,23 +71,28 @@ export const authOptions: NextAuthOptions = {
 
           const loginData = await loginRes.json();
           if (loginData.statusCode === 200) {
-            return true;
+            // Created & logged in → go to thank you
+            return "/signup-as-doctor?status=thank-you";
+          } else {
+            return "/signup-as-doctor?error=DoctorLoginFailed";
           }
         } else {
-          return true;
+          // 4. Doctor already exists → stay on signup page
+          return "/signup-as-doctor?error=DoctorAlreadyExists";
         }
-        return true;
       } catch (err) {
         console.error("Doctor sign-in error:", err);
-        return false;
+        return "/signup-as-doctor?error=SomethingWentWrong";
       }
     },
+
     async jwt({ token, user }) {
       if (user) {
         token.role = "doctor";
       }
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.role = token.role;
@@ -89,20 +100,10 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
 
-    //   redirect({ url, baseUrl }) {
-    //     if (url.startsWith(baseUrl)) return url;
-    //     if (url.startsWith("/")) return `${baseUrl}${url}`;
-    //     return baseUrl;
-    //   },
-    // },
-
     async redirect({ url, baseUrl }) {
-      // Handle thank-you redirect
-      if (url.includes("/doctor-signup?status=thank-you")) {
-        return `${baseUrl}${url}`;
-      }
-      // Default redirect to dashboard
-      return url.startsWith(baseUrl) ? url : `${baseUrl}${url}`;
+      // NextAuth will use whatever we return from signIn callback directly
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      return url;
     },
   },
   session: {
