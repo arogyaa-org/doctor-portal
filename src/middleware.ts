@@ -7,8 +7,11 @@ export async function middleware(request: NextRequest) {
   const cookieStore = cookies();
   const token = cookieStore.get("token")?.value;
 
-  const publicPaths = ["/login", "/signup-as-doctor", "/error"]; // Added /signup-as-doctor
-  const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
+  const publicPaths = ["/login", "/signup-as-doctor", "/legal"];
+  const pathname = request.nextUrl.pathname;
+  const isPublicPath = publicPaths.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
 
   if (!isPublicPath) {
     if (token) {
