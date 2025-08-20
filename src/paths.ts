@@ -1,6 +1,18 @@
 export const paths = {
-  home: '/',
-  auth: { signIn: '/login', resetPassword: '/reset-password', doctorSignup: '/signup-as-doctor', },
+  home: "/",
+
+  auth: {
+    signIn: "/login",
+    resetPassword: "/reset-password",
+    doctorSignup: "/signup-as-doctor",
+  },
+
+  // NEW: public legal routes
+  legal: {
+    terms: "/legal/terms",
+    privacy: "/legal/privacy",
+  },
+
   dashboard: {
     overview: '/dashboard',
     account: '/account',

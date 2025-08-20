@@ -13,81 +13,47 @@ export const authOptions: NextAuthOptions = {
       const DOCTOR_URL = process.env.NEXT_PUBLIC_DOCTOR_URL!;
       const email = (user?.email || "").toLowerCase();
 
+      const THANK_YOU = "/signup-as-doctor?status=thank-you&via=google";
+      const ALREADY_EXISTS = "/signup-as-doctor?error=DoctorAlreadyExists";
+
       try {
-        // 1) Check if doctor exists
-        const getRes = await fetch(
-          `${DOCTOR_URL}/get-doctor-by-email/${encodeURIComponent(email)}`,
+        // 1) Only check existence by email
+        const existsRes = await fetch(
+          `${DOCTOR_URL}/doctor/exists?email=${encodeURIComponent(email)}`,
           { cache: "no-store" }
         );
-        const getData = await getRes.json();
-
-        const notFound =
-          getRes.status === 404 ||
-          getData?.statusCode === 404 ||
-          getData?.message === "Doctor Not Found";
-
-        if (notFound) {
-          // 2) Create doctor
-          const createRes = await fetch(`${DOCTOR_URL}/create-doctor`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              username: user?.name,
-              email,
-              profilePicture: user?.image,
-              type: "social",
-              role: "doctor",
-              specialization: "",
-              qualification: "",
-              consultationFee: "",
-              password: process.env.NEXT_PUBLIC_DOCTOR_PASS, // temp password
-              status: "pending",
-              createdFrom: "arogyaa",
-              isVerified: false,
-            }),
-          });
-          const createData = await createRes.json();
-
-          // If BE says already exists, let FE show a toast
-          if (createRes.status === 409 || createData?.statusCode === 409) {
-            return "/signup-as-doctor?error=DoctorAlreadyExists";
-          }
-
-          // 3) Try auto-login, BUT do not block the flow if it fails.
-          try {
-            const loginRes = await fetch(`${DOCTOR_URL}/login`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email,
-                password: process.env.NEXT_PUBLIC_DOCTOR_PASS,
-              }),
-            });
-            if (loginRes.ok) {
-              return "/signup-as-doctor?status=thank-you&via=google";
-            }
-          } catch {
-            /* ignore login error */
-          }
-          // Created but login failed → still show thank-you
-          return "/signup-as-doctor?status=thank-you&via=google";
+        const existsData = await existsRes.json().catch(() => ({}) as any);
+        if (existsData?.exists) {
+          return ALREADY_EXISTS;
         }
 
-        // 4) Doctor exists
-        const pendingOrUnverified =
-          getData?.status === "pending" || getData?.isVerified === false;
+        // 2) Create doctor (first-time). Keep payload minimal but valid for your DTO.
+        await fetch(`${DOCTOR_URL}/create-doctor`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-signup-method": "google", // so BE records consent source
+          },
+          body: JSON.stringify({
+            username: user?.name,
+            email,
+            profilePicture: user?.image,
+            password:
+              process.env.DOCTOR_TEMP_PASS ??
+              process.env.NEXT_PUBLIC_DOCTOR_PASS ??
+              "Temp@12345",
+            status: "pending",
+            createdFrom: "arogyaa",
+            isVerified: false,
+          }),
+        });
 
-        if (pendingOrUnverified) {
-          // Existing but pending → show thank-you (review in progress)
-          return "/signup-as-doctor?status=thank-you&via=google";
-        }
-
-        // Fully exists/active → let FE show a toast about existing account
-        return "/signup-as-doctor?error=DoctorAlreadyExists";
+        // Regardless of create response (except duplicate), show thank-you.
+        return THANK_YOU;
       } catch (err) {
         console.error("Doctor sign-in error:", err);
-        // Graceful fallback: avoid dead-ends; FE shows thank-you and proceeds
-        return "/signup-as-doctor?status=thank-you&via=google";
+        // Fallback still shows thank-you per your requirement of only two outcomes
+        return THANK_YOU;
       }
     },
 
@@ -102,7 +68,6 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // Ensure relative paths become same-origin absolute URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       return url;
     },

@@ -31,6 +31,7 @@ import { z as zod } from "zod";
 import Toast from "@/components/common/Toast";
 import { AppDispatch, RootState } from "@/redux/store";
 import { Utility } from "@/utils";
+import LegalConsentInline from "@/components/common/LegalConsentInline";
 import { fetcher } from "@/apis/apiClient";
 import {
   Phone,
@@ -162,7 +163,7 @@ export function DoctorSignup({
         dispatch,
         true,
         "error",
-        "Account exists. Try with another google account."
+        "This email is already registered. Please sign in or use a different Google account."
       );
     }
   }, [searchParams]);
@@ -965,7 +966,18 @@ export function DoctorSignup({
                       )}
                     />
 
+                    {/* LinkedIn-style consent text */}
+                    <LegalConsentInline
+                      ariaId="legal-consent-inline"
+                      primaryCtaLabel="Agree & Join"
+                      continueLabel="Continue with Google"
+                      termsHref="/legal/terms"
+                      privacyHref="/legal/privacy"
+                      align="left"
+                    />
+
                     <Button
+                      aria-describedby="legal-consent-inline"
                       disabled={signupSubmitting}
                       type="submit"
                       variant="contained"
@@ -998,7 +1010,7 @@ export function DoctorSignup({
                           <span>Creating Account...</span>
                         </Box>
                       ) : (
-                        "Complete Signup"
+                        "Agree & Join"
                       )}
                     </Button>
                   </Stack>
@@ -1115,9 +1127,21 @@ export function DoctorSignup({
         <Divider sx={{ my: 2, fontFamily: "Poppins" }}>or</Divider>
       )}
 
+      {!isGoogleFlow && (
+        <LegalConsentInline
+          ariaId="legal-consent-inline"
+          primaryCtaLabel="Agree & Join"
+          continueLabel="Continue with Google"
+          termsHref="/legal/terms"
+          privacyHref="/legal/privacy"
+          align="left"
+        />
+      )}
+
       {/* Google Sign-In Button */}
       {!isGoogleFlow && (
         <Button
+          aria-describedby="legal-consent-inline"
           variant="outlined"
           fullWidth
           startIcon={
