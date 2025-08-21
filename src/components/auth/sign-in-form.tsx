@@ -1,8 +1,10 @@
+"use client";
+
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircularProgress, Box, Stack, Paper } from "@mui/material";
+import { CircularProgress, Box, Stack } from "@mui/material";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import FormHelperText from "@mui/material/FormHelperText";
@@ -13,12 +15,14 @@ import { Controller, useForm } from "react-hook-form";
 import { z as zod } from "zod";
 import Toast from "@/components/common/Toast";
 import { AppDispatch, RootState } from "@/redux/store";
-import { creator } from "@/apis/apiClient";
+import { creator, fetcher } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 import { ArrowBack, Visibility } from "@mui/icons-material";
 import { VisibilityOff } from "@mui/icons-material";
 import { MedicalServices } from "@mui/icons-material";
 import { AdminPanelSettings } from "@mui/icons-material";
+import LegalConsentInline from "@/components/common/LegalConsentInline";
+
 interface DoctorResponse {
   statusCode: number;
   message: string;
@@ -42,12 +46,21 @@ interface SignInFormProps {
   setClientRole: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
+type ConsentCheckRes = {
+  exists: boolean;
+  requireConsent: boolean;
+  termsVersion?: string;
+  privacyVersion?: string;
+};
+
 export function SignInForm({
   clientRole,
   setClientRole,
 }: SignInFormProps): React.JSX.Element {
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [loading, setLoading] = React.useState<boolean>(false);
+  const [needsConsent, setNeedsConsent] = React.useState<boolean>(false);
+
   const { toast } = useSelector((state: RootState) => state.toast);
 
   const router = useRouter();
@@ -57,49 +70,89 @@ export function SignInForm({
   const {
     control,
     handleSubmit,
-    formState: { errors, isValid, isDirty },
+    formState: { errors },
+    getValues,
   } = useForm<Values>({
     defaultValues,
     resolver: zodResolver(schema),
     mode: "onChange",
   });
 
+  const doLogin = React.useCallback(
+    async (values: Values) => {
+      const response: DoctorResponse = await creator(
+        clientRole === "admin" ||
+          clientRole === "sub_admin" ||
+          clientRole === "sales"
+          ? "user"
+          : clientRole ?? "doctor",
+        "/login",
+        {
+          email: values.email,
+          password: values.password,
+        }
+      );
+
+      const { role } = decodedToken(response.token);
+      if (response?.statusCode === 200) {
+        document.cookie = `token=${response.token}; path=/; max-age=${
+          1 * 24 * 60 * 60
+        }; secure; samesite=strict`;
+        if (role === "sales") {
+          router.push("/sales-dashboard");
+        } else {
+          router.push("/dashboard");
+        }
+      } else if (response?.statusCode === 409 || response?.statusCode === 404) {
+        toastAndNavigate(dispatch, true, "error", "User not found");
+      } else if (response?.statusCode === 400) {
+        toastAndNavigate(dispatch, true, "error", "Invalid Password");
+      } else {
+        toastAndNavigate(
+          dispatch,
+          true,
+          "error",
+          "An error occurred. Please Try Again"
+        );
+      }
+    },
+    [clientRole, decodedToken, dispatch, router, toastAndNavigate]
+  );
+
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
       setLoading(true);
-
       try {
-        const response: DoctorResponse = await creator(
-          (clientRole === "admin" || clientRole === "sub_admin" || clientRole === "sales") ? "user" : clientRole ?? "doctor",
-          "/login",
-          {
-            email: values.email,
-            password: values.password,
+        // Consent gate applies only to doctor login
+        if ((clientRole ?? "doctor") === "doctor") {
+          if (!needsConsent) {
+            // 1) Check if consent is required
+            const data = await fetcher<ConsentCheckRes>(
+              "doctor",
+              `/doctor/consent-required?email=${encodeURIComponent(
+                values.email
+              )}`
+            );
+            if (data?.exists && data?.requireConsent) {
+              setNeedsConsent(true);
+              toastAndNavigate(
+                dispatch,
+                true,
+                "info",
+                "Please agree to the latest Terms & Privacy to continue."
+              );
+              return; // stop here; user will click again to accept + login
+            }
+          } else {
+            // 2) User already saw the text: accept and continue
+            await creator("doctor", "/doctor/accept-consent", {
+              email: values.email,
+            } as any);
           }
-        );
-        const { role } = decodedToken(response.token);
-        console.log(response, "this is response from login", role, 'role');
-
-        if (response?.statusCode === 200) {
-          document.cookie = `token=${response.token}; path=/; max-age=${1 * 24 * 60 * 60}; secure; samesite=strict`;
-          router.push("/dashboard");
-          if (role === 'sales') {
-            router.push("/sales-dashboard");
-          }
-        } else if (
-          response?.statusCode === 409 ||
-          response?.statusCode === 404
-        ) {
-          toastAndNavigate(dispatch, true, "error", "User not found");
-          setTimeout(() => {
-            setLoading(false);
-          }, 2200);
-        } else if (response?.statusCode === 400) {
-          toastAndNavigate(dispatch, true, "error", "Invalid Password");
-          setTimeout(() => {
-            setLoading(false);
-          }, 2200);
         }
+
+        // 3) Proceed with normal login
+        await doLogin(values);
       } catch (error) {
         console.error("Login failed", error);
         toastAndNavigate(
@@ -108,16 +161,19 @@ export function SignInForm({
           "error",
           "An error occurred. Please Try Again"
         );
-        setTimeout(() => {
-          setLoading(false);
-        }, 2200);
       } finally {
-        setTimeout(() => {
-          setLoading(false);
-        }, 12000);
+        setLoading(false);
       }
     },
-    [decodedToken, clientRole, dispatch, router, toastAndNavigate]
+    [
+      clientRole,
+      creator,
+      fetcher,
+      needsConsent,
+      doLogin,
+      dispatch,
+      toastAndNavigate,
+    ]
   );
 
   return (
@@ -130,11 +186,10 @@ export function SignInForm({
         maxWidth: 450,
         margin: "auto",
         transform: "translateY(-20px)",
-        position: "relative", // For Toast positioning
+        position: "relative",
       }}
     >
       <Stack spacing={2}>
-        {/* Logo and Role Selection */}
         {!clientRole ? (
           <Box sx={{ textAlign: "center", mb: 4 }}>
             <Typography
@@ -225,11 +280,13 @@ export function SignInForm({
                   color: clientRole === "admin" ? "#122647" : "#15b79e",
                 }}
               >
-                {clientRole !== 'doctor' ? 'User' : capitalizeFirstLetter(clientRole)} Login
+                {clientRole !== "doctor"
+                  ? "User"
+                  : capitalizeFirstLetter(clientRole)}{" "}
+                Login
               </Typography>
             </Box>
 
-            {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)}>
               <Stack spacing={2.5}>
                 <Controller
@@ -269,16 +326,12 @@ export function SignInForm({
                           showPassword ? (
                             <Visibility
                               style={{ cursor: "pointer" }}
-                              onClick={(): void => {
-                                setShowPassword(false);
-                              }}
+                              onClick={() => setShowPassword(false)}
                             />
                           ) : (
                             <VisibilityOff
                               style={{ cursor: "pointer" }}
-                              onClick={(): void => {
-                                setShowPassword(true);
-                              }}
+                              onClick={() => setShowPassword(true)}
                             />
                           )
                         }
@@ -310,6 +363,19 @@ export function SignInForm({
                   </Box>
                 </Typography> */}
 
+                {/* Consent gate appears only when needed for doctors */}
+                {clientRole === "doctor" && needsConsent ? (
+                  <Box sx={{ mt: 1 }}>
+                    <LegalConsentInline
+                      primaryCtaLabel="Agree & Sign in"
+                      continueLabel="" // hide google text here
+                      termsHref="/legal/terms"
+                      privacyHref="/legal/privacy"
+                      align="left"
+                    />
+                  </Box>
+                ) : null}
+
                 <Button
                   disabled={loading}
                   type="submit"
@@ -332,6 +398,8 @@ export function SignInForm({
                 >
                   {loading ? (
                     <CircularProgress size={22} color="inherit" />
+                  ) : needsConsent && clientRole === "doctor" ? (
+                    "Agree & Sign in"
                   ) : (
                     "Sign in"
                   )}
