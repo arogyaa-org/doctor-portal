@@ -22,22 +22,26 @@ import {
   MenuItem,
   FormControl,
   TablePagination,
+  Card,
+  CardContent,
+  Stack,
+  Grid,
+  Skeleton,
+  Fab,
+  Avatar,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import {
   CheckCircle,
   AddCircle,
   HourglassEmpty,
-  KeyboardArrowDown,
-  KeyboardArrowUp,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Description as DescriptionIcon,
-  Category as CategoryIcon,
-  Event as EventIcon,
+  ExpandMore as ExpandMoreIcon,
   Photo as PhotoIcon,
   LocalHospital as TestIcon,
   Close as CloseIcon,
   Cancel,
+  Category as CategoryIcon,
+  Event as EventIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { fetcher, modifier } from "@/apis/apiClient";
@@ -48,7 +52,6 @@ import Toast from "@/components/common/Toast";
 import ImagePicker from "@/components/common/ImagePicker";
 import CreateTestDialog from "./createTestDialog";
 
-// Updated Test interface to match the actual data structure
 interface Test {
   _id: string;
   patientId: {
@@ -77,10 +80,100 @@ interface TestHistoryProps {
   patientId: string;
 }
 
+// Styled Components
+const StyledContainer = styled(Container)(({ theme }) => ({
+  padding: theme.spacing(1),
+  [theme.breakpoints.up("sm")]: {
+    padding: theme.spacing(2),
+  },
+  [theme.breakpoints.up("md")]: {
+    padding: theme.spacing(3),
+  },
+}));
+
+const HeaderSection = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(2),
+  marginBottom: theme.spacing(3),
+  [theme.breakpoints.up("sm")]: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+}));
+
+const StyledFab = styled(Fab)(({ theme }) => ({
+  position: "fixed",
+  bottom: theme.spacing(2),
+  right: theme.spacing(2),
+  zIndex: 1000,
+  background: "linear-gradient(135deg, #2196F3 0%, #1976D2 100%)",
+  color: "white",
+  boxShadow: "0 4px 20px rgba(33, 150, 243, 0.4)",
+  "&:hover": {
+    background: "linear-gradient(135deg, #1976D2 0%, #0D47A1 100%)",
+    transform: "scale(1.1)",
+  },
+  transition: "all 0.3s ease",
+}));
+
+const MobileCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  borderRadius: theme.spacing(2),
+  boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+  border: `1px solid ${theme.palette.divider}`,
+  overflow: "hidden",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    transform: "translateY(-2px)",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+  },
+}));
+
+const StatusChip = styled(Chip)(({ theme }) => ({
+  fontWeight: 600,
+  fontSize: "0.75rem",
+  height: "28px",
+  borderRadius: "14px",
+  "& .MuiChip-icon": {
+    fontSize: "16px",
+  },
+}));
+
+const DetailItem = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  padding: theme.spacing(1, 0),
+}));
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: "20px",
+  textTransform: "none",
+  fontWeight: 600,
+  padding: theme.spacing(0.5, 2),
+  minWidth: "auto",
+  fontSize: "0.875rem",
+}));
+
+const EmptyStateContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing(6, 2),
+  textAlign: "center",
+  backgroundColor: "rgba(25, 118, 210, 0.02)",
+  borderRadius: theme.spacing(2),
+  border: `2px dashed rgba(25, 118, 210, 0.2)`,
+}));
+
 // eslint-disable-next-line react/function-component-definition
 const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
 
   const [tests, setTests] = useState<Test[]>([]);
   const [page, setPage] = useState(0);
@@ -176,7 +269,6 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
 
     try {
       setIsUploading(true);
-
       const headers = {
         "Content-Type": "multipart/form-data",
       };
@@ -189,7 +281,6 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
         },
         headers
       );
-
       toastAndNavigate(
         dispatch,
         true,
@@ -220,7 +311,6 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
   const handleStatusChange = useCallback(
     async (testId: string, newStatus: string) => {
       if (!testId) return;
-
       try {
         const response = await modifier("test", "update-test", {
           _id: testId,
@@ -278,14 +368,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
     {
       value: "scheduled",
       label: "Scheduled",
-      icon: (
-        <HourglassEmpty
-          sx={{
-            fontSize: "1rem",
-            color: "#B98900",
-          }}
-        />
-      ),
+      icon: <HourglassEmpty sx={{ fontSize: "1rem", color: "#B98900" }} />,
       chipStyle: {
         backgroundColor: "#FFF8E5",
         color: "#B98900",
@@ -294,14 +377,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
     {
       value: "completed",
       label: "Completed",
-      icon: (
-        <CheckCircle
-          sx={{
-            fontSize: "1rem",
-            color: "#2D9735",
-          }}
-        />
-      ),
+      icon: <CheckCircle sx={{ fontSize: "1rem", color: "#2D9735" }} />,
       chipStyle: {
         backgroundColor: "#d4edda",
         color: "#2D9735",
@@ -310,14 +386,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
     {
       value: "cancelled",
       label: "Cancelled",
-      icon: (
-        <Cancel
-          sx={{
-            fontSize: "1rem",
-            color: "#C41E1D",
-          }}
-        />
-      ),
+      icon: <Cancel sx={{ fontSize: "1rem", color: "#C41E1D" }} />,
       chipStyle: {
         backgroundColor: "#f8d7da",
         color: "#C41E1D",
@@ -325,41 +394,359 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
     },
   ];
 
+  const getStatusConfig = (status: string) => {
+    return (
+      statusOptions.find((option) => option.value === status.toLowerCase()) ||
+      statusOptions[0]
+    );
+  };
+
+  // Mobile Test Card Component
+  const MobileTestCard = ({ test }: { test: Test }) => {
+    const statusConfig = getStatusConfig(test.status);
+    const isExpanded = expandedTest === test._id;
+
+    return (
+      <MobileCard>
+        <CardContent sx={{ p: 0 }}>
+          {/* Header */}
+          <Box
+            sx={{
+              p: 2,
+              pb: 1,
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              cursor: "pointer",
+            }}
+            onClick={() => handleToggleExpand(test._id)}
+          >
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1.5,
+              }}
+            >
+              <Avatar
+                sx={{
+                  width: 40,
+                  height: 40,
+                  bgcolor: "primary.main",
+                  fontSize: "1.2rem",
+                }}
+              >
+                <TestIcon />
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  variant="h6"
+                  fontWeight="bold"
+                  color="primary"
+                  sx={{
+                    fontSize: "1.1rem",
+                    lineHeight: 1.2,
+                    mb: 0.5,
+                  }}
+                >
+                  {getTestName(test)}
+                </Typography>
+                <StatusChip
+                  icon={statusConfig.icon}
+                  label={statusConfig.label}
+                  size="small"
+                  sx={{
+                    ...statusConfig.chipStyle,
+                    fontSize: "0.75rem",
+                    height: "24px",
+                  }}
+                />
+              </Box>
+            </Box>
+            <IconButton
+              sx={{
+                color: "primary.main",
+                transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.3s ease",
+              }}
+            >
+              <ExpandMoreIcon />
+            </IconButton>
+          </Box>
+
+          {/* Expandable Content */}
+          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+            <Divider />
+            <Box sx={{ p: 2 }}>
+              <Grid container spacing={2}>
+                {/* Tests */}
+                <Grid item xs={12}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight="bold"
+                      color="primary"
+                      sx={{
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <TestIcon fontSize="small" />
+                      Tests
+                    </Typography>
+                    {Array.isArray(test.tests) && test.tests.length > 0 ? (
+                      <Stack spacing={1}>
+                        {test.tests.map((t, index) => (
+                          <Paper
+                            key={index}
+                            sx={{
+                              p: 1.5,
+                              backgroundColor: "rgba(25, 118, 210, 0.05)",
+                              border: "1px solid rgba(25, 118, 210, 0.1)",
+                            }}
+                          >
+                            <Typography
+                              variant="body2"
+                              fontWeight="600"
+                              color="primary"
+                            >
+                              {t.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {t.description}
+                              {t.isEmptyStomach && " (Requires empty stomach)"}
+                            </Typography>
+                          </Paper>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        {getTestName(test)}
+                      </Typography>
+                    )}
+                  </Box>
+                </Grid>
+
+                {/* Details Row */}
+                <Grid item xs={6}>
+                  <DetailItem>
+                    <CategoryIcon
+                      sx={{ color: "primary.main", fontSize: 18 }}
+                    />
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Category
+                      </Typography>
+                      <Typography variant="body2" fontWeight="medium">
+                        {capitalizeFirstLetter(getTestCategory(test))}
+                      </Typography>
+                    </Box>
+                  </DetailItem>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <DetailItem>
+                    <EventIcon sx={{ color: "primary.main", fontSize: 18 }} />
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Created
+                      </Typography>
+                      <Typography variant="body2" fontWeight="medium">
+                        {test.createdAt
+                          ? dayjs(test.createdAt).format("DD MMM")
+                          : "N/A"}
+                      </Typography>
+                    </Box>
+                  </DetailItem>
+                </Grid>
+
+                {/* Prescription */}
+                <Grid item xs={12}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight="bold"
+                      color="primary"
+                      sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                    >
+                      <PhotoIcon fontSize="small" />
+                      Prescription
+                    </Typography>
+                    {test.photo ? (
+                      <Box
+                        component="img"
+                        src={test.photo}
+                        alt="Prescription"
+                        sx={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 1,
+                          objectFit: "cover",
+                          cursor: "pointer",
+                          border: "2px solid rgba(25, 118, 210, 0.2)",
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenViewImageModal(test.photo);
+                        }}
+                      />
+                    ) : (
+                      <ActionButton
+                        size="small"
+                        variant="outlined"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenModal(test._id);
+                        }}
+                        startIcon={<PhotoIcon />}
+                      >
+                        Upload
+                      </ActionButton>
+                    )}
+                  </Box>
+                </Grid>
+
+                {/* Actions */}
+                <Grid item xs={12}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1,
+                      justifyContent: "flex-end",
+                      mt: 1,
+                    }}
+                  >
+                    <FormControl size="small">
+                      <Select
+                        value={test.status.toLowerCase()}
+                        onChange={(e) =>
+                          handleStatusChange(test._id, e.target.value)
+                        }
+                        sx={{
+                          borderRadius: "20px",
+                          fontWeight: 600,
+                          backgroundColor:
+                            statusConfig.chipStyle.backgroundColor,
+                          color: statusConfig.chipStyle.color,
+                          fontSize: "0.875rem",
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            border: "none",
+                          },
+                        }}
+                      >
+                        {statusOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              {option.icon}
+                              {option.label}
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+          </Collapse>
+        </CardContent>
+      </MobileCard>
+    );
+  };
+
+  // Loading Skeleton
+  const LoadingSkeleton = () => (
+    <Stack spacing={2}>
+      <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 2 }} />
+      {[1, 2, 3].map((item) => (
+        <Skeleton
+          key={item}
+          variant="rectangular"
+          height={isMobile ? 120 : 80}
+          sx={{ borderRadius: 2 }}
+        />
+      ))}
+    </Stack>
+  );
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 3, pb: 4 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Button
+    <StyledContainer maxWidth="lg">
+      <HeaderSection>
+        <Box>
+          <Typography
+            variant="h5"
+            fontWeight="bold"
+            color="primary"
+            gutterBottom
+          >
+            Test History
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {totalCount > 0
+              ? `${totalCount} test${totalCount > 1 ? "s" : ""} found`
+              : "No tests found"}
+          </Typography>
+        </Box>
+
+        {!isMobile && (
+          <Button
+            onClick={() => setOpenCreateDialog(true)}
+            sx={{
+              background: "linear-gradient(135deg, #2196F3 0%, #1976D2 100%)",
+              color: "white",
+              fontWeight: "bold",
+              padding: "12px 24px",
+              borderRadius: "24px",
+              fontSize: "15px",
+              boxShadow: "0px 4px 16px rgba(33, 150, 243, 0.3)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                background: "linear-gradient(135deg, #1976D2 0%, #0D47A1 100%)",
+                transform: "translateY(-2px)",
+                boxShadow: "0px 6px 20px rgba(33, 150, 243, 0.4)",
+              },
+            }}
+            startIcon={<AddCircle />}
+          >
+            Add Test
+          </Button>
+        )}
+      </HeaderSection>
+
+      {isMobile && (
+        <StyledFab
           onClick={() => setOpenCreateDialog(true)}
-          sx={{
-            background: "linear-gradient(45deg, #2196F3 30%, #1976D2 90%)",
-            color: "white",
-            fontWeight: "bold",
-            padding: "8px 24px",
-            borderRadius: "24px",
-            fontSize: "15px",
-            boxShadow: "0px 6px 12px rgba(33, 150, 243, 0.3)",
-            transition: "all 0.3s ease",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            "&:hover": {
-              background: "linear-gradient(45deg, #1976D2 30%, #0D47A1 90%)",
-              boxShadow: "0px 8px 16px rgba(33, 150, 243, 0.4)",
-              transform: "translateY(-2px)",
-            },
-          }}
+          aria-label="add test"
         >
-          <AddCircle sx={{ fontSize: 20 }} />
-          Create Test
-        </Button>
-      </Box>
+          <AddCircle />
+        </StyledFab>
+      )}
 
       <CreateTestDialog
         open={openCreateDialog}
@@ -368,317 +755,362 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
         patientId={patientId}
       />
 
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
           {error}
         </Alert>
-      ) : null}
+      )}
 
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-          <Typography>Loading tests...</Typography>
-        </Box>
-      ) : (
-        <Paper
-          elevation={3}
-          sx={{
-            borderRadius: 3,
-            overflow: "hidden",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-          }}
-        >
-          <List disablePadding>
-            {tests.map((test) => (
-              <React.Fragment key={test._id}>
-                <ListItem
-                  onClick={() => handleToggleExpand(test._id)}
-                  sx={{
-                    py: 2,
-                    px: 3,
-                    borderBottom: "1px solid #eee",
-                    backgroundColor:
-                      expandedTest === test._id ? "#f0f7ff" : "white",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      backgroundColor: "#f5faff",
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <TestIcon
-                          fontSize="medium"
-                          sx={{
-                            color: "primary.main",
-                            mr: 1.5,
-                            fontSize: "1.8rem",
-                          }}
-                        />
-                        <Typography
-                          fontWeight={600}
-                          fontSize="1.1rem"
-                          color="text.primary"
-                        >
-                          {capitalizeFirstLetter(getTestName(test))}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <FormControl size="small" sx={{ minWidth: 120 }}>
-                      <Select
-                        value={test.status.toLowerCase()}
-                        onChange={(e) =>
-                          handleStatusChange(test._id, e.target.value)
-                        }
-                        IconComponent={KeyboardArrowDown}
+        <LoadingSkeleton />
+      ) : tests.length > 0 ? (
+        <>
+          {isMobile ? (
+            // Mobile View - Cards
+            <Box>
+              {tests.map((test) => (
+                <MobileTestCard key={test._id} test={test} />
+              ))}
+            </Box>
+          ) : (
+            // Desktop View - List
+            <Paper
+              elevation={2}
+              sx={{
+                borderRadius: 3,
+                overflow: "hidden",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              }}
+            >
+              <List disablePadding>
+                {tests.map((test) => {
+                  const statusConfig = getStatusConfig(test.status);
+                  const isExpanded = expandedTest === test._id;
+
+                  return (
+                    <React.Fragment key={test._id}>
+                      <ListItem
+                        onClick={() => handleToggleExpand(test._id)}
                         sx={{
-                          borderRadius: "20px",
-                          fontWeight: 600,
-                          backgroundColor:
-                            test.status.toLowerCase() === "completed"
-                              ? "#d4edda"
-                              : test.status.toLowerCase() === "scheduled"
-                                ? "#FFF8E5"
-                                : test.status.toLowerCase() === "cancelled"
-                                  ? "#f8d7da"
-                                  : "#f8f9fa",
-                          color:
-                            test.status.toLowerCase() === "completed"
-                              ? "#2D9735"
-                              : test.status.toLowerCase() === "scheduled"
-                                ? "#B98900"
-                                : test.status.toLowerCase() === "cancelled"
-                                  ? "#C41E1D"
-                                  : "#333",
-                          height: "30px",
-                          padding: "0 12px",
-                          "& .MuiSelect-icon": {
-                            color:
-                              test.status.toLowerCase() === "completed"
-                                ? "#2D9735"
-                                : test.status.toLowerCase() === "scheduled"
-                                  ? "#B98900"
-                                  : test.status.toLowerCase() === "cancelled"
-                                    ? "#C41E1D"
-                                    : "#333",
+                          py: 2.5,
+                          px: 3,
+                          backgroundColor: isExpanded
+                            ? "rgba(25, 118, 210, 0.02)"
+                            : "white",
+                          transition: "all 0.3s ease",
+                          cursor: "pointer",
+                          "&:hover": {
+                            backgroundColor: "rgba(25, 118, 210, 0.04)",
                           },
                         }}
                       >
-                        <MenuItem value="scheduled">Scheduled</MenuItem>
-                        <MenuItem value="completed">Completed</MenuItem>
-                        <MenuItem value="cancelled">Cancelled</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <IconButton
-                      size="medium"
-                      edge="end"
-                      sx={{
-                        backgroundColor:
-                          expandedTest === test._id
-                            ? "rgba(25, 118, 210, 0.1)"
-                            : "transparent",
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                          backgroundColor: "rgba(25, 118, 210, 0.2)",
-                        },
-                      }}
-                    >
-                      {expandedTest === test._id ? (
-                        <KeyboardArrowUp fontSize="medium" />
-                      ) : (
-                        <KeyboardArrowDown fontSize="medium" />
-                      )}
-                    </IconButton>
-                  </Box>
-                </ListItem>
-
-                <Collapse
-                  in={expandedTest === test._id}
-                  timeout="auto"
-                  unmountOnExit
-                >
-                  <Box sx={{ p: 1, bgcolor: "#f9fbff" }}>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: 3,
-                        p: 2,
-                        borderTop: "1px solid #eee",
-                        mt: -1,
-                      }}
-                    >
-                      <Box>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            mb: 0.5,
-                          }}
-                        >
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            Tests
-                          </Typography>
-                        </Box>
-                        {Array.isArray(test.tests) && test.tests.length > 0 ? (
-                          <Box>
-                            {test.tests.map((t, index) => (
-                              <Box
-                                key={index}
+                        <ListItemText
+                          primary={
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              <Avatar
                                 sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  flexWrap: "wrap",
-                                  py: 0.5,
+                                  width: 48,
+                                  height: 48,
+                                  bgcolor: "primary.main",
                                 }}
                               >
+                                <TestIcon />
+                              </Avatar>
+                              <Box>
                                 <Typography
-                                  variant="body2"
-                                  fontWeight={600}
-                                  sx={{ mr: 1, minWidth: "70px" }}
+                                  variant="h6"
+                                  fontWeight="bold"
+                                  color="primary"
+                                  sx={{ fontSize: "1.1rem" }}
                                 >
-                                  {t.name}:
+                                  {getTestName(test)}
                                 </Typography>
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: "text.secondary" }}
+                                  color="text.secondary"
                                 >
-                                  {t.description}
+                                  Category:{" "}
+                                  {capitalizeFirstLetter(getTestCategory(test))}
+                                  {" • Created: "}
+                                  {test.createdAt
+                                    ? dayjs(test.createdAt).format(
+                                        "DD MMM YYYY"
+                                      )
+                                    : "N/A"}
                                 </Typography>
                               </Box>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="body1">
-                            {getTestName(test)}
-                          </Typography>
-                        )}
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          fontWeight="bold"
-                          color="text.primary"
-                          mb={1}
-                        >
-                          Type
-                        </Typography>
-                        <Chip
-                          label={capitalizeFirstLetter(test.type || "N/A")}
-                          size="small"
-                          sx={{
-                            backgroundColor: "rgba(25, 118, 210, 0.1)",
-                            color: "primary.dark",
-                            fontWeight: 500,
-                          }}
+                            </Box>
+                          }
                         />
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          fontWeight="bold"
-                          color="text.primary"
-                          mb={1}
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
                         >
-                          Created Date
-                        </Typography>
-                        <Typography variant="body2">
-                          {test.createdAt
-                            ? dayjs(test.createdAt).format("DD-MMM-YYYY")
-                            : "N/A"}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          fontWeight="bold"
-                          color="text.primary"
-                          mb={1}
-                        >
-                          Prescription
-                        </Typography>
-                        {test.photo ? (
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <img
-                              src={test.photo}
-                              alt="prescription"
-                              style={{
-                                width: 50,
-                                height: 50,
-                                borderRadius: 6,
-                                objectFit: "cover",
-                                cursor: "pointer",
-                              }}
-                              onClick={(e) => {
+                          <FormControl size="small">
+                            <Select
+                              value={test.status.toLowerCase()}
+                              onChange={(e) => {
                                 e.stopPropagation();
-                                handleOpenViewImageModal(test.photo);
+                                handleStatusChange(test._id, e.target.value);
                               }}
-                            />
-                          </Box>
-                        ) : (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenModal(test._id);
+                              sx={{
+                                borderRadius: "20px",
+                                fontWeight: 600,
+                                backgroundColor:
+                                  statusConfig.chipStyle.backgroundColor,
+                                color: statusConfig.chipStyle.color,
+                                "& .MuiOutlinedInput-notchedOutline": {
+                                  border: "none",
+                                },
+                              }}
+                            >
+                              {statusOptions.map((option) => (
+                                <MenuItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 1,
+                                    }}
+                                  >
+                                    {option.icon}
+                                    {option.label}
+                                  </Box>
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <IconButton
+                            sx={{
+                              color: "primary.main",
+                              transform: isExpanded
+                                ? "rotate(180deg)"
+                                : "rotate(0deg)",
+                              transition: "transform 0.3s ease",
                             }}
-                            startIcon={<PhotoIcon />}
-                            sx={{ borderRadius: "20px", px: 2 }}
                           >
-                            Upload
-                          </Button>
-                        )}
-                      </Box>
-                    </Box>
-                  </Box>
-                </Collapse>
-                <Divider />
-              </React.Fragment>
-            ))}
-          </List>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={totalCount}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
+                            <ExpandMoreIcon />
+                          </IconButton>
+                        </Box>
+                      </ListItem>
+
+                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                        <Box
+                          sx={{
+                            px: 3,
+                            pb: 3,
+                            bgcolor: "rgba(25, 118, 210, 0.02)",
+                          }}
+                        >
+                          <Grid container spacing={3} sx={{ pt: 2 }}>
+                            {/* Tests */}
+                            <Grid item xs={12} md={6}>
+                              <Typography
+                                variant="subtitle1"
+                                fontWeight="bold"
+                                color="primary"
+                                sx={{
+                                  mb: 1,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
+                                <TestIcon fontSize="small" />
+                                Tests
+                              </Typography>
+                              {Array.isArray(test.tests) &&
+                              test.tests.length > 0 ? (
+                                <Stack spacing={1}>
+                                  {test.tests.map((t, index) => (
+                                    <Paper
+                                      key={index}
+                                      sx={{
+                                        p: 1.5,
+                                        backgroundColor: "white",
+                                        border:
+                                          "1px solid rgba(25, 118, 210, 0.1)",
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight="600"
+                                        color="primary"
+                                      >
+                                        {t.name}
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {t.description}
+                                        {t.isEmptyStomach &&
+                                          " (Requires empty stomach)"}
+                                      </Typography>
+                                    </Paper>
+                                  ))}
+                                </Stack>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {getTestName(test)}
+                                </Typography>
+                              )}
+                            </Grid>
+
+                            {/* Prescription */}
+                            <Grid item xs={12} md={6}>
+                              <Typography
+                                variant="subtitle1"
+                                fontWeight="bold"
+                                color="primary"
+                                sx={{
+                                  mb: 1,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
+                                <PhotoIcon fontSize="small" />
+                                Prescription Photo
+                              </Typography>
+                              {test.photo ? (
+                                <Box
+                                  component="img"
+                                  src={test.photo}
+                                  alt="Prescription"
+                                  sx={{
+                                    width: "100%",
+                                    maxWidth: 200,
+                                    height: 150,
+                                    borderRadius: 2,
+                                    objectFit: "cover",
+                                    cursor: "pointer",
+                                    border: "2px solid rgba(25, 118, 210, 0.2)",
+                                    transition: "all 0.3s ease",
+                                    "&:hover": {
+                                      transform: "scale(1.02)",
+                                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                                    },
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenViewImageModal(test.photo);
+                                  }}
+                                />
+                              ) : (
+                                <ActionButton
+                                  variant="outlined"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenModal(test._id);
+                                  }}
+                                  startIcon={<PhotoIcon />}
+                                  sx={{ mt: 1 }}
+                                >
+                                  Upload Photo
+                                </ActionButton>
+                              )}
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      </Collapse>
+                      <Divider />
+                    </React.Fragment>
+                  );
+                })}
+              </List>
+            </Paper>
+          )}
+
+          {/* Pagination */}
+          {totalCount > rowsPerPage && (
+            <Box
+              sx={{
+                mt: 3,
+                display: "flex",
+                justifyContent: "center",
+                backgroundColor: "background.paper",
+                borderRadius: 2,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                p: 1,
+              }}
+            >
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={totalCount}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                sx={{
+                  "& .MuiTablePagination-toolbar": {
+                    paddingLeft: isMobile ? 0 : "default",
+                    paddingRight: isMobile ? 0 : "default",
+                  },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-select":
+                    {
+                      fontWeight: 600,
+                    },
+                  "& .MuiTablePagination-displayedRows": {
+                    fontWeight: 500,
+                  },
+                }}
+              />
+            </Box>
+          )}
+        </>
+      ) : (
+        <EmptyStateContainer>
+          <TestIcon
             sx={{
-              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-select":
-                {
-                  fontWeight: 500,
-                },
+              fontSize: 64,
+              color: "primary.main",
+              opacity: 0.5,
+              mb: 2,
             }}
           />
-        </Paper>
+          <Typography
+            variant="h6"
+            gutterBottom
+            color="primary"
+            fontWeight="bold"
+          >
+            No Tests Found
+          </Typography>
+          <Typography variant="body2" color="text.secondary" maxWidth="400px">
+            No test plans have been created for this patient yet. Click the "Add
+            Test" button to create the first test plan.
+          </Typography>
+          {isMobile && (
+            <Button
+              onClick={() => setOpenCreateDialog(true)}
+              variant="contained"
+              startIcon={<AddCircle />}
+              sx={{
+                mt: 2,
+                borderRadius: "20px",
+                background: "linear-gradient(135deg, #2196F3 0%, #1976D2 100%)",
+              }}
+            >
+              Add Test
+            </Button>
+          )}
+        </EmptyStateContainer>
       )}
 
+      {/* Description Modal */}
       <Modal open={descriptionModalOpen} onClose={handleCloseDescriptionModal}>
         <Box
           sx={{
@@ -687,113 +1119,145 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
             left: "50%",
             transform: "translate(-50%, -50%)",
             backgroundColor: "white",
-            padding: 4,
+            padding: { xs: 3, sm: 4 },
             borderRadius: 3,
             boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-            width: "90%",
-            maxWidth: 550,
+            width: { xs: "90%", sm: "80%", md: "60%" },
+            maxWidth: 600,
             maxHeight: "85vh",
             overflow: "auto",
           }}
         >
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: "bold", mb: 3, color: "primary.main" }}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 3,
+            }}
           >
-            Test Details
-          </Typography>
-
-          {currentTest ? (
-            <Box sx={{ mb: 2 }}>
-              <Typography
-                variant="subtitle1"
-                fontWeight={600}
-                color="text.secondary"
-              >
-                Name:
-              </Typography>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                {getTestName(currentTest)}
-              </Typography>
-            </Box>
-          ) : null}
-
-          {currentTest &&
-          Array.isArray(currentTest.tests) &&
-          currentTest.tests.length > 0 ? (
-            currentTest.tests.map((t, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Typography
-                  variant="subtitle1"
-                  sx={{ fontWeight: "bold", color: "primary.main" }}
-                >
-                  {t.name}
-                </Typography>
-                <Typography variant="body1" sx={{ mt: 1 }}>
-                  {t.description}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Category: {capitalizeFirstLetter(t.category || "N/A")}
-                </Typography>
-                <Typography variant="body2">
-                  {t.isEmptyStomach
-                    ? "Requires empty stomach"
-                    : "No fasting required"}
-                </Typography>
-                {index < currentTest.tests.length - 1 && (
-                  <Divider sx={{ my: 2 }} />
-                )}
-              </Box>
-            ))
-          ) : currentTest ? (
-            <Typography variant="body1">
-              {currentTest.description || "No description available"}
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: "bold", color: "primary.main" }}
+            >
+              Test Details
             </Typography>
-          ) : null}
+            <IconButton
+              onClick={handleCloseDescriptionModal}
+              sx={{ color: "text.secondary" }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
 
           {currentTest && (
             <>
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
-                Patient:
-              </Typography>
-              <Typography variant="body1">
-                {currentTest.patientId?.username || "Unknown"}
-                {currentTest.patientId?.age &&
-                  ` (${currentTest.patientId.age} years)`}
-                {currentTest.patientId?.gender &&
-                  `, ${capitalizeFirstLetter(currentTest.patientId.gender)}`}
-              </Typography>
+              <Box sx={{ mb: 3 }}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  Name:
+                </Typography>
+                <Typography variant="h6" color="primary">
+                  {getTestName(currentTest)}
+                </Typography>
+              </Box>
 
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
-                Dates:
-              </Typography>
-              <Typography variant="body2">
-                Created: {new Date(currentTest.createdAt).toLocaleString()}
-              </Typography>
-              <Typography variant="body2">
-                Last Updated: {new Date(currentTest.updatedAt).toLocaleString()}
-              </Typography>
+              <Divider sx={{ my: 2 }} />
+
+              {Array.isArray(currentTest.tests) &&
+              currentTest.tests.length > 0 ? (
+                <Stack spacing={2}>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight="bold"
+                    color="primary"
+                  >
+                    Tests:
+                  </Typography>
+                  {currentTest.tests.map((t, index) => (
+                    <Paper
+                      key={index}
+                      sx={{
+                        p: 2,
+                        backgroundColor: "rgba(25, 118, 210, 0.05)",
+                        border: "1px solid rgba(25, 118, 210, 0.1)",
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        fontWeight="bold"
+                        color="primary"
+                        gutterBottom
+                      >
+                        {t.name}
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary">
+                        {t.description}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="primary"
+                        sx={{ mt: 1, fontWeight: 500 }}
+                      >
+                        Category: {capitalizeFirstLetter(t.category || "N/A")}
+                        {" • "}
+                        {t.isEmptyStomach
+                          ? "Requires empty stomach"
+                          : "No fasting required"}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography variant="body1" color="text.secondary">
+                  {getTestDescription(currentTest)}
+                </Typography>
+              )}
+
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
+                  color="primary"
+                >
+                  Patient:
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  {currentTest.patientId?.username || "Unknown"}
+                  {currentTest.patientId?.age &&
+                    ` (${currentTest.patientId.age} years)`}
+                  {currentTest.patientId?.gender &&
+                    `, ${capitalizeFirstLetter(currentTest.patientId.gender)}`}
+                </Typography>
+              </Box>
+
+              <Box sx={{ mt: 2 }}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
+                  color="primary"
+                >
+                  Dates:
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Created: {dayjs(currentTest.createdAt).format("DD MMM YYYY")}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Last Updated:{" "}
+                  {dayjs(currentTest.updatedAt).format("DD MMM YYYY")}
+                </Typography>
+              </Box>
             </>
           )}
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleCloseDescriptionModal}
-            sx={{
-              mt: 3,
-              borderRadius: "24px",
-              px: 4,
-              py: 1,
-              boxShadow: "0 4px 12px rgba(33, 150, 243, 0.3)",
-            }}
-          >
-            Close
-          </Button>
         </Box>
       </Modal>
 
-      {openModal && selectedTestId ? (
+      {/* Image Upload Modal */}
+      {openModal && selectedTestId && (
         <ImagePicker
           open={openModal}
           onClose={handleCloseModal}
@@ -807,13 +1271,14 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
           imagePreview={testImagePreview}
           setImagePreview={setTestImagePreview}
         />
-      ) : null}
+      )}
 
+      {/* Image Preview Modal */}
       <Modal
         open={viewImageModal}
         onClose={(event, reason) => {
           if (reason === "backdropClick") return;
-          handleCloseViewImageModal(event);
+          handleCloseViewImageModal(event as React.MouseEvent);
         }}
       >
         <Box
@@ -822,7 +1287,8 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
             justifyContent: "center",
             alignItems: "center",
             height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            p: 2,
           }}
         >
           <Box
@@ -830,48 +1296,44 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
             sx={{
               position: "relative",
               backgroundColor: "white",
-              padding: 2,
               borderRadius: 2,
-              outline: "none",
-              boxShadow: 24,
+              overflow: "hidden",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
               display: "flex",
               flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
             }}
           >
             <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCloseViewImageModal(e);
-              }}
+              onClick={handleCloseViewImageModal}
               sx={{
                 position: "absolute",
                 top: 8,
                 right: 8,
-                color: "black",
-                backgroundColor: "rgba(255, 255, 255, 0.6)",
-                borderRadius: "50%",
+                color: "white",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                zIndex: 10,
                 "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                  backgroundColor: "rgba(0, 0, 0, 0.7)",
                 },
               }}
             >
               <CloseIcon />
             </IconButton>
-
-            {viewImageUrl ? (
-              <img
+            {viewImageUrl && (
+              <Box
+                component="img"
                 src={viewImageUrl}
-                alt="Preview"
-                style={{
-                  maxWidth: "90%",
-                  maxHeight: "90%",
-                  borderRadius: "8px",
+                alt="Prescription Preview"
+                sx={{
+                  width: "100%",
+                  height: "auto",
+                  maxHeight: "85vh",
+                  objectFit: "contain",
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
-            ) : null}
+            )}
           </Box>
         </Box>
       </Modal>
@@ -881,7 +1343,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ patientId }) => {
         severity={toast.toastSeverity}
         message={toast.toastMessage}
       />
-    </Container>
+    </StyledContainer>
   );
 };
 

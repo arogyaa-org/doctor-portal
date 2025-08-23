@@ -1,32 +1,36 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Typography,
   Grid,
   Paper,
   Avatar,
   IconButton,
-  Chip,
   Button,
   useMediaQuery,
   useTheme,
   Box,
-  styled,
   Select,
   MenuItem,
   Collapse,
+  Card,
+  CardContent,
+  Stack,
+  Chip,
+  Skeleton,
+  Tooltip,
+  Modal,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import {
   Info as InfoIcon,
   MedicalServices as MedicalIcon,
   LocalHospital as HospitalIcon,
-  PlayCircleOutline as PlayIcon,
   LocationOn as LocationIcon,
   Wc as GenderIcon,
   CalendarMonth as CalendarMonthIcon,
   Assignment as AssignmentIcon,
-  Schedule as ScheduleIcon,
   Phone as PhoneIcon,
   ArrowBack as ArrowBackIcon,
   Event as EventIcon,
@@ -42,132 +46,287 @@ import {
   LocationCity as LocationCityIcon,
   AllInbox as AllInboxIcon,
   HourglassEmpty,
-  CheckCircle,
   Cancel,
-  ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  Videocam as VideocamIcon,
+  VideocamOff as VideocamOffIcon,
+  ExpandLess,
+  ExpandMore,
   CheckCircle as CompletedIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
-import { format, parse } from "date-fns";
-import { motion } from "framer-motion";
-import ReactPlayer from "react-player";
+import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 
+// ✅ IMPORTANT: use "react-player" (NOT "react-player/lazy") and disable SSR
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+
+// Your components
 import Toast from "@/components/common/Toast";
 import TreatmentHistory from "./treatmentHistory";
 import TestHistory from "./testHistory";
-import type { AppDispatch, RootState } from "@/redux/store";
+import VisitsHistory from "./visitHistory";
+
+// Hooks & utils
 import { useGetAppointment } from "@/hooks/appointment";
 import { useGetPatient } from "@/hooks/patient";
 import { useRouter, useParams } from "next/navigation";
-import VisitsHistory from "./visitHistory";
 import { useDispatch, useSelector } from "react-redux";
 import { modifier } from "@/apis/apiClient";
-import { setAppointment, setLoading } from "@/redux/features/appointmentSlice";
+import { setAppointment } from "@/redux/features/appointmentSlice";
 import { Utility } from "@/utils";
+
+/* --------------------------- Constants & Options -------------------------- */
 
 const statusOptions = [
   {
     value: "scheduled",
     label: "Scheduled",
     color: "#0056b3",
+    bgColor: "#e3f2fd",
     icon: <EventIcon fontSize="small" />,
   },
   {
     value: "rescheduled",
     label: "Rescheduled",
     color: "#856404",
+    bgColor: "#fff3cd",
     icon: <HourglassEmpty fontSize="small" />,
   },
   {
     value: "rejected",
     label: "Rejected",
-    color: "red",
+    color: "#dc3545",
+    bgColor: "#f8d7da",
     icon: <Cancel fontSize="small" />,
   },
   {
     value: "pending",
     label: "Pending",
     color: "#f39c12",
+    bgColor: "#fff3cd",
     icon: <HourglassEmpty fontSize="small" />,
   },
   {
     value: "completed",
     label: "Completed",
-    icon: <CompletedIcon fontSize="small" color="success" />,
-    color: "success",
+    color: "#28a745",
+    bgColor: "#d4edda",
+    icon: <CompletedIcon fontSize="small" />,
   },
 ];
 
-// eslint-disable-next-line react/function-component-definition
+/* --------------------------------- Styles -------------------------------- */
+
+const MainLayout = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  minHeight: "100vh",
+  backgroundColor: "#f8fafc",
+  padding: theme.spacing(2),
+  [theme.breakpoints.up("sm")]: { padding: theme.spacing(3) },
+  [theme.breakpoints.up("lg")]: {
+    flexDirection: "row",
+    padding: theme.spacing(4),
+  },
+}));
+
+const ContentArea = styled(Box)(({ theme }) => ({
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  transition: "all 0.3s ease-in-out",
+  overflow: "hidden",
+  marginRight: 0,
+}));
+
+const StyledAvatar = styled(Avatar)(({ theme }) => ({
+  width: 56,
+  height: 56,
+  backgroundColor: theme.palette.primary.main,
+  fontSize: "1.5rem",
+  fontWeight: 600,
+  [theme.breakpoints.up("sm")]: { width: 72, height: 72, fontSize: "2rem" },
+  [theme.breakpoints.up("md")]: { width: 88, height: 88, fontSize: "2.5rem" },
+}));
+
+const PatientInfoCard = styled(Card)(({ theme }) => ({
+  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  color: "white",
+  borderRadius: theme.spacing(2),
+  boxShadow: "0 8px 32px rgba(31, 38, 135, 0.37)",
+  backdropFilter: "blur(8px)",
+  border: "1px solid rgba(255, 255, 255, 0.18)",
+  marginBottom: theme.spacing(3),
+}));
+
+const InfoChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: "rgba(255, 255, 255, 0.2)",
+  color: "white",
+  fontWeight: 500,
+  "& .MuiChip-icon": { color: "white" },
+  margin: theme.spacing(0.5),
+}));
+
+const TabContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  overflowX: "auto",
+  gap: theme.spacing(1),
+  marginBottom: theme.spacing(3),
+  padding: theme.spacing(1),
+  backgroundColor: "white",
+  borderRadius: theme.spacing(1),
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+  "&::-webkit-scrollbar": { height: "4px" },
+  "&::-webkit-scrollbar-thumb": {
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: "2px",
+  },
+}));
+
+const StyledTab = styled(Button, {
+  shouldForwardProp: (prop) => prop !== "active",
+})(({ theme, active }: { theme?: any; active?: boolean }) => ({
+  minWidth: "120px",
+  padding: theme.spacing(1.5, 2),
+  borderRadius: theme.spacing(1),
+  textTransform: "none",
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  transition: "all 0.3s ease",
+  backgroundColor: active ? theme.palette.primary.main : "transparent",
+  color: active ? "white" : theme.palette.text.primary,
+  "&:hover": {
+    backgroundColor: active
+      ? theme.palette.primary.dark
+      : theme.palette.action.hover,
+  },
+}));
+
+const DetailCard = styled(Card)(({ theme }) => ({
+  height: "100%",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    transform: "translateY(-2px)",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+  },
+}));
+
+const VideoToggleButton = styled(IconButton)(({ theme }) => ({
+  position: "fixed",
+  bottom: theme.spacing(2),
+  right: theme.spacing(2),
+  backgroundColor: theme.palette.primary.main,
+  color: "white",
+  zIndex: 1300,
+  width: 64,
+  height: 64,
+  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.primary.dark,
+    transform: "scale(1.1)",
+  },
+}));
+
+const StatusSelect = styled(Select, {
+  shouldForwardProp: (prop) => prop !== "statuscolor" && prop !== "statusbg",
+})(
+  ({
+    theme,
+    statuscolor,
+    statusbg,
+  }: {
+    theme?: any;
+    statuscolor?: string;
+    statusbg?: string;
+  }) => ({
+    borderRadius: theme.spacing(3),
+    backgroundColor: statusbg || theme.palette.grey[100],
+    color: statuscolor || theme.palette.text.primary,
+    fontWeight: 600,
+    "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+    "& .MuiSelect-select": {
+      display: "flex",
+      alignItems: "center",
+      gap: theme.spacing(1),
+      padding: theme.spacing(1, 2),
+    },
+  })
+);
+
+// Video Modal Styles
+const VideoModal = styled(Modal)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing(2),
+}));
+
+const VideoModalContent = styled(Paper)(({ theme }) => ({
+  position: "relative",
+  width: "90vw",
+  height: "80vh",
+  maxWidth: "1200px",
+  backgroundColor: "black",
+  borderRadius: theme.spacing(1),
+  overflow: "hidden",
+  outline: "none",
+  display: "flex",
+  flexDirection: "column",
+}));
+
+const VideoHeader = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: theme.spacing(2),
+  backgroundColor: "rgba(0, 0, 0, 0.8)",
+  color: "white",
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 10,
+}));
+
+const VideoPlayerContainer = styled(Box)({
+  flex: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "black",
+});
+
+/* ------------------------------ Main Component --------------------------- */
+
 const AppointmentDetails = () => {
-  const [activeTab, setActiveTab] = useState("info");
-  const [showVideo, setShowVideo] = useState(true);
-  const [isHovering, setIsHovering] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "info" | "visits" | "tests" | "treatment"
+  >("info");
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
+    {}
+  );
+
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("md"));
+
   const router = useRouter();
   const { toastAndNavigate } = Utility();
-  const [status, setStatus] = useState<string | undefined>(undefined);
-  const { toast } = useSelector((state: RootState) => state.toast);
-  const dispatch: AppDispatch = useDispatch();
+  const { toast } = useSelector((state: any) => state.toast);
+  const dispatch = useDispatch();
 
   const params = useParams();
-  const appointmentId = params?.id as string;
+  const appointmentId = (params as any)?.id;
 
-  const StyledAvatar = styled(Avatar)(({ theme }) => ({
-    width: 64,
-    height: 64,
-    backgroundColor: "#4FC3F7",
-    fontSize: "1.5rem",
-    marginBottom: theme.spacing(1),
-  }));
+  const { value: appointmentData, swrLoading: appointmentLoading } =
+    useGetAppointment(null, `get-appointment-by-id/${appointmentId}`);
 
-  const AppointmentInfoChip = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    padding: theme.spacing(0.5, 1.5),
-    backgroundColor: "#e3f2fd",
-    borderRadius: 16,
-    marginRight: theme.spacing(1),
-    marginBottom: theme.spacing(1),
-    "& .MuiSvgIcon-root": {
-      fontSize: "1rem",
-      marginRight: theme.spacing(0.5),
-      color: "#1976d2",
-    },
-  }));
-
-  const VideoToggleButton = styled(IconButton)(({ theme }) => ({
-    position: "absolute",
-    right: 0,
-    top: "50%",
-    transform: "translateY(-50%)",
-    backgroundColor: theme.palette.primary.main,
-    color: "white",
-    zIndex: 10,
-    width: 20,
-    height: 70,
-    borderRadius: "6px 0 0 6px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-    transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
-      width: 25,
-    },
-  }));
-
-  const getInitial = (name: string) => {
-    return name ? name.charAt(0).toUpperCase() : "P";
-  };
-
-  const {
-    value: appointmentData,
-    swrLoading,
-    refetch,
-  } = useGetAppointment(null, `get-appointment-by-id/${appointmentId}`);
-
-  const patientId = appointmentData?.data?.patientId._id || null;
-  const symptomIds = appointmentData?.data?.symptomIds || [];
+  const patientId = appointmentData?.data?.patientId?._id || null;
 
   const { value: patientData, swrLoading: patientLoading } = useGetPatient(
     null,
@@ -177,17 +336,13 @@ const AppointmentDetails = () => {
   );
 
   useEffect(() => {
-    if (appointmentData?.data?.status) {
-      setStatus(appointmentData.data.status);
-    }
+    if (appointmentData?.data?.status) setStatus(appointmentData.data.status);
   }, [appointmentData?.data?.status]);
 
-  const toggleVideo = () => {
-    setShowVideo(!showVideo);
-    if (!showVideo) {
-      setIsHovering(false);
-    }
-  };
+  const toggleVideoModal = () => setShowVideoModal((v) => !v);
+
+  const toggleCardExpansion = (cardId: string) =>
+    setExpandedCards((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
 
   const handleStatusChange = async (newStatus: string) => {
     try {
@@ -196,67 +351,60 @@ const AppointmentDetails = () => {
         status: newStatus,
       });
 
-      const updatedResults = appointmentData?.data?.results?.map(
-        (appointment) =>
-          appointment._id === appointmentId
-            ? { ...appointment, status: newStatus }
-            : appointment
+      const updatedResults = appointmentData?.data?.results?.map((a: any) =>
+        a._id === appointmentId ? { ...a, status: newStatus } : a
       );
-
       const updatedAppointment = {
         ...appointmentData,
         results: updatedResults,
       };
 
       dispatch(setAppointment(updatedAppointment));
-
-      toastAndNavigate(dispatch, true, "success", "Status updated sucessfully");
+      toastAndNavigate(
+        dispatch,
+        true,
+        "success",
+        "Status updated successfully"
+      );
     } catch (error) {
       console.error("Error updating status:", error);
       toastAndNavigate(dispatch, true, "error", "Failed to update status");
     }
   };
 
-  const handleTabChange = (tabKey: string) => {
-    setActiveTab(tabKey);
-  };
+  const getInitial = (name?: string) =>
+    name ? name.charAt(0).toUpperCase() : "P";
 
-  const convertHeightToMeters = (height: string) => {
-    if (
-      height.toLowerCase().includes("feet") ||
-      height.toLowerCase().includes("ft")
-    ) {
+  const convertHeightToMeters = (height?: string) => {
+    if (!height || height === "None") return 0;
+    const h = height.toLowerCase();
+    if (h.includes("feet") || h.includes("ft")) {
       const parts = height.split(" ");
       const feet = parseInt(parts[0], 10);
-      const cm = parseInt(parts[2], 10);
+      const cm = parseInt(parts[2], 10) || 0;
       const totalCm = feet * 30.48 + cm;
       return totalCm / 100;
     }
-    if (height.toLowerCase().includes("cm")) {
-      return parseFloat(height) / 100;
-    }
-    if (height.toLowerCase().includes("m")) {
-      return parseFloat(height);
-    }
+    if (h.includes("cm")) return parseFloat(height) / 100;
+    if (h.includes("m")) return parseFloat(height);
     return 0;
   };
 
-  const calculateBMI = (height: string, weight: string) => {
+  const calculateBMI = (height?: string, weight?: string) => {
     const heightInMeters = convertHeightToMeters(height);
-    const weightInKg = parseFloat(weight);
-    if (heightInMeters && weightInKg) {
+    const weightInKg = parseFloat(weight || "");
+    if (heightInMeters && weightInKg)
       return weightInKg / (heightInMeters * heightInMeters);
-    }
     return null;
   };
 
   const getBMICategory = (bmi: number | null) => {
     if (bmi === null) return "N/A";
     if (bmi < 18.5) return "Underweight";
-    if (bmi >= 18.5 && bmi <= 24.9) return "Normal weight";
-    if (bmi >= 25 && bmi <= 29.9) return "Overweight";
-    if (bmi >= 30 && bmi <= 34.9) return "Obesity (Class 1)";
-    if (bmi >= 35 && bmi <= 39.9) return "Obesity (Class 2)";
+    if (bmi <= 24.9) return "Normal weight";
+    if (bmi <= 29.9) return "Overweight";
+    if (bmi <= 34.9) return "Obesity (Class 1)";
+    if (bmi <= 39.9) return "Obesity (Class 2)";
     return "Severe Obesity (Class 3)";
   };
 
@@ -265,643 +413,445 @@ const AppointmentDetails = () => {
   const bmi = calculateBMI(patientHeight, patientWeight);
   const bmiCategory = getBMICategory(bmi);
 
+  const currentStatus = statusOptions.find((o) => o.value === status);
+
+  const patientDetails = [
+    {
+      category: "Personal Information",
+      icon: <GenderIcon />,
+      items: [
+        {
+          icon: <GenderIcon />,
+          label: "Gender",
+          value: patientData?.data?.gender || "N/A",
+        },
+        {
+          icon: <CakeIcon />,
+          label: "Age",
+          value: patientData?.data?.age || "N/A",
+        },
+        {
+          icon: <MailIcon />,
+          label: "Email",
+          value: patientData?.data?.email || "N/A",
+        },
+        {
+          icon: <PhoneIcon />,
+          label: "Phone",
+          value: patientData?.data?.contact || "N/A",
+        },
+        {
+          icon: <CalendarMonthIcon />,
+          label: "DOB",
+          value: patientData?.data?.dob
+            ? format(new Date(patientData?.data?.dob), "dd MMM yyyy")
+            : "N/A",
+        },
+      ],
+    },
+    {
+      category: "Location Information",
+      icon: <LocationIcon />,
+      items: [
+        {
+          icon: <PersonPinCircleIcon />,
+          label: "Pincode",
+          value: patientData?.data?.pincode || "N/A",
+        },
+        {
+          icon: <LocationCityIcon />,
+          label: "City",
+          value: patientData?.data?.city || "N/A",
+        },
+        {
+          icon: <LocationIcon />,
+          label: "Address",
+          value: patientData?.data?.address || "N/A",
+        },
+      ],
+    },
+    {
+      category: "Medical Information",
+      icon: <MedicalIcon />,
+      items: [
+        {
+          icon: <AcUnitIcon />,
+          label: "Allergies",
+          value: patientData?.data?.allergies?.join(", ") || "None",
+        },
+        {
+          icon: <BloodtypeIcon />,
+          label: "Blood Group",
+          value: patientData?.data?.bloodGroup || "N/A",
+        },
+        {
+          icon: <AlignHorizontalLeftIcon />,
+          label: "Height",
+          value: patientData?.data?.height || "N/A",
+        },
+        {
+          icon: <MonitorWeightIcon />,
+          label: "Weight",
+          value: patientData?.data?.weight || "N/A",
+        },
+        {
+          icon: <AllInboxIcon />,
+          label: "BMI Index",
+          value: `${bmi ? bmi.toFixed(2) : "N/A"} - ${bmiCategory}`,
+        },
+        {
+          icon: <MedicationLiquidIcon />,
+          label: "Current Medication",
+          value: patientData?.data?.currentMedication?.join(", ") || "None",
+        },
+        {
+          icon: <MedicalIcon />,
+          label: "Medical History",
+          value: patientData?.data?.medicalHistory?.join(", ") || "None",
+        },
+      ],
+    },
+  ];
+
   const tabs = [
     {
       key: "info",
-      name: "Info",
-      icon: <InfoIcon sx={{ color: "#3f51b5" }} />,
-      content:
-        appointmentData === null ? (
-          <Typography variant="h6" color="primary">
-            Loading...
-          </Typography>
-        ) : (
-          <>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "auto 1fr",
-                  alignItems: "center",
-                  gap: 2,
-                }}
+      name: "Patient Info",
+      icon: <InfoIcon />,
+      content: (
+        <PatientInfoContent
+          patientDetails={patientDetails}
+          expandedCards={expandedCards}
+          toggleCardExpansion={toggleCardExpansion}
+          loading={patientLoading}
+        />
+      ),
+    },
+    {
+      key: "visits",
+      name: "Visit History",
+      icon: <HospitalIcon />,
+      content: (
+        <VisitsHistory
+          patientId={patientId}
+          doctorID={appointmentData?.data?.doctorId?._id}
+          onTabChange={setActiveTab as any}
+        />
+      ),
+    },
+    {
+      key: "tests",
+      name: "Test",
+      icon: <AssignmentIcon />,
+      content: <TestHistory patientId={patientId} />,
+    },
+    {
+      key: "treatment",
+      name: "Treatment Plan",
+      icon: <MedicalIcon />,
+      content: <TreatmentHistory patientId={patientId} />,
+    },
+  ] as const;
+
+  if (appointmentLoading) return <LoadingSkeleton />;
+
+  return (
+    <>
+      <MainLayout>
+        <ContentArea>
+          {/* Header */}
+          <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+            <IconButton onClick={() => router.back()} sx={{ mr: 2 }}>
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h4" fontWeight="bold" color="primary">
+              Appointment Details
+            </Typography>
+          </Box>
+
+          {/* Patient Overview Card */}
+          <PatientInfoCard>
+            <CardContent sx={{ p: 3 }}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={3}
+                alignItems={{ xs: "center", sm: "flex-start" }}
               >
-                {/* Avatar in the first column */}
-                <StyledAvatar
-                  sx={{
-                    width: 75,
-                    height: 75,
-                    fontSize: "2.5rem",
-                  }}
-                >
+                <StyledAvatar>
                   {getInitial(patientData?.data?.username)}
                 </StyledAvatar>
 
-                <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  {/* Name aligned with chip text (not icon) */}
-                  <Typography
-                    variant="h5"
-                    fontWeight="bold"
-                    sx={{
-                      ml: 4,
-                      mb: 1,
-                      marginLeft: "-7px",
-                    }}
-                  >
-                    {patientData?.data?.username}
+                <Box flex={1} textAlign={{ xs: "center", sm: "left" }}>
+                  <Typography variant="h4" fontWeight="bold" gutterBottom>
+                    {patientData?.data?.username || "Loading..."}
                   </Typography>
 
-                  <AppointmentInfoChip
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "fit-content",
-                      marginLeft: "-13.5px",
-                    }}
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1}
+                    alignItems="center"
+                    justifyContent={{ xs: "center", sm: "flex-start" }}
+                    flexWrap="wrap"
                   >
-                    <EventIcon sx={{ mr: 0.5, ml: 0.5 }} />
-                    <Typography variant="body2" sx={{ mr: 1 }}>
-                      {appointmentData?.data?.appointmentDate
-                        ? format(
-                            new Date(appointmentData?.data?.appointmentDate),
-                            "dd MMM yyyy"
-                          )
-                        : "N/A"}
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <AccessTimeIcon sx={{ mr: 0.5 }} />
-                      <Typography variant="body2">
-                        {appointmentData?.data?.appointmentTime
-                          ? (() => {
-                              try {
-                                const timeString =
-                                  appointmentData.data.appointmentTime;
-                                if (
-                                  !timeString ||
-                                  !/^\d{1,2}:\d{2}\s[AP]M$/.test(timeString)
-                                ) {
-                                  return "N/A";
-                                }
-                                const parsedTime = parse(
-                                  timeString,
-                                  "hh:mm a",
-                                  new Date()
-                                );
-                                return format(parsedTime, "hh:mm a");
-                              } catch (error) {
-                                console.error(
-                                  "Error parsing appointment time:",
-                                  error
-                                );
-                                return "Invalid Time";
-                              }
-                            })()
-                          : "N/A"}
-                      </Typography>
-                    </Box>
-                  </AppointmentInfoChip>
+                    <InfoChip
+                      icon={<EventIcon />}
+                      label={
+                        appointmentData?.data?.appointmentDate
+                          ? format(
+                              new Date(appointmentData.data.appointmentDate),
+                              "dd MMM yyyy"
+                            )
+                          : "N/A"
+                      }
+                    />
+                    <InfoChip
+                      icon={<AccessTimeIcon />}
+                      label={appointmentData?.data?.appointmentTime || "N/A"}
+                    />
+                  </Stack>
                 </Box>
-              </Box>
 
-              {/* Status */}
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Select
-                  value={status}
-                  onChange={(e) => {
-                    setStatus(e.target.value);
-                    handleStatusChange(e.target.value);
-                  }}
-                  variant="outlined"
-                  size="small"
-                  displayEmpty
-                  sx={{
-                    borderRadius: "20px",
-                    width: "100%",
-                    height: "36px",
-                    textAlign: "center",
-                    backgroundColor: statusOptions.find(
-                      (option) => option.value === status
-                    )
-                      ? statusOptions.find((option) => option.value === status)
-                          ?.color + "30"
-                      : "#f8f9fa",
-                    color:
-                      statusOptions.find((option) => option.value === status)
-                        ?.color || "#000",
-                    fontWeight: "500",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    "& .MuiSelect-select": {
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                    },
-                  }}
-                  renderValue={() => {
-                    const selectedStatusOption = statusOptions.find(
-                      (option) => option.value === status
-                    );
-                    return selectedStatusOption ? (
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        {selectedStatusOption.icon}
-                        <Typography
-                          sx={{
-                            fontWeight: 500,
-                            color: selectedStatusOption.color,
-                          }}
-                        >
-                          {selectedStatusOption.label}
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Typography sx={{ fontWeight: 500 }}>
-                        Select Status
-                      </Typography>
-                    );
-                  }}
-                >
-                  {statusOptions
-                    .filter((option) => option.value !== status)
-                    .map((option) => (
+                <Box>
+                  <StatusSelect
+                    value={status || ""}
+                    onChange={(e: any) => {
+                      setStatus(e.target.value);
+                      handleStatusChange(e.target.value);
+                    }}
+                    displayEmpty
+                    size="small"
+                    statuscolor={currentStatus?.color}
+                    statusbg={currentStatus?.bgColor}
+                  >
+                    {statusOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1.5,
-                            color: option.color,
-                          }}
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
                         >
                           {option.icon}
                           {option.label}
                         </Box>
                       </MenuItem>
                     ))}
-                </Select>
-              </Box>
-            </Box>
+                  </StatusSelect>
+                </Box>
+              </Stack>
+            </CardContent>
+          </PatientInfoCard>
 
-            {/* Grid container with increased padding-left for better spacing */}
-            <Grid container spacing={0.5} sx={{ marginTop: -0.5, pl: 2 }}>
-              {[
-                {
-                  icon: <GenderIcon color="primary" />,
-                  label: "Gender",
-                  value: patientData?.data?.gender || "N/A",
-                },
-                {
-                  icon: <GenderIcon color="primary" />,
-                  label: "Age",
-                  value: patientData?.data?.age || "N/A",
-                },
-                {
-                  icon: <MailIcon color="primary" />,
-                  label: "Email",
-                  value: patientData?.data?.email,
-                },
-                {
-                  icon: <PhoneIcon color="primary" />,
-                  label: "phone",
-                  value: patientData?.data?.contact || "N/A",
-                },
-                {
-                  icon: <CakeIcon color="primary" />,
-                  label: "DOB",
-                  value: patientData?.data?.dob
-                    ? format(new Date(patientData?.data?.dob), "dd MMM yyyy")
-                    : "N/A",
-                },
-                {
-                  icon: <PersonPinCircleIcon color="primary" />,
-                  label: "Pincode",
-                  value: patientData?.data?.pincode,
-                },
-                {
-                  icon: <LocationCityIcon color="primary" />,
-                  label: "City",
-                  value: patientData?.data?.city,
-                },
-                {
-                  icon: <AcUnitIcon color="primary" />,
-                  label: "Allergies",
-                  value: patientData?.data?.allergies?.join(", "),
-                },
-                {
-                  icon: <BloodtypeIcon color="primary" />,
-                  label: "Blood Group",
-                  value: patientData?.data?.bloodGroup,
-                },
-                {
-                  icon: <AlignHorizontalLeftIcon color="primary" />,
-                  label: "Height",
-                  value: patientData?.data?.height,
-                },
-                {
-                  icon: <MonitorWeightIcon color="primary" />,
-                  label: "Weight",
-                  value: patientData?.data?.weight,
-                },
-                {
-                  icon: <AllInboxIcon color="primary" />,
-                  label: "BMI Index",
-                  value: `${bmi ? bmi.toFixed(2) : "N/A"} - ${bmiCategory}`,
-                },
-                {
-                  icon: <MedicationLiquidIcon color="primary" />,
-                  label: "Current Medication",
-                  value: patientData?.data?.currentMedication?.join(", "),
-                },
-                {
-                  icon: <LocationIcon color="primary" />,
-                  label: "Address",
-                  value: patientData?.data?.address,
-                },
-                {
-                  icon: <MedicalIcon color="primary" />,
-                  label: "Medical History",
-                  value: patientData?.data?.medicalHistory?.join(", "),
-                },
-              ].map((detail, index) => (
-                <Grid item xs={12} sm={4} key={index}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      paddingTop: 2,
-                      paddingBottom: 2,
-                    }}
-                  >
-                    {detail.icon}
-                    <div>
-                      <Typography variant="caption" color="text.secondary">
-                        {detail.label}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        fontWeight="medium"
-                        color="text.primary"
-                      >
-                        {detail.value}
-                      </Typography>
-                    </div>
-                  </div>
-                </Grid>
-              ))}
-            </Grid>
-          </>
-        ),
-    },
-    {
-      key: "visits",
-      icon: <HospitalIcon sx={{ color: "#4CAF50" }} />,
-      name: "Visits",
-      content: (
-        <VisitsHistory
-          patientId={patientId}
-          doctorID={appointmentData?.data?.doctorId?._id}
-          onTabChange={handleTabChange}
-        />
-      ),
-    },
-    {
-      key: "tests",
-      icon: <AssignmentIcon sx={{ color: "#FF9800" }} />,
-      name: "Tests",
-      content: (
-        <div>
-          <TestHistory patientId={patientId} />
-        </div>
-      ),
-    },
-    {
-      key: "treatment",
-      icon: <MedicalIcon sx={{ color: "#9C27B0" }} />,
-      name: "Treatment",
-      content: (
-        <div>
-          <TreatmentHistory patientId={patientId} />
-        </div>
-      ),
-    },
-  ];
-
-  return (
-    <Box sx={{ display: "flex", position: "relative", height: "100vh" }}>
-      {/* Main content section - will resize when video is shown */}
-      <Box
-        sx={{
-          flex: showVideo ? "0 0 65%" : 1,
-          transition: "all 0.00003s ease",
-          padding: isSmallScreen ? 0.5 : 1,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            padding: 0,
-          }}
-        >
-          {/* Heading and Back Button in the same row */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: 1,
-            }}
-          >
-            {/* Back Button */}
-            <IconButton
-              onClick={() => router.back()}
-              sx={{
-                marginRight: 1,
-              }}
-            >
-              <ArrowBackIcon sx={{ color: "primary.main" }} />
-            </IconButton>
-
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 600,
-                marginBottom: 0,
-              }}
-            >
-              Appointment Details
-            </Typography>
-          </Box>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 4,
-              marginBottom: 12,
-              backgroundColor: "#f0f4f8",
-              borderRadius: 6,
-              padding: 6,
-            }}
-          >
+          {/* Tabs */}
+          <TabContainer>
             {tabs.map((tab) => (
-              <Button
+              <StyledTab
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                variant={activeTab === tab.key ? "contained" : "text"}
-                color="primary"
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  textTransform: "none",
-                  padding: "8px 12px",
-                  minWidth: "90px",
-                  color: activeTab === tab.key ? "blue" : "black",
-                  bgcolor:
-                    activeTab === tab.key ? "rgba(63,81,181,0.1)" : "none",
-                  "&:hover": {
-                    bgcolor: "rgba(63,81,181,0.05)",
-                  },
-                }}
+                active={activeTab === tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                startIcon={tab.icon}
               >
-                {tab.icon}
-                <Typography variant="body1" fontWeight="medium">
-                  {tab.name}
-                </Typography>
-              </Button>
+                {tab.name}
+              </StyledTab>
             ))}
-          </div>
+          </TabContainer>
 
-          {/* Removed Paper component and now content is displayed directly */}
-          <Box
-            sx={{
-              maxHeight: isSmallScreen ? "auto" : "calc(100vh - 120px)",
-              overflowY: "auto",
-              mt: 1,
-            }}
-          >
-            {tabs.find((tab) => tab.key === activeTab)?.content}
+          {/* Tab Content */}
+          <Box sx={{ flex: 1, overflow: "auto" }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {tabs.find((t) => t.key === activeTab)?.content}
+              </motion.div>
+            </AnimatePresence>
           </Box>
-        </div>
-      </Box>
+        </ContentArea>
 
-      <Box position="relative">
-        <motion.div
-          initial={{ x: "100vw" }}
-          animate={{ x: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 50,
-            damping: 20,
-            duration: 0.8,
-          }}
-        >
-          <VideoToggleButton
-            onClick={toggleVideo}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-          >
-            {showVideo ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        {/* Video Toggle Button with Tooltip */}
+        <Tooltip title="Patient Symptoms Video" placement="left" arrow>
+          <VideoToggleButton onClick={toggleVideoModal}>
+            <VideocamIcon />
           </VideoToggleButton>
-        </motion.div>
+        </Tooltip>
 
-        {isHovering && !showVideo && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              position: "absolute",
-              top: "90px",
-              right: "30px",
-              zIndex: 1000,
-            }}
-          >
-            <Box
-              sx={{
-                backgroundColor: "white",
-                borderRadius: "8px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-                padding: "8px",
-                width: "200px",
-                height: "120px",
-                position: "relative",
-              }}
-            >
-              <ReactPlayer
-                url={appointmentData?.data?.videoUrl || ""}
-                width="100%"
-                height="100%"
-                playing={isHovering && !showVideo}
-                controls={false}
-                muted
-                loop
-              />
-              {/* Overlay message when no video is available */}
-              {!appointmentData?.data?.videoUrl && (
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "rgba(0, 0, 0, 0.8)",
-                    color: "white",
-                  }}
-                >
-                  <Typography variant="caption" textAlign="center">
-                    No video available
-                  </Typography>
-                </Box>
-              )}
-              <Typography
-                variant="caption"
-                sx={{ mt: 1, display: "block", textAlign: "center" }}
-              >
-                Symptom Video Preview
-              </Typography>
-            </Box>
-          </motion.div>
-        )}
-      </Box>
-
-      <Collapse
-        in={showVideo}
-        orientation="horizontal"
-        sx={{
-          flex: showVideo ? "0 0 35%" : "0 0 0%",
-          position: "relative",
-          overflowY: "auto",
-          borderLeft: "1px solid rgba(0,0,0,0.12)",
-          transition: "all 0.3s spring",
-          mt: 7,
-        }}
-      >
-        <Box
-          sx={{
-            height: "100%",
-            width: "100%",
-            padding: 2,
-            display: "flex",
-            flexDirection: "column",
-            background:
-              "linear-gradient(to bottom right, #f0f4f8 0%, #e1e5eb 100%)",
-          }}
+        {/* Video Modal */}
+        <VideoModal
+          open={showVideoModal}
+          onClose={() => setShowVideoModal(false)}
+          aria-labelledby="video-modal-title"
+          aria-describedby="video-modal-description"
         >
-          <Paper
-            elevation={6}
-            sx={{
-              width: "100%",
-              borderRadius: 2,
-              overflow: "hidden",
-              position: "relative",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-            }}
-          >
-            <Box
-              sx={{
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                borderBottom: "1px solid rgba(0,0,0,0.08)",
-                backgroundColor: theme.palette.primary.main,
-                color: "white",
-              }}
-            >
-              <PlayIcon />
-              <Typography variant="h6" fontWeight="500">
-                Patient Symptom Video
-              </Typography>
-            </Box>
-
-            <Box
-              sx={{
-                position: "relative",
-                backgroundColor: "#000",
-                width: "100%",
-              }}
-            >
-              <video
-                controls
-                autoPlay
-                muted
-                poster="/api/placeholder/800/450"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  maxHeight: "450px",
-                  objectFit: "cover",
-                  opacity: 0.7,
-                }}
+          <VideoModalContent>
+            <VideoHeader>
+              <Typography
+                id="video-modal-title"
+                variant="h6"
+                fontWeight="bold"
+                color="white"
               >
-                <source
-                  src={appointmentData?.data?.videoUrl || ""}
-                  type="video/mp4"
+                Patient Symptoms Video
+              </Typography>
+              <IconButton
+                onClick={() => setShowVideoModal(false)}
+                sx={{ color: "white" }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </VideoHeader>
+
+            <VideoPlayerContainer>
+              {appointmentData?.data?.videoUrl ? (
+                <ReactPlayer
+                  url={appointmentData.data.videoUrl}
+                  width="100%"
+                  height="100%"
+                  controls
+                  playing={false}
+                  volume={1}
+                  muted={false}
+                  playsinline={false}
+                  pip={true}
+                  stopOnUnmount={false}
+                  config={{
+                    file: {
+                      attributes: {
+                        controlsList: "nodownload",
+                        disablePictureInPicture: false,
+                      },
+                    },
+                  }}
+                  onContextMenu={(e) => e.preventDefault()}
+                  style={{
+                    backgroundColor: "black",
+                  }}
                 />
-                Your browser does not support the video tag.
-              </video>
-              {!appointmentData?.data?.videoUrl && (
+              ) : (
                 <Box
                   sx={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
                     display: "flex",
-                    justifyContent: "center",
+                    flexDirection: "column",
                     alignItems: "center",
-                    backgroundColor: "rgba(0, 0, 0, 0.8)",
+                    justifyContent: "center",
                     color: "white",
+                    textAlign: "center",
+                    p: 4,
                   }}
                 >
-                  <Typography variant="body2" textAlign="center">
-                    No video available
+                  <VideocamOffIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
+                  <Typography variant="h6" gutterBottom>
+                    No Video Available
+                  </Typography>
+                  <Typography variant="body2" color="rgba(255,255,255,0.7)">
+                    The patient has not uploaded any symptom video for this
+                    appointment.
                   </Typography>
                 </Box>
               )}
-            </Box>
+            </VideoPlayerContainer>
+          </VideoModalContent>
+        </VideoModal>
+      </MainLayout>
 
-            <Box sx={{ padding: "16px 20px" }}>
-              <Typography
-                variant="h6"
-                color="primary"
-                gutterBottom
-                sx={{ fontWeight: 500 }}
-              >
-                Symptom Analysis
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                This video provides a detailed overview of the patient's
-                described symptoms, helping with visual diagnosis and treatment
-                planning.
-              </Typography>
-            </Box>
-          </Paper>
-        </Box>
-      </Collapse>
       <Toast
         alerting={toast.toastAlert}
         severity={toast.toastSeverity}
         message={toast.toastMessage}
       />
-    </Box>
+    </>
   );
 };
+
+/* -------------------------- Helper Subcomponents -------------------------- */
+
+const PatientInfoContent = ({
+  patientDetails,
+  expandedCards,
+  toggleCardExpansion,
+  loading,
+}: {
+  patientDetails: any[];
+  expandedCards: Record<string, boolean>;
+  toggleCardExpansion: (id: string) => void;
+  loading: boolean;
+}) => {
+  if (loading) return <LoadingSkeleton />;
+
+  return (
+    <Grid container spacing={3}>
+      {patientDetails.map((category) => (
+        <Grid item xs={12} md={6} lg={4} key={category.category}>
+          <DetailCard>
+            <CardContent>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 2,
+                  cursor: "pointer",
+                }}
+                onClick={() => toggleCardExpansion(category.category)}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {category.icon}
+                  <Typography variant="h6" fontWeight="bold">
+                    {category.category}
+                  </Typography>
+                </Box>
+                {expandedCards[category.category] ? (
+                  <ExpandLess />
+                ) : (
+                  <ExpandMore />
+                )}
+              </Box>
+
+              <Collapse in={expandedCards[category.category] !== false}>
+                <Stack spacing={2}>
+                  {category.items.map((item: any, idx: number) => (
+                    <Box
+                      key={idx}
+                      sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}
+                    >
+                      {item.icon}
+                      <Box>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          {item.label}
+                        </Typography>
+                        <Typography variant="body2" fontWeight="medium">
+                          {item.value}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              </Collapse>
+            </CardContent>
+          </DetailCard>
+        </Grid>
+      ))}
+    </Grid>
+  );
+};
+
+const LoadingSkeleton = () => (
+  <Box sx={{ p: 3 }}>
+    <Stack spacing={3}>
+      <Skeleton variant="rectangular" height={200} />
+      <Grid container spacing={2}>
+        {[1, 2, 3, 4, 5, 6].map((item) => (
+          <Grid item xs={12} sm={6} md={4} key={item}>
+            <Skeleton variant="rectangular" height={150} />
+          </Grid>
+        ))}
+      </Grid>
+    </Stack>
+  </Box>
+);
 
 export default AppointmentDetails;
