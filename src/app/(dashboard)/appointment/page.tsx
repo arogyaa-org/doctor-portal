@@ -12,6 +12,8 @@ import {
   Button,
   Box,
   Chip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import CreateIcon from "@mui/icons-material/Create";
 import { isEqual } from "lodash";
@@ -113,7 +115,7 @@ const dateOptions = [
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [loading, setLoading] = useState(false); // To track API request
+  const [loading, setLoading] = useState(false);
   const [openModal, setOpenModal] = React.useState(false);
   const [selectedAppointment, setSelectedAppointment] =
     React.useState<Appointment | null>(null);
@@ -136,6 +138,10 @@ const Page: React.FC = () => {
   const { decodedToken } = Utility();
   const role = decodedToken()?.role;
   const doctorId = decodedToken()?.id;
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   const apiEndpoint =
     role === "doctor" && doctorId
@@ -235,14 +241,14 @@ const Page: React.FC = () => {
 
   const handlePageChange = useCallback(
     async (newPage: number) => {
-      if (loading) return; // Prevent API call if a request is in progress
+      if (loading) return;
 
-      setLoading(true); // Mark API request as in progress
-      setCurrentPage(newPage); // Update the current page
+      setLoading(true);
+      setCurrentPage(newPage);
 
       try {
         await refetch({
-          page: newPage + 1, // Page is 1-based
+          page: newPage + 1,
           limit: pageSize,
           dateFilter:
             selectedDateFilter !== "all" ? selectedDateFilter : undefined,
@@ -252,7 +258,7 @@ const Page: React.FC = () => {
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
-        setLoading(false); // Reset the loading state
+        setLoading(false);
       }
     },
     [
@@ -268,9 +274,8 @@ const Page: React.FC = () => {
   const handlePageSizeChange = useCallback(
     (newPageSize: number) => {
       if (pageSize !== newPageSize) {
-        // Only update if size actually changed
         setPageSize(newPageSize);
-        setCurrentPage(0); // Reset to first page when page size changes
+        setCurrentPage(0);
       }
     },
     [pageSize]
@@ -306,210 +311,460 @@ const Page: React.FC = () => {
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={isMobile ? 2 : 3} sx={{ padding: isMobile ? 1 : 2 }}>
       <Stack
-        direction="row"
-        spacing={3}
-        alignItems="center"
+        direction={isMobile ? "column" : "row"}
+        spacing={isMobile ? 1 : 3}
+        alignItems={isMobile ? "stretch" : "center"}
         justifyContent="space-between"
+        flexWrap="wrap"
       >
         <Typography
-          variant="h4"
+          variant={isMobile ? "h5" : "h4"}
           sx={{
             flex: 1,
             fontWeight: 600,
-            marginLeft: "11px",
+            marginLeft: isMobile ? 0 : "11px",
+            textAlign: isMobile ? "center" : "left",
           }}
         >
           Appointments
         </Typography>
 
-        <Stack direction="row" spacing={2} alignItems="center">
-          {/* Status Filter */}
-          <Select
-            value={selectedStatus}
-            onChange={(event) =>
-              setSelectedStatus(event.target.value as string)
-            }
-            variant="outlined"
-            size="small"
-            sx={{
-              minWidth: 160,
-              minHeight: 40,
-              px: 1.5,
-              py: 0.5,
-              borderRadius: "10px",
-              backgroundColor: (() => {
-                const opt = statusOptions.find(
-                  (o) => o.value === selectedStatus
-                );
-                if (!opt) return "#f8f9fa";
-                return opt.textColor
-                  ? opt.textColor + "30"
-                  : (theme) => theme.palette[opt.color || "text"]?.main + "30";
-              })(),
-              "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-              "& .MuiSelect-select": {
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                padding: 0,
-              },
-            }}
-            renderValue={(selected) => {
-              const option = statusOptions.find(
-                (opt) => opt.value === selected
-              );
-              const getClr = (theme) =>
-                option?.textColor ||
-                (option?.color
-                  ? theme.palette[option.color]?.main
-                  : theme.palette.text.primary);
+        {isMobile ? (
+          <Stack
+            direction="column"
+            spacing={1}
+            sx={{ width: "100%", maxWidth: "100%" }}
+          >
+            {/* Search Bar */}
+            <Search
+              refetchAPI={handleSearch}
+              holderText="Appointments..."
+              sx={{
+                width: "100%",
+                maxWidth: "100%",
+              }}
+            />
+            {/* Filters */}
+            <Stack
+              direction="row"
+              spacing={0.5}
+              alignItems="center"
+              sx={{
+                width: "100%",
+                flexWrap: "wrap",
+                gap: 0.5,
+                justifyContent: "space-between",
+              }}
+            >
+              {/* Status Filter */}
+              <Select
+                value={selectedStatus}
+                onChange={(event) =>
+                  setSelectedStatus(event.target.value as string)
+                }
+                variant="outlined"
+                size="small"
+                sx={{
+                  flex: 1,
+                  minWidth: 90,
+                  minHeight: 32,
+                  px: 0.5,
+                  py: 0.25,
+                  borderRadius: "8px",
+                  backgroundColor: (() => {
+                    const opt = statusOptions.find(
+                      (o) => o.value === selectedStatus
+                    );
+                    if (!opt) return "#f8f9fa";
+                    return opt.textColor
+                      ? opt.textColor + "30"
+                      : (theme) =>
+                          theme.palette[opt.color || "text"]?.main + "30";
+                  })(),
+                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "& .MuiSelect-select": {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    padding: 0,
+                  },
+                }}
+                renderValue={(selected) => {
+                  const option = statusOptions.find(
+                    (opt) => opt.value === selected
+                  );
+                  const getClr = (theme) =>
+                    option?.textColor ||
+                    (option?.color
+                      ? theme.palette[option.color]?.main
+                      : theme.palette.text.primary);
 
-              return (
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  height="100%"
-                  width="100%"
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
-                    {React.cloneElement(option?.icon || <></>, {
-                      sx: { color: getClr },
-                    })}
-                    <Typography
-                      variant="body2"
-                      fontWeight={600}
-                      sx={{
-                        color: getClr,
-                        lineHeight: 1.2,
-                      }}
+                  return (
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      height="100%"
+                      width="100%"
                     >
-                      {option?.label}
-                    </Typography>
-                  </Box>
-                </Box>
-              );
+                      <Box display="flex" alignItems="center" gap={0.5}>
+                        {React.cloneElement(option?.icon || <></>, {
+                          sx: { color: getClr, fontSize: 14 },
+                        })}
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: getClr,
+                            lineHeight: 1.2,
+                            fontSize: "0.65rem",
+                          }}
+                        >
+                          {option?.label}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                }}
+              >
+                {statusOptions
+                  .filter((opt) => opt.value !== selectedStatus)
+                  .map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {React.cloneElement(option.icon, {
+                          sx: {
+                            color: option.textColor || option.color,
+                            fontSize: 14,
+                          },
+                        })}
+                        <Typography
+                          variant="body2"
+                          fontWeight={500}
+                          sx={{
+                            color:
+                              option.textColor ||
+                              ((theme) => theme.palette[option.color]?.main),
+                            fontSize: "0.65rem",
+                          }}
+                        >
+                          {option.label}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+              </Select>
+
+              {/* Date Filter */}
+              <Select
+                value={selectedDateFilter}
+                onChange={(event) =>
+                  setSelectedDateFilter(event.target.value as string)
+                }
+                variant="outlined"
+                size="small"
+                sx={{
+                  flex: 1,
+                  minWidth: 90,
+                  minHeight: 32,
+                  px: 0.5,
+                  py: 0.25,
+                  borderRadius: "8px",
+                  backgroundColor: (() => {
+                    const opt = dateOptions.find(
+                      (o) => o.value === selectedDateFilter
+                    );
+                    return opt?.color
+                      ? opt.color.startsWith("#")
+                        ? opt.color + "30"
+                        : (theme) => theme.palette[opt.color].main + "30"
+                      : "#f8f9fa";
+                  })(),
+                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "& .MuiSelect-select": {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    padding: 0,
+                  },
+                }}
+                renderValue={(selected) => {
+                  const option = dateOptions.find(
+                    (opt) => opt.value === selected
+                  );
+                  return (
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      height="100%"
+                      width="100%"
+                    >
+                      <Box display="flex" alignItems="center" gap={0.5}>
+                        {React.cloneElement(option?.icon || <></>, {
+                          sx: { color: option?.color, fontSize: 14 },
+                        })}
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: option?.color,
+                            lineHeight: 1.2,
+                            fontSize: "0.65rem",
+                          }}
+                        >
+                          {option?.label}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                }}
+              >
+                {dateOptions
+                  .filter((opt) => opt.value !== selectedDateFilter)
+                  .map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        gap={1}
+                        color={option.color}
+                      >
+                        {React.cloneElement(option.icon, {
+                          sx: { color: option.color, fontSize: 14 },
+                        })}
+                        <Typography
+                          variant="body2"
+                          fontWeight={500}
+                          sx={{
+                            fontSize: "0.65rem",
+                          }}
+                        >
+                          {option.label}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+              </Select>
+            </Stack>
+          </Stack>
+        ) : (
+          <Stack
+            direction="row"
+            spacing={2}
+            alignItems="center"
+            sx={{
+              width: "auto",
+              flexWrap: "wrap",
+              gap: 2,
+              justifyContent: "flex-end",
             }}
           >
-            {statusOptions
-              .filter((opt) => opt.value !== selectedStatus)
-              .map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  <Box display="flex" alignItems="center" gap={1.5}>
-                    {React.cloneElement(option.icon, {
-                      sx: { color: option.textColor || option.color },
-                    })}
-                    <Typography
-                      variant="body2"
-                      fontWeight={500}
-                      sx={{
-                        color:
-                          option.textColor ||
-                          ((theme) => theme.palette[option.color]?.main),
-                      }}
-                    >
-                      {option.label}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-          </Select>
-
-          {/* Date Filter */}
-          <Select
-            value={selectedDateFilter}
-            onChange={(event) =>
-              setSelectedDateFilter(event.target.value as string)
-            }
-            variant="outlined"
-            size="small"
-            sx={{
-              minWidth: 150,
-              minHeight: 40,
-              marginRight: 1.5,
-              borderRadius: "10px",
-              px: 1.5,
-              py: 0.5,
-              backgroundColor: (() => {
-                const opt = dateOptions.find(
-                  (o) => o.value === selectedDateFilter
+            {/* Status Filter */}
+            <Select
+              value={selectedStatus}
+              onChange={(event) =>
+                setSelectedStatus(event.target.value as string)
+              }
+              variant="outlined"
+              size="small"
+              sx={{
+                minWidth: 160,
+                minHeight: 32,
+                px: 1.5,
+                py: 0.25,
+                borderRadius: "8px",
+                backgroundColor: (() => {
+                  const opt = statusOptions.find(
+                    (o) => o.value === selectedStatus
+                  );
+                  if (!opt) return "#f8f9fa";
+                  return opt.textColor
+                    ? opt.textColor + "30"
+                    : (theme) =>
+                        theme.palette[opt.color || "text"]?.main + "30";
+                })(),
+                "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                "& .MuiSelect-select": {
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  padding: 0,
+                },
+              }}
+              renderValue={(selected) => {
+                const option = statusOptions.find(
+                  (opt) => opt.value === selected
                 );
-                return opt?.color
-                  ? opt.color.startsWith("#")
-                    ? opt.color + "30"
-                    : (theme) => theme.palette[opt.color].main + "30"
-                  : "#f8f9fa";
-              })(),
-              "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-              "& .MuiSelect-select": {
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                padding: 0,
-              },
-            }}
-            renderValue={(selected) => {
-              const option = dateOptions.find((opt) => opt.value === selected);
-              return (
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  height="100%"
-                  width="100%"
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
-                    {React.cloneElement(option?.icon || <></>, {
-                      sx: { color: option?.color },
-                    })}
-                    <Typography
-                      variant="body2"
-                      fontWeight={600}
-                      sx={{
-                        color: option?.color,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {option?.label}
-                    </Typography>
-                  </Box>
-                </Box>
-              );
-            }}
-          >
-            {dateOptions
-              .filter((opt) => opt.value !== selectedDateFilter)
-              .map((option) => (
-                <MenuItem key={option.value} value={option.value}>
+                const getClr = (theme) =>
+                  option?.textColor ||
+                  (option?.color
+                    ? theme.palette[option.color]?.main
+                    : theme.palette.text.primary);
+
+                return (
                   <Box
                     display="flex"
                     alignItems="center"
-                    gap={1.5}
-                    color={option.color}
+                    justifyContent="center"
+                    height="100%"
+                    width="100%"
                   >
-                    {React.cloneElement(option.icon, {
-                      sx: { color: option.color },
-                    })}
-                    <Typography variant="body2" fontWeight={500}>
-                      {option.label}
-                    </Typography>
+                    <Box display="flex" alignItems="center" gap={0.5}>
+                      {React.cloneElement(option?.icon || <></>, {
+                        sx: { color: getClr, fontSize: 20 },
+                      })}
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        sx={{
+                          color: getClr,
+                          lineHeight: 1.2,
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        {option?.label}
+                      </Typography>
+                    </Box>
                   </Box>
-                </MenuItem>
-              ))}
-          </Select>
+                );
+              }}
+            >
+              {statusOptions
+                .filter((opt) => opt.value !== selectedStatus)
+                .map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {React.cloneElement(option.icon, {
+                        sx: {
+                          color: option.textColor || option.color,
+                          fontSize: 20,
+                        },
+                      })}
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        sx={{
+                          color:
+                            option.textColor ||
+                            ((theme) => theme.palette[option.color]?.main),
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        {option.label}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+            </Select>
 
-          {/* Search */}
-          <Search
-            refetchAPI={handleSearch}
-            holderText="Appointments..."
-            sx={{ width: 250 }}
-          />
-        </Stack>
+            {/* Date Filter */}
+            <Select
+              value={selectedDateFilter}
+              onChange={(event) =>
+                setSelectedDateFilter(event.target.value as string)
+              }
+              variant="outlined"
+              size="small"
+              sx={{
+                minWidth: 150,
+                minHeight: 32,
+                marginRight: 1.5,
+                px: 1.5,
+                py: 0.25,
+                borderRadius: "8px",
+                backgroundColor: (() => {
+                  const opt = dateOptions.find(
+                    (o) => o.value === selectedDateFilter
+                  );
+                  return opt?.color
+                    ? opt.color.startsWith("#")
+                      ? opt.color + "30"
+                      : (theme) => theme.palette[opt.color].main + "30"
+                    : "#f8f9fa";
+                })(),
+                "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                "& .MuiSelect-select": {
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  padding: 0,
+                },
+              }}
+              renderValue={(selected) => {
+                const option = dateOptions.find(
+                  (opt) => opt.value === selected
+                );
+                return (
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    height="100%"
+                    width="100%"
+                  >
+                    <Box display="flex" alignItems="center" gap={0.5}>
+                      {React.cloneElement(option?.icon || <></>, {
+                        sx: { color: option?.color, fontSize: 20 },
+                      })}
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        sx={{
+                          color: option?.color,
+                          lineHeight: 1.2,
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        {option?.label}
+                      </Typography>
+                    </Box>
+                  </Box>
+                );
+              }}
+            >
+              {dateOptions
+                .filter((opt) => opt.value !== selectedDateFilter)
+                .map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={1}
+                      color={option.color}
+                    >
+                      {React.cloneElement(option.icon, {
+                        sx: { color: option.color, fontSize: 20 },
+                      })}
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        sx={{
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        {option.label}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+            </Select>
+
+            {/* Search */}
+            <Search
+              refetchAPI={handleSearch}
+              holderText="Appointments..."
+              sx={{
+                minWidth: isTablet ? 225 : 250,
+              }}
+            />
+          </Stack>
+        )}
       </Stack>
 
-      <Stack spacing={3}>
+      <Stack spacing={isMobile ? 2 : 3}>
         <Toast
           alerting={toast.toastAlert}
           severity={toast.toastSeverity}
@@ -517,7 +772,13 @@ const Page: React.FC = () => {
         />
       </Stack>
 
-      <Card sx={{ marginTop: "-25px", boxShadow: 3 }}>
+      <Card
+        sx={{
+          marginTop: isMobile ? "-15px" : "-25px",
+          boxShadow: 3,
+          overflowX: "auto",
+        }}
+      >
         <ServerPaginationGrid
           columns={datagridColumns({
             handleStatusChange,
@@ -531,6 +792,17 @@ const Page: React.FC = () => {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           noRowsMessage="No appointments found"
+          sx={{
+            "& .MuiDataGrid-root": {
+              fontSize: isMobile ? "0.75rem" : "0.875rem",
+            },
+            "& .MuiDataGrid-cell": {
+              padding: isMobile ? "4px" : "8px",
+            },
+            "& .MuiDataGrid-columnHeaderTitle": {
+              fontSize: isMobile ? "0.7rem" : "0.875rem",
+            },
+          }}
         />
       </Card>
 
