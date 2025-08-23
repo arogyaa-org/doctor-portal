@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Bell,
   Video,
@@ -24,24 +25,20 @@ import {
   Chip,
   Button,
   Stack,
-  Divider,
   Badge,
   IconButton,
-  CircularProgress,
   Paper,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import { paths } from "@/paths";
 import { useRouter } from "next/navigation";
+import DailyIframe, { DailyCall } from "@daily-co/daily-js";
 
-// Custom styled components
-const GradientCard = styled(Card)(({ theme, gradient }) => ({
+/* ---------- Styled components ---------- */
+const GradientCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== "gradient",
+})<{ gradient: string }>(({ theme, gradient }) => ({
   background: gradient,
   borderRadius: theme.shape.borderRadius * 2,
   transition: "transform 0.3s, box-shadow 0.3s",
@@ -51,8 +48,10 @@ const GradientCard = styled(Card)(({ theme, gradient }) => ({
   },
 }));
 
-const StatusChip = styled(Chip)(({ theme, status }) => {
-  const colors = {
+const StatusChip = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== "status",
+})<{ status: string }>(({ theme, status }) => {
+  const colors: Record<string, { bg: string; text: string }> = {
     active: {
       bg: theme.palette.success.light,
       text: theme.palette.success.dark,
@@ -61,45 +60,60 @@ const StatusChip = styled(Chip)(({ theme, status }) => {
     completed: { bg: theme.palette.grey[100], text: theme.palette.grey[700] },
     expired: { bg: theme.palette.error.light, text: theme.palette.error.dark },
   };
+  const c = colors[status] || {
+    bg: theme.palette.grey[100],
+    text: theme.palette.grey[700],
+  };
   return {
-    backgroundColor: colors[status]?.bg || theme.palette.grey[100],
-    color: colors[status]?.text || theme.palette.grey[700],
-    border: `1px solid ${colors[status]?.bg || theme.palette.grey[200]}`,
+    backgroundColor: c.bg,
+    color: c.text,
+    border: `1px solid ${c.bg}`,
     fontWeight: 600,
   };
 });
 
-const GradientButton = styled(Button)(({ theme, gradient }) => ({
+const GradientButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== "gradient",
+})<{ gradient: string }>(({ theme, gradient }) => ({
   background: gradient,
   color: theme.palette.common.white,
   fontWeight: 600,
   borderRadius: theme.shape.borderRadius * 2,
   padding: theme.spacing(1.5, 3),
   "&:hover": {
-    background: gradient.replace("500", "600").replace("600", "700"),
     transform: "scale(1.05)",
   },
 }));
 
-// eslint-disable-next-line react/function-component-definition
+/* ---------- Component ---------- */
 const DoctorDashboard = () => {
   const { decodedToken, getLocalStorage } = Utility();
-  const [doctorId, setDocterId] = useState(null);
-  const [socket, setSocket] = useState(null);
+  const [doctorId, setDocterId] = useState<string | null>(null);
+  const [socket, setSocket] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [patientNames, setPatientNames] = useState({});
-  const [disconnectedRooms, setDisconnectedRooms] = useState(() => {
-    const storedRooms = getLocalStorage("disconnectedRooms");
-    return storedRooms ? new Set(storedRooms) : new Set();
-  });
-  const [openExtendDialog, setOpenExtendDialog] = useState(false);
-  const router = useRouter();
-  const [extendRequestData, setExtendRequestData] = useState<{
-    doctorId: string;
-    appointmentId: string;
-  } | null>(null);
 
-  const [rooms, setRooms] = useState({
+  const [patientNames, setPatientNames] = useState<Record<string, string>>({});
+  const [disconnectedRooms, setDisconnectedRooms] = useState<Set<string>>(
+    () => {
+      const stored = getLocalStorage("disconnectedRooms");
+      return stored ? new Set(stored) : new Set();
+    }
+  );
+
+  const router = useRouter();
+
+  const [rooms, setRooms] = useState<{
+    activeRooms: any[];
+    scheduledRooms: any[];
+    recentRooms: any[];
+    expiredRooms: any[];
+    summary: {
+      totalActive: number;
+      totalScheduled: number;
+      totalRecent: number;
+      totalExpired: number;
+    };
+  }>({
     activeRooms: [],
     scheduledRooms: [],
     recentRooms: [],
@@ -111,155 +125,103 @@ const DoctorDashboard = () => {
       totalExpired: 0,
     },
   });
-  const [notifications, setNotifications] = useState([]);
+
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationPermission, setNotificationPermission] =
-    useState("default");
+    useState<NotificationPermission>("default");
   const [activeCalls, setActiveCalls] = useState<Set<string>>(new Set());
+
   const [expanded, setExpanded] = useState(false);
   const [expandedScheduled, setExpandedScheduled] = useState(false);
   const [expandedExpired, setExpandedExpired] = useState(false);
 
   const visibleRooms = expanded
     ? rooms.recentRooms
-    : rooms.recentRooms.slice(0, 3); // show only 3 initially
-
+    : rooms.recentRooms.slice(0, 3);
   const visibleScheduledRooms = expandedScheduled
-    ? rooms.scheduledRooms // full list
-    : rooms.scheduledRooms.slice(0, 3); // only first 3
-
+    ? rooms.scheduledRooms
+    : rooms.scheduledRooms.slice(0, 3);
   const visibleExpiredRooms = expandedExpired
-    ? rooms.expiredRooms // full list from backend
-    : rooms.expiredRooms.slice(0, 3); // only first 3
-  // useEffect(() => {
-  //   if (!doctorId) {
-  //     setDocterId(decodedToken().id);
-  //   }
-  // }, [decodedToken().id]);
+    ? rooms.expiredRooms
+    : rooms.expiredRooms.slice(0, 3);
 
+  // Inline call state (Daily)
+  const [activeRoom, setActiveRoom] = useState<{
+    roomId: string;
+    url: string;
+  } | null>(null);
+  const callContainerRef = useRef<HTMLDivElement | null>(null);
+  const callFrameRef = useRef<any>(null);
+  const [dailyCall, setDailyCall] = useState<DailyCall | null>(null);
+
+  /* --- auth --- */
   useEffect(() => {
     const token = decodedToken();
-    if (token && token.id) {
-      setDocterId(token.id);
+    if (token?.id) setDocterId(token.id);
+  }, [decodedToken]);
+
+  /* --- notifications permission --- */
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then(setNotificationPermission);
+    } else {
+      setNotificationPermission(Notification.permission);
     }
   }, []);
 
-  // Request notification permission
-  useEffect(() => {
-    if ("Notification" in window) {
-      if (Notification.permission === "default") {
-        Notification.requestPermission().then((permission) => {
-          setNotificationPermission(permission);
-        });
-      } else {
-        setNotificationPermission(Notification.permission);
-      }
-    }
-  }, []);
+  /* --- browser notification helper --- */
+  const showBrowserNotification = useCallback(
+    (title: string, body: string) => {
+      if (notificationPermission !== "granted") return;
+      const n = new Notification(title, {
+        body,
+        icon: "/assets/f2Fintechlogo.png",
+        tag: "doctor-notification",
+        requireInteraction: true,
+      });
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+      setTimeout(() => n.close(), 10000);
+    },
+    [notificationPermission]
+  );
 
-  // Initialize socket connection
-  useEffect(() => {
-    if (!doctorId) {
-      console.log("Doctor ID not available, skipping socket connection");
-      setIsConnected(false);
-      return;
+  /* --- fetch rooms --- */
+  const fetchRooms = useCallback(async () => {
+    if (!doctorId) return;
+    try {
+      const { data } = await fetcher("chat", `/doctor/${doctorId}/rooms`);
+      setRooms(data);
+    } catch (e) {
+      console.error("Error fetching rooms:", e);
     }
+  }, [doctorId]);
 
-    const newSocket = io(
+  /* --- socket --- */
+  useEffect(() => {
+    if (!doctorId) return;
+    const s = io(
       `${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`,
       {
-        transports: ["websocket", "polling"], // Add polling as fallback
+        transports: ["websocket"],
         autoConnect: true,
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-        timeout: 20000,
-        forceNew: true, // Force new connection
       }
     );
 
-    // Connection event handlers
-    newSocket.on("connect", () => {
-      console.log("Connected to WebSocket with ID:", newSocket.id);
+    s.on("connect", () => {
       setIsConnected(true);
-
-      // Add these new handlers right after your existing room event handlers
-      newSocket.on("roomCompleted", (data) => {
-        console.log("Room completed:", data);
-        setActiveCalls((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(data.roomId);
-          return newSet;
-        });
-        setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
-        fetchRooms();
-      });
-
-      newSocket.on("disconnectFromRoom", (data) => {
-        setActiveCalls((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(data.roomId);
-          return newSet;
-        });
-        setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
-      });
-
-      // Only join doctor room if doctorId is available
-      if (doctorId) {
-        console.log("Joining doctor room with ID:", doctorId);
-        newSocket.emit("joinDoctorRoom", { doctorId });
-      }
+      s.emit("joinDoctorRoom", { doctorId });
     });
 
-    newSocket.on("request-extend-call", (data) => {
-      console.log("Received extension request from patient:", data);
-      setExtendRequestData(data);
-      setOpenExtendDialog(true);
-    });
+    s.on("connect_error", () => setIsConnected(false));
+    s.on("disconnect", () => setIsConnected(false));
 
-    newSocket.on("connect_error", (error) => {
-      console.error("Connection error:", error);
-      setIsConnected(false);
-    });
+    s.on("roomStatusUpdate", (data: any) => setRooms(data));
 
-    newSocket.on("disconnect", (reason) => {
-      console.log("Disconnected from WebSocket. Reason:", reason);
-      setIsConnected(false);
-
-      setDisconnectedRooms((prev) => {
-        const newSet = new Set(prev);
-        rooms.activeRooms.forEach((room) => {
-          newSet.add(room.roomId);
-        });
-        return newSet;
-      });
-    });
-
-    newSocket.on("reconnect", (attemptNumber) => {
-      console.log("Reconnected after", attemptNumber, "attempts");
-      setIsConnected(true);
-    });
-
-    newSocket.on("reconnect_error", (error) => {
-      console.error("Reconnection error:", error);
-    });
-
-    // Room event handlers
-    newSocket.on("joinedDoctorRoom", (data) => {
-      console.log("Joined doctor room:", data);
-    });
-
-    newSocket.on("roomStatusUpdate", (data) => {
-      console.log("Room status update:", data);
-      setRooms(data);
-    });
-
-    newSocket.on("roomNotification", (notification) => {
-      console.log("Room notification:", notification);
-      handleRoomNotification(notification);
-    });
-
-    newSocket.on("roomCreated", (data) => {
-      console.log("New room created:", data);
+    s.on("roomCreated", (data: any) => {
       showBrowserNotification(
         "New Video Call",
         `New ${data.type} call created for patient ${data.patientId}`
@@ -267,8 +229,7 @@ const DoctorDashboard = () => {
       fetchRooms();
     });
 
-    newSocket.on("roomScheduled", (data) => {
-      console.log("Room scheduled:", data);
+    s.on("roomScheduled", (data: any) => {
       showBrowserNotification(
         "Appointment Scheduled",
         `${data.type} call scheduled for ${new Date(data.scheduledAt).toLocaleString()}`
@@ -276,182 +237,142 @@ const DoctorDashboard = () => {
       fetchRooms();
     });
 
-    newSocket.on("roomCompleted", (data) => {
-      console.log("Room completed:", data);
+    s.on("roomCompleted", (data: any) => {
+      setActiveCalls((prev) => {
+        const ns = new Set(prev);
+        ns.delete(data.roomId);
+        return ns;
+      });
       setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
       fetchRooms();
     });
 
-    newSocket.on("disconnectFromRoom", (data) => {
-      setDisconnectedRooms((prev) => new Set(prev).add(data.roomId));
-    });
+    s.on("request-extend-call", (data: any) => {
+      showBrowserNotification(
+        "Patient requested +time",
+        `Patient ${data.patientId} requested to extend this call`
+      );
 
-    newSocket.on("call-extended", (data) => {
-      console.log("Call successfully extended:", data);
-      alert("Call time successfully extended!");
-      fetchRooms(); // Refresh rooms to update expiry time
-    });
-
-    setSocket(newSocket);
-
-    // Fetch rooms after a short delay
-    const fetchTimer = setTimeout(() => {
+      
       fetchRooms();
-    }, 2000); // Increased delay
+    });
 
-    // Cleanup function
+    setSocket(s);
+    const t = setTimeout(fetchRooms, 1500);
+
     return () => {
-      clearTimeout(fetchTimer);
-      if (newSocket) {
-        console.log("Cleaning up socket connection");
-        newSocket.removeAllListeners();
-        newSocket.close();
-      }
+      clearTimeout(t);
+      s.removeAllListeners();
+      s.close();
     };
-  }, [doctorId]);
+  }, [doctorId, fetchRooms, showBrowserNotification]);
 
+  /* --- map patient names --- */
   useEffect(() => {
-    const allPatientIds = [
+    const ids = [
       ...rooms.activeRooms,
       ...rooms.scheduledRooms,
       ...rooms.recentRooms,
       ...rooms.expiredRooms,
-    ].map((room) => room.patientId);
+    ]
+      .map((r: any) => r.patientId)
+      .filter(Boolean);
 
-    [...new Set(allPatientIds)].forEach(fetchPatientName);
-  }, [rooms]);
-
-  const handleRoomNotification = useCallback(
-    (notification) => {
-      const { data } = notification;
-
-      if (data.upcomingRooms.length > 0) {
-        data.upcomingRooms.forEach((room) => {
-          const timeUntil =
-            new Date(room.scheduledAt).getTime() - new Date().getTime();
-          const minutesUntil = Math.round(timeUntil / (1000 * 60));
-
-          if (minutesUntil <= 5 && minutesUntil > 0) {
-            showBrowserNotification(
-              "Upcoming Appointment",
-              `You have a ${room.type} call in ${minutesUntil} minutes with patient ${room.patientId}`
-            );
-          }
-        });
+    [...new Set(ids)].forEach(async (id: string) => {
+      if (patientNames[id]) return;
+      try {
+        const res = await fetcher("patient", `get-patient-by-id/${id}`);
+        const name = res?.data?.username || "Unknown";
+        setPatientNames((p) => ({ ...p, [id]: name }));
+      } catch {
+        setPatientNames((p) => ({ ...p, [id]: "Unknown" }));
       }
+    });
+  }, [rooms, patientNames]);
 
-      setNotifications((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          type: "room_update",
-          message: `${data.activeRooms.length} active rooms, ${data.upcomingRooms.length} upcoming`,
-          timestamp: new Date(),
-        },
-      ]);
+  /* --- Join Call inline (Daily) --- */
+  const joinRoom = (roomId: string, url: string) => {
+    if (!url) return alert("Room URL not available");
 
-      setRooms({
-        activeRooms: data.activeRooms,
-        scheduledRooms: data.upcomingRooms,
-        recentRooms: rooms.recentRooms,
-        summary: {
-          totalActive: data.activeRooms.length,
-          totalScheduled: data.upcomingRooms.length,
-          totalRecent: rooms.summary.totalRecent,
-        },
-      });
-    },
-    [rooms.recentRooms, rooms.summary.totalRecent]
-  );
-
-  const showBrowserNotification = useCallback(
-    (title, body) => {
-      if (notificationPermission === "granted") {
-        const notification = new Notification(title, {
-          body,
-          icon: "/assets/f2Fintechlogo.png",
-          badge: "/assets/logo-dropbox.png",
-          tag: "doctor-notification",
-          requireInteraction: true,
-        });
-
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
-        };
-
-        setTimeout(() => {
-          notification.close();
-        }, 10000);
-      }
-    },
-    [notificationPermission]
-  );
-
-  const fetchPatientName = async (patientId) => {
-    if (!patientId || patientNames[patientId]) return;
-
-    try {
-      const Patientdata = await fetcher(
-        "patient",
-        `get-patient-by-id/${patientId}`
-      );
-      const name = Patientdata?.data?.username;
-
-      setPatientNames((prev) => ({ ...prev, [patientId]: name || "Unknown" }));
-    } catch (error) {
-      console.error("Error fetching patient name:", error);
-      setPatientNames((prev) => ({ ...prev, [patientId]: "Unknown" }));
+    // clean previous frame if any
+    if (callFrameRef.current) {
+      try {
+        callFrameRef.current.leave();
+      } catch {}
+      try {
+        callFrameRef.current.destroy();
+      } catch {}
+      callFrameRef.current = null;
     }
+    if (callContainerRef.current) {
+      callContainerRef.current.innerHTML = "";
+    }
+
+    setActiveCalls((prev) => new Set(prev).add(roomId));
+    setActiveRoom({ roomId, url });
   };
 
-  const fetchRooms = useCallback(async () => {
-    try {
-      const { data } = await fetcher("chat", `/doctor/${doctorId}/rooms`);
-      setRooms(data);
-    } catch (error) {
-      console.error("Error fetching rooms:", error);
+  const endCall = useCallback(() => {
+    if (callFrameRef.current) {
+      try {
+        callFrameRef.current.leave();
+      } catch {}
+      try {
+        callFrameRef.current.destroy();
+      } catch {}
+      callFrameRef.current = null;
     }
-  }, [doctorId]);
-
-  const joinRoom = (roomId, url) => {
-    if (url) {
-      // Add this room to active calls
-      setActiveCalls((prev) => new Set(prev).add(roomId));
-      const newWindow = window.open(url, "_blank");
-      const roomIdToTrack = roomId;
-
-      const interval = setInterval(() => {
-        if (newWindow.closed) {
-          console.log("Video tab closed, marking as disconnected");
-
-          // Remove from active calls when window is closed
-          setActiveCalls((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(roomIdToTrack);
-            return newSet;
-          });
-
-          setDisconnectedRooms((prev) => {
-            const newSet = new Set(prev);
-            newSet.add(roomIdToTrack);
-
-            localStorage.setItem(
-              "disconnectedRooms",
-              JSON.stringify([...newSet])
-            );
-
-            return newSet;
-          });
-
-          clearInterval(interval);
-        }
-      }, 500);
-    } else {
-      alert("Room URL not available");
+    if (callContainerRef.current) {
+      callContainerRef.current.innerHTML = "";
     }
-  };
-  const completeRoom = async (roomId) => {
+    setActiveRoom(null);
+  }, []);
+
+  useEffect(() => {
+    if (!activeRoom || !callContainerRef.current) return;
+    if (callFrameRef.current) return; 
+
+    const frame = DailyIframe?.createFrame(callContainerRef.current, {
+      iframeStyle: {
+        width: "100%",
+        height: "520px",
+        border: "0",
+        borderRadius: "12px",
+      },
+      showLeaveButton: true,
+    });
+
+    callFrameRef.current = frame;
+
+    const onLeft = () => endCall();
+    const onError = (e: any) => console.error("Daily error:", e);
+
+    frame.on("left-meeting", onLeft);
+    frame.on("error", onError);
+
+    frame
+      .join({ url: activeRoom.url })
+      .then(() => setDailyCall(frame))
+      .catch(onError);
+
+    return () => {
+      if (callFrameRef.current) {
+        try {
+          callFrameRef.current.off("left-meeting", onLeft);
+        } catch {}
+        try {
+          callFrameRef.current.off("error", onError);
+        } catch {}
+        try {
+          callFrameRef.current.destroy();
+        } catch {}
+        callFrameRef.current = null;
+      }
+    };
+  }, [activeRoom, endCall]);
+
+  /* --- actions --- */
+  const completeRoom = async (roomId: string) => {
     try {
       const response = await creator(
         "chat",
@@ -459,8 +380,7 @@ const DoctorDashboard = () => {
         {},
         { "Content-Type": "application/json" }
       );
-
-      if (response.success) {
+      if (response?.success) {
         showBrowserNotification(
           "Room Completed",
           "Video call has been marked as completed"
@@ -470,28 +390,14 @@ const DoctorDashboard = () => {
       return response;
     } catch (error) {
       console.error("Error completing room:", error);
-
       return null;
     }
   };
 
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const handleAcceptExtension = async (appointmentId: string) => {
+  const handleAcceptExtension = async (
+    appointmentId: string,
+    patientId: string
+  ) => {
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_CHAT_URL}/approve-extension/${appointmentId}`,
@@ -499,57 +405,73 @@ const DoctorDashboard = () => {
       );
       const data = await res.json();
 
-      if (res.ok && data.success) {
+      if (res.ok && data?.success) {
         alert("Accepted. Patient can now pay.");
-        fetchRooms(); // refresh UI
+        if (socket && doctorId && patientId) {
+          socket.emit("doctor-approved-extension", {
+            doctorId,
+            appointmentId,
+            patientId,
+            extensionMinutes: 10,
+          });
+        }
+        fetchRooms();
+      } else {
+        alert(data?.message || "Failed to accept extension.");
       }
     } catch (e) {
       console.error("Error accepting extension", e);
     }
   };
 
-  const handleRejectExtension = async (appointmentId: string) => {
+  const handleRejectExtension = async (
+    appointmentId: string,
+    patientId: string
+  ) => {
+    let done = false;
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_CHAT_URL}/reject-extension/${appointmentId}`,
         { method: "POST" }
       );
-      const data = await res.json();
+      if (res.ok) done = true;
+    } catch {
+      // ignore
+    }
 
-      if (res.ok && data.success) {
-        alert("Rejected extension.");
-        fetchRooms(); // refresh UI
-      }
-    } catch (e) {
-      console.error("Error rejecting extension", e);
+    if (!done && socket && doctorId && patientId) {
+      socket.emit("doctor-rejected-extension", {
+        doctorId,
+        appointmentId,
+        patientId,
+      });
+      done = true;
+    }
+
+    if (done) {
+      alert("Rejected extension.");
+      fetchRooms();
+    } else {
+      alert("Failed to reject extension.");
     }
   };
 
-  // Accept handler
-  // const handleAcceptExtension = () => {
-  //   if (!extendRequestData || !socket) return;
-  //   socket.emit("doctor-accepted-extension", {
-  //     appointmentId: extendRequestData.appointmentId,
-  //     doctorId: extendRequestData.doctorId,
-  //   });
-  //   setOpenExtendDialog(false);
-  //   alert(
-  //     "You accepted the extension request. Patient will proceed to payment."
-  //   );
-  // };
+  /* --- utils --- */
+  const formatTime = (date: string) =>
+    new Date(date).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
 
-  // Reject handler
-  // const handleRejectExtension = () => {
-  //   if (!extendRequestData || !socket) return;
-  //   socket.emit("doctor-rejected-extension", {
-  //     appointmentId: extendRequestData.appointmentId,
-  //     doctorId: extendRequestData.doctorId,
-  //   });
-  //   setOpenExtendDialog(false);
-  //   alert("You rejected the extension request.");
-  // };
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
         return <Video size={16} />;
@@ -564,6 +486,7 @@ const DoctorDashboard = () => {
     }
   };
 
+  /* ---------- UI ---------- */
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "grey.50", p: 4 }}>
       <Container maxWidth="xl">
@@ -592,7 +515,7 @@ const DoctorDashboard = () => {
             </Typography>
           </Stack>
 
-          {/* Status and Notifications */}
+          {/* Status + notifications */}
           <Stack direction="row" alignItems="center" spacing={3}>
             <Tooltip
               title={
@@ -619,6 +542,7 @@ const DoctorDashboard = () => {
                 sx={{ fontWeight: 500 }}
               />
             </Tooltip>
+
             <Badge
               badgeContent={notifications.length}
               color="error"
@@ -638,9 +562,30 @@ const DoctorDashboard = () => {
           </Stack>
         </Box>
 
+        {/* Inline Call Area */}
+        {activeRoom && (
+          <Paper elevation={4} sx={{ mb: 6, p: 2, borderRadius: 3 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              mb={1.5}
+            >
+              <Typography variant="subtitle1" fontWeight={700}>
+                Video Call • Room: {activeRoom.roomId}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" color="error" onClick={endCall}>
+                  End Call
+                </Button>
+              </Stack>
+            </Stack>
+            <Box ref={callContainerRef} sx={{ width: "100%" }} />
+          </Paper>
+        )}
+
         {/* Summary Cards */}
         <Grid container spacing={3} mb={6}>
-          {/* Active Rooms Card */}
           <Grid item xs={12} md={4}>
             <GradientCard gradient="linear-gradient(to right, #f0fdf4, #dcfce7)">
               <CardContent>
@@ -683,7 +628,6 @@ const DoctorDashboard = () => {
             </GradientCard>
           </Grid>
 
-          {/* Scheduled Card */}
           <Grid item xs={12} md={4}>
             <GradientCard gradient="linear-gradient(to right, #eff6ff, #dbeafe)">
               <CardContent>
@@ -721,29 +665,23 @@ const DoctorDashboard = () => {
             {/* Scheduled Calls List */}
             {rooms.scheduledRooms.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                {/* <Stack spacing={2}>
-                  {visibleScheduledRooms.map((room) => (
-                    <GradientCard
-                      key={room._id}
-                      gradient="linear-gradient(to right, #f0f9ff, #e0f2fe)"
-                      sx={{ p: 2 }}
-                    >
+                {/* Example list (kept commented as in your code)
+                <Stack spacing={2}>
+                  {visibleScheduledRooms.map((room:any) => (
+                    <GradientCard key={room._id} gradient="linear-gradient(to right, #f0f9ff, #e0f2fe)" sx={{ p: 2 }}>
                       <CardContent sx={{ p: 0 }}>
                         <Typography variant="body1" fontWeight="bold">
-                          Patient:{" "}
-                          {patientNames[room.patientId] || room.patientId}
+                          Patient: {patientNames[room.patientId] || room.patientId}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Type: {room.type} | Starts at:{" "}
-                          {formatDate(room.startTime)}{" "}
-                          {formatTime(room.startTime)}
+                          Type: {room.type} | Starts at: {formatDate(room.startTime)} {formatTime(room.startTime)}
                         </Typography>
                       </CardContent>
                     </GradientCard>
                   ))}
-                </Stack> */}
+                </Stack>
+                */}
 
-                {/* Expand/Collapse Button */}
                 {rooms.scheduledRooms.length > 3 && (
                   <Box sx={{ textAlign: "center", mt: 2 }}>
                     <Button
@@ -758,7 +696,6 @@ const DoctorDashboard = () => {
             )}
           </Grid>
 
-          {/* Recent Calls Card */}
           <Grid item xs={12} md={4}>
             <GradientCard gradient="linear-gradient(to right, #f7f7f7, #e5e5e5)">
               <CardContent>
@@ -794,7 +731,6 @@ const DoctorDashboard = () => {
             </GradientCard>
           </Grid>
 
-          {/* Expired Calls Card */}
           <Grid item xs={12} md={4}>
             <GradientCard gradient="linear-gradient(to right, #fef2f2, #fee2e2)">
               <CardContent>
@@ -828,32 +764,10 @@ const DoctorDashboard = () => {
                 </Typography>
               </CardContent>
             </GradientCard>
-            {/* Expired Calls List */}
+
             {rooms.expiredRooms.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                {/* <Stack spacing={2}>
-                  {visibleExpiredRooms.map((room) => (
-                    <GradientCard
-                      key={room._id}
-                      gradient="linear-gradient(to right, #fef2f2, #fee2e2)"
-                      sx={{ p: 2 }}
-                    >
-                      <CardContent sx={{ p: 0 }}>
-                        <Typography variant="body1" fontWeight="bold">
-                          Patient:{" "}
-                          {patientNames[room.patientId] || room.patientId}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Type: {room.type} | Scheduled for:{" "}
-                          {formatDate(room.startTime)}{" "}
-                          {formatTime(room.startTime)}
-                        </Typography>
-                      </CardContent>
-                    </GradientCard>
-                  ))}
-                </Stack> */}
-
-                {/* Expand/Collapse Button */}
+                {/* Example list kept commented */}
                 {rooms.expiredRooms.length > 3 && (
                   <Box sx={{ textAlign: "center", mt: 2 }}>
                     <Button
@@ -909,9 +823,10 @@ const DoctorDashboard = () => {
                 </Box>
               </Stack>
             </Box>
+
             <Box sx={{ p: 4 }}>
               <Stack spacing={2}>
-                {rooms.activeRooms.map((room) => (
+                {rooms.activeRooms.map((room: any) => (
                   <GradientCard
                     key={room._id}
                     gradient="linear-gradient(to right, #f0fdf4, #dcfce7)"
@@ -965,6 +880,7 @@ const DoctorDashboard = () => {
                             </Typography>
                           </Box>
                         </Stack>
+
                         <Stack
                           direction={{ xs: "column", sm: "row" }}
                           spacing={2}
@@ -985,9 +901,10 @@ const DoctorDashboard = () => {
                                 ? "Rejoin Call"
                                 : "Join Call"}
                           </GradientButton>
+
                           <GradientButton
-                            gradient="linear-gradient( #4FC3F7)"
-                            onClick={async () => {
+                            gradient="linear-gradient(#4FC3F7, #4FC3F7)"
+                            onClick={() => {
                               if (room.appointmentId) {
                                 router.push(
                                   `/appointment/details/${room.appointmentId}`
@@ -1001,18 +918,14 @@ const DoctorDashboard = () => {
                           >
                             Patient Details
                           </GradientButton>
+
                           <GradientButton
                             gradient="linear-gradient(to right, #64748b, #475569)"
                             onClick={async () => {
                               const response = await completeRoom(room.roomId);
-
                               if (response?.success && room.appointmentId) {
                                 router.push(
                                   `/appointment/details/${room.appointmentId}`
-                                );
-                              } else {
-                                console.log(
-                                  "Appointment ID not found, cannot redirect."
                                 );
                               }
                             }}
@@ -1021,13 +934,18 @@ const DoctorDashboard = () => {
                           </GradientButton>
                         </Stack>
                       </Stack>
+
+                      {/* Accept / Reject only when pending */}
                       {room.extensionStatus === "pending" && (
                         <Stack direction="row" spacing={1} mt={2}>
                           <Button
                             variant="contained"
                             color="success"
                             onClick={() =>
-                              handleAcceptExtension(room.appointmentId)
+                              handleAcceptExtension(
+                                room.appointmentId,
+                                room.patientId
+                              )
                             }
                           >
                             Accept
@@ -1036,7 +954,10 @@ const DoctorDashboard = () => {
                             variant="outlined"
                             color="error"
                             onClick={() =>
-                              handleRejectExtension(room.appointmentId)
+                              handleRejectExtension(
+                                room.appointmentId,
+                                room.patientId
+                              )
                             }
                           >
                             Reject
@@ -1093,7 +1014,7 @@ const DoctorDashboard = () => {
             </Box>
             <Box sx={{ p: 4 }}>
               <Stack spacing={2}>
-                {rooms.scheduledRooms.map((room) => (
+                {rooms.scheduledRooms.map((room: any) => (
                   <GradientCard
                     key={room._id}
                     gradient="linear-gradient(to right, #eff6ff, #dbeafe)"
@@ -1141,12 +1062,22 @@ const DoctorDashboard = () => {
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Scheduled:{" "}
-                              <strong>{`${formatDate(room.scheduledAt)} at ${formatTime(room.scheduledAt)}`}</strong>
+                              <strong>
+                                {`${formatDate(room.scheduledAt)} at ${formatTime(room.scheduledAt)}`}
+                              </strong>
                             </Typography>
                           </Box>
                         </Stack>
+
                         <Chip
-                          label={`${Math.max(0, Math.round((new Date(room.scheduledAt) - new Date()) / (1000 * 60)))} min`}
+                          label={`${Math.max(
+                            0,
+                            Math.round(
+                              (new Date(room.scheduledAt).getTime() -
+                                Date.now()) /
+                                (1000 * 60)
+                            )
+                          )} min`}
                           color="info"
                           variant="outlined"
                           sx={{ fontWeight: 600 }}
@@ -1204,9 +1135,10 @@ const DoctorDashboard = () => {
                 </Box>
               </Stack>
             </Box>
+
             <Box sx={{ p: 4 }}>
               <Stack spacing={2}>
-                {visibleRooms.map((room) => (
+                {visibleRooms.map((room: any) => (
                   <GradientCard
                     key={room._id}
                     gradient="linear-gradient(to right, #f7f7f7, #e5e5e5)"
@@ -1241,7 +1173,9 @@ const DoctorDashboard = () => {
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {room.completedAt ? "Completed" : "Created"}:{" "}
-                            <strong>{`${formatDate(room.completedAt || room.createAt)} at ${formatTime(room.completedAt || room.createAt)}`}</strong>
+                            <strong>{`${formatDate(
+                              room.completedAt || room.createAt
+                            )} at ${formatTime(room.completedAt || room.createAt)}`}</strong>
                           </Typography>
                         </Box>
                       </Stack>
@@ -1249,7 +1183,7 @@ const DoctorDashboard = () => {
                   </GradientCard>
                 ))}
               </Stack>
-              {/* Expand/Collapse Button */}
+
               {rooms.recentRooms.length > 3 && (
                 <Box sx={{ textAlign: "center", mt: 2 }}>
                   <Button variant="text" onClick={() => setExpanded(!expanded)}>
@@ -1301,9 +1235,10 @@ const DoctorDashboard = () => {
                 </Box>
               </Stack>
             </Box>
+
             <Box sx={{ p: 4 }}>
               <Stack spacing={2}>
-                {rooms.expiredRooms.map((room) => (
+                {rooms.expiredRooms.map((room: any) => (
                   <GradientCard
                     key={room._id}
                     gradient="linear-gradient(to right, #fef2f2, #fee2e2)"
@@ -1342,7 +1277,9 @@ const DoctorDashboard = () => {
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             Expired:{" "}
-                            <strong>{`${formatDate(room.expiresAt)} at ${formatTime(room.expiresAt)}`}</strong>
+                            <strong>{`${formatDate(room.expiresAt)} at ${formatTime(
+                              room.expiresAt
+                            )}`}</strong>
                           </Typography>
                         </Box>
                       </Stack>
@@ -1354,7 +1291,7 @@ const DoctorDashboard = () => {
           </Paper>
         )}
 
-        {/* No rooms message */}
+        {/* Empty state */}
         {rooms.activeRooms.length === 0 &&
           rooms.scheduledRooms.length === 0 &&
           rooms.recentRooms.length === 0 && (
