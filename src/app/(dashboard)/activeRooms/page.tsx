@@ -29,6 +29,7 @@ import {
   IconButton,
   Paper,
   Tooltip,
+  Alert,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
@@ -154,6 +155,17 @@ const DoctorDashboard = () => {
   const callFrameRef = useRef<any>(null);
   const [dailyCall, setDailyCall] = useState<DailyCall | null>(null);
 
+  const [lastPayment, setLastPayment] = useState<{
+    appointmentId: string;
+    txnid?: string;
+    patientId?: string;
+    minutes?: number;
+  } | null>(null);
+
+  const [justPaidMap, setJustPaidMap] = useState<
+    Record<string, { txnid?: string; ts: number }>
+  >({});
+
   /* --- auth --- */
   useEffect(() => {
     const token = decodedToken();
@@ -224,7 +236,7 @@ const DoctorDashboard = () => {
     s.on("roomCreated", (data: any) => {
       showBrowserNotification(
         "New Video Call",
-        `New ${data.type} call created for patient ${data.patientId}`
+        `video call joined by patient ${data.patientId}`
       );
       fetchRooms();
     });
@@ -232,7 +244,7 @@ const DoctorDashboard = () => {
     s.on("roomScheduled", (data: any) => {
       showBrowserNotification(
         "Appointment Scheduled",
-        `${data.type} call scheduled for ${new Date(data.scheduledAt).toLocaleString()}`
+        `call scheduled for ${new Date(data.scheduledAt).toLocaleString()}`
       );
       fetchRooms();
     });
@@ -248,13 +260,98 @@ const DoctorDashboard = () => {
     });
 
     s.on("request-extend-call", (data: any) => {
+      //data: { doctorId, appointmentId, patientId, extensionMinutes, currentEndTime }
       showBrowserNotification(
-        "Patient requested +time",
-        `Patient ${data.patientId} requested to extend this call`
+        "Patient request to extend-call",
+        `extension request by patient ${data.patientId}`
+      );
+      fetchRooms();
+    });
+
+    s.on("extension-payment-success", (payload: any) => {
+      if (!payload?.doctorId || payload.doctorId !== doctorId) return;
+
+      setLastPayment({
+        appointmentId: String(payload.appointmentId),
+        txnid: payload.txnid,
+        patientId: payload.patientId,
+        minutes: payload.minutes,
+      });
+
+      setJustPaidMap((prev) => ({
+        ...prev,
+        [String(payload.appointmentId)]: {
+          txnid: payload.txnid,
+          minutes: payload.minutes,
+          ts: Date.now(),
+        },
+      }));
+
+      showBrowserNotification(
+        "Extension Amount Paid By Patient",
+        `Appointment ${payload.appointmentId} • Txn ${payload.txnid || "N/A"}`
       );
 
-      
+      setJustPaidMap((prev) => ({
+        ...prev,
+        [String(payload.appointmentId)]: {
+          txnid: payload.txnid,
+          ts: Date.now(),
+        },
+      }));
+
       fetchRooms();
+
+      setTimeout(() => {
+        setJustPaidMap((prev) => {
+          const copy = { ...prev };
+          delete copy[String(payload.appointmentId)];
+          return copy;
+        });
+      }, 30000);
+    });
+
+    s.on("payment-success", (payload: any) => {
+      if (payload?.purpose !== "EXTENSION") return;
+      if (!payload?.doctorId || payload.doctorId !== doctorId) return;
+
+      setLastPayment({
+        appointmentId: String(payload.appointmentId),
+        txnid: payload.txnid,
+        patientId: payload.patientId,
+        minutes: payload.minutes,
+      });
+      setJustPaidMap((prev) => ({
+        ...prev,
+        [String(payload.appointmentId)]: {
+          txnid: payload.txnid,
+          minutes: payload.minutes,
+          ts: Date.now(),
+        },
+      }));
+
+      showBrowserNotification(
+        "Extension Paid",
+        `Appointment ${payload.appointmentId} • Txn ${payload.txnid || "N/A"}`
+      );
+
+      setJustPaidMap((prev) => ({
+        ...prev,
+        [String(payload.appointmentId)]: {
+          txnid: payload.txnid,
+          ts: Date.now(),
+        },
+      }));
+
+      fetchRooms();
+
+      setTimeout(() => {
+        setJustPaidMap((prev) => {
+          const copy = { ...prev };
+          delete copy[String(payload.appointmentId)];
+          return copy;
+        });
+      }, 30000);
     });
 
     setSocket(s);
@@ -266,6 +363,19 @@ const DoctorDashboard = () => {
       s.close();
     };
   }, [doctorId, fetchRooms, showBrowserNotification]);
+
+  const getDurationWithExtension = (room: any) => {
+    const base = Number(room?.duration) || 0;
+    let extra = 0;
+
+    if (lastPayment && lastPayment.appointmentId === room.appointmentId) {
+      extra = Number(lastPayment.minutes) || 0;
+    } else if (justPaidMap[room.appointmentId]?.minutes) {
+      extra = Number(justPaidMap[room.appointmentId].minutes) || 0;
+    }
+
+    return base + extra;
+  };
 
   /* --- map patient names --- */
   useEffect(() => {
@@ -294,7 +404,6 @@ const DoctorDashboard = () => {
   const joinRoom = (roomId: string, url: string) => {
     if (!url) return alert("Room URL not available");
 
-    // clean previous frame if any
     if (callFrameRef.current) {
       try {
         callFrameRef.current.leave();
@@ -330,8 +439,7 @@ const DoctorDashboard = () => {
 
   useEffect(() => {
     if (!activeRoom || !callContainerRef.current) return;
-    if (callFrameRef.current) return; 
-
+    if (callFrameRef.current) return;
     const frame = DailyIframe?.createFrame(callContainerRef.current, {
       iframeStyle: {
         width: "100%",
@@ -412,7 +520,7 @@ const DoctorDashboard = () => {
             doctorId,
             appointmentId,
             patientId,
-            extensionMinutes: 10,
+            extensionMinutes: 20,
           });
         }
         fetchRooms();
@@ -435,9 +543,7 @@ const DoctorDashboard = () => {
         { method: "POST" }
       );
       if (res.ok) done = true;
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     if (!done && socket && doctorId && patientId) {
       socket.emit("doctor-rejected-extension", {
@@ -560,6 +666,20 @@ const DoctorDashboard = () => {
               </IconButton>
             </Badge>
           </Stack>
+
+          {lastPayment && (
+            <Alert
+              severity="success"
+              onClose={() => setLastPayment(null)}
+              sx={{ mt: 2, mb: 2, borderRadius: 2, fontWeight: 600 }}
+            >
+              Extension amount paid by patient — Appointment{" "}
+              <strong>{lastPayment.appointmentId}</strong>
+              {typeof lastPayment.minutes === "number" ? (
+                <> • +{lastPayment.minutes} min</>
+              ) : null}
+            </Alert>
+          )}
         </Box>
 
         {/* Inline Call Area */}
@@ -665,22 +785,7 @@ const DoctorDashboard = () => {
             {/* Scheduled Calls List */}
             {rooms.scheduledRooms.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                {/* Example list (kept commented as in your code)
-                <Stack spacing={2}>
-                  {visibleScheduledRooms.map((room:any) => (
-                    <GradientCard key={room._id} gradient="linear-gradient(to right, #f0f9ff, #e0f2fe)" sx={{ p: 2 }}>
-                      <CardContent sx={{ p: 0 }}>
-                        <Typography variant="body1" fontWeight="bold">
-                          Patient: {patientNames[room.patientId] || room.patientId}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Type: {room.type} | Starts at: {formatDate(room.startTime)} {formatTime(room.startTime)}
-                        </Typography>
-                      </CardContent>
-                    </GradientCard>
-                  ))}
-                </Stack>
-                */}
+                {/* (kept commented) */}
 
                 {rooms.scheduledRooms.length > 3 && (
                   <Box sx={{ textAlign: "center", mt: 2 }}>
@@ -767,7 +872,7 @@ const DoctorDashboard = () => {
 
             {rooms.expiredRooms.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                {/* Example list kept commented */}
+                {/* (kept commented) */}
                 {rooms.expiredRooms.length > 3 && (
                   <Box sx={{ textAlign: "center", mt: 2 }}>
                     <Button
@@ -870,14 +975,38 @@ const DoctorDashboard = () => {
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Type: <strong>{room.type}</strong> | Duration:{" "}
-                              <strong>{room.duration} min</strong>
+                              <strong>
+                                {getDurationWithExtension(room)} min
+                              </strong>
                             </Typography>
+
                             <Typography variant="body2" color="text.secondary">
                               Expires:{" "}
                               <strong style={{ color: "#dc2626" }}>
-                                {formatTime(room.expiresAt)}
+                                {formatTime(
+                                  lastPayment &&
+                                    lastPayment.appointmentId ===
+                                      room.appointmentId
+                                    ? new Date(
+                                        new Date(room.expiresAt).getTime() +
+                                          (lastPayment.minutes || 20) * 60000
+                                      ).toISOString()
+                                    : room.expiresAt
+                                )}
                               </strong>
                             </Typography>
+
+                            {justPaidMap[room.appointmentId] && (
+                              <Chip
+                                label={`Extension Paid • Txn ${
+                                  justPaidMap[room.appointmentId].txnid || "N/A"
+                                }`}
+                                color="success"
+                                variant="filled"
+                                size="small"
+                                sx={{ mt: 1, fontWeight: 700 }}
+                              />
+                            )}
                           </Box>
                         </Stack>
 
@@ -1063,7 +1192,9 @@ const DoctorDashboard = () => {
                             <Typography variant="body2" color="text.secondary">
                               Scheduled:{" "}
                               <strong>
-                                {`${formatDate(room.scheduledAt)} at ${formatTime(room.scheduledAt)}`}
+                                {`${formatDate(room.scheduledAt)} at ${formatTime(
+                                  room.scheduledAt
+                                )}`}
                               </strong>
                             </Typography>
                           </Box>
@@ -1175,7 +1306,9 @@ const DoctorDashboard = () => {
                             {room.completedAt ? "Completed" : "Created"}:{" "}
                             <strong>{`${formatDate(
                               room.completedAt || room.createAt
-                            )} at ${formatTime(room.completedAt || room.createAt)}`}</strong>
+                            )} at ${formatTime(
+                              room.completedAt || room.createAt
+                            )}`}</strong>
                           </Typography>
                         </Box>
                       </Stack>
