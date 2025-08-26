@@ -609,33 +609,34 @@ const DoctorForm: React.FC = () => {
                   touched.consultationFee ? errors.consultationFee : null
                 }
               />
-              <FormControl
-                fullWidth
-                error={touched.status ? Boolean(errors.status) : null}
-              >
-                <InputLabel> Status </InputLabel>
-                <Select
-                  label="Status"
-                  name="status"
-                  value={values.status}
-                  onChange={(e) => setFieldValue("status", e.target.value)}
-                  startAdornment={
-                    <InputAdornment position="start">
-                      <InfoIcon color="primary" />
-                    </InputAdornment>
-                  }
+              {decodedToken().role !== "sub_admin" && (
+                <FormControl
+                  fullWidth
+                  error={touched.status ? Boolean(errors.status) : null}
                 >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                  <MenuItem value="on leave">On Leave</MenuItem>
-                </Select>
-                {touched.status && errors.status ? (
-                  <Typography color="error" variant="body2">
-                    {errors.status}
-                  </Typography>
-                ) : null}
-              </FormControl>
-
+                  <InputLabel> Status </InputLabel>
+                  <Select
+                    label="Status"
+                    name="status"
+                    value={values.status}
+                    onChange={(e) => setFieldValue("status", e.target.value)}
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <InfoIcon color="primary" />
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                    <MenuItem value="on leave">On Leave</MenuItem>
+                  </Select>
+                  {touched.status && errors.status ? (
+                    <Typography color="error" variant="body2">
+                      {errors.status}
+                    </Typography>
+                  ) : null}
+                </FormControl>
+              )}
               <Field
                 as={MuiTextField}
                 label="Clinic Address"

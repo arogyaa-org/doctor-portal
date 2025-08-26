@@ -112,7 +112,7 @@ const UserForm: React.FC = () => {
     setUpdatePassword(!updatePassword);
   }, [updatePassword, formValues]);
 
-  //Create/Edit/Populate User
+  // Create/Edit/Populate User
   useEffect(() => {
     if (userId) {
       setTitle("Edit User");
@@ -217,6 +217,13 @@ const UserForm: React.FC = () => {
     },
     [updatePassword, modifyUser, toastAndNavigate, dispatch, router]
   );
+
+  const designationOptions = [
+    "Operations",
+    "Team Leader",
+    "Manager",
+    "Relationship Executive",
+  ];
 
   return (
     <Box margin="0 10px 10px 10px">
@@ -420,7 +427,7 @@ const UserForm: React.FC = () => {
                 fullWidth
                 error={touched.status ? Boolean(errors.status) : null}
               >
-                <InputLabel> Status </InputLabel>
+                <InputLabel>Status</InputLabel>
                 <Select
                   label="Status"
                   name="status"
@@ -474,6 +481,7 @@ const UserForm: React.FC = () => {
                   >
                     <MenuItem value="sub_admin">Sub Admin</MenuItem>
                     <MenuItem value="sales">Sales</MenuItem>
+                    <MenuItem value="operations">Operations</MenuItem>
                   </Select>
                 )}
                 {touched.role && errors.role ? (
@@ -482,22 +490,34 @@ const UserForm: React.FC = () => {
                   </Typography>
                 ) : null}
               </FormControl>
-              <Field
-                as={MuiTextField}
-                label="Designation"
-                name="designation"
-                type="text"
+              <FormControl
                 fullWidth
-                InputProps={{
-                  startAdornment: (
+                error={touched.designation ? Boolean(errors.designation) : null}
+              >
+                <InputLabel>Designation *</InputLabel>
+                <Select
+                  label="Designation"
+                  name="designation"
+                  value={values.designation || ""}
+                  onChange={(e) => setFieldValue("designation", e.target.value)}
+                  startAdornment={
                     <InputAdornment position="start">
                       <WorkIcon color="primary" />
                     </InputAdornment>
-                  ),
-                }}
-                error={touched.designation ? Boolean(errors.designation) : null}
-                helperText={touched.designation ? errors.designation : null}
-              />
+                  }
+                >
+                  {designationOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {touched.designation && errors.designation ? (
+                  <Typography color="error" variant="body2">
+                    {errors.designation}
+                  </Typography>
+                ) : null}
+              </FormControl>
               <Field
                 as={MuiTextField}
                 label="Address"

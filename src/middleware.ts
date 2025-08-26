@@ -25,7 +25,8 @@ export async function middleware(request: NextRequest) {
           role !== "admin" &&
           role !== "sub_admin" &&
           role !== "sales" &&
-          role !== "doctor"
+          role !== "doctor" &&
+          role !== "operations"
         ) {
           return NextResponse.redirect(new URL("/unauthorized", request.url));
         }
