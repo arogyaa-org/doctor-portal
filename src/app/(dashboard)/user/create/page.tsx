@@ -60,10 +60,10 @@ const initialValues: UserData = {
   gender: null,
   dob: "",
   pincode: null,
-  address: '',
-  profilePicture: '',
+  address: "",
+  profilePicture: "",
   status: Status.ACTIVE,
-  role: Role.SALES
+  role: Role.SALES,
 };
 let editFormValues: UserData;
 
@@ -74,8 +74,10 @@ const UserForm: React.FC = () => {
   const [formValues, setFormValues] = useState<UserData>(initialValues);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [updatePassword, setUpdatePassword] = useState<boolean>(false);
+  const [creatorId, setCreatorId] = useState<string | undefined>();
   const pwFieldRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [currentRole, setCurrentRole] = useState<Role | undefined>();
 
   const params = useParams();
   const router = useRouter();
@@ -85,6 +87,7 @@ const UserForm: React.FC = () => {
   const { modifyUser } = useModifyUser("update-user");
   const { toastAndNavigate } = Utility();
   const userId = params?.id;
+  const { decodedToken } = Utility();
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -120,6 +123,11 @@ const UserForm: React.FC = () => {
     }
   }, [userId]);
 
+  useEffect(() => {
+    const payload = decodedToken(); // auto-reads cookie "token"
+    setCreatorId(payload?.id); // may be undefined if no token
+  }, []);
+
   const create = useCallback(
     async (values: UserData) => {
       setLoading(true);
@@ -127,6 +135,7 @@ const UserForm: React.FC = () => {
         const response = await createUser({
           ...values,
           profilePicture: values?.profilePicture?.file || null,
+          createdBy: creatorId,
         });
         if (response?.statusCode === 409) {
           toastAndNavigate(
@@ -157,7 +166,7 @@ const UserForm: React.FC = () => {
         setLoading(false);
       }
     },
-    []
+    [creatorId, createUser, dispatch, router, toastAndNavigate]
   );
 
   const populateData = useCallback(async (userId: string | string[]) => {
@@ -168,7 +177,7 @@ const UserForm: React.FC = () => {
         `get-user-by-id/${userId}`
       );
       if (response?.statusCode === 200) {
-        console.log(response.data, 'response user')
+        console.log(response.data, "response user");
         setFormValues(response.data);
       }
     } catch (err) {
@@ -184,7 +193,7 @@ const UserForm: React.FC = () => {
       try {
         const payload = {
           ...values,
-          profilePicture: values?.profilePicture?.file || null
+          profilePicture: values?.profilePicture?.file || null,
         };
         if (!updatePassword) {
           delete payload.password;
@@ -206,13 +215,7 @@ const UserForm: React.FC = () => {
         setLoading(false);
       }
     },
-    [
-      updatePassword,
-      modifyUser,
-      toastAndNavigate,
-      dispatch,
-      router,
-    ]
+    [updatePassword, modifyUser, toastAndNavigate, dispatch, router]
   );
 
   return (
@@ -442,21 +445,37 @@ const UserForm: React.FC = () => {
                 fullWidth
                 error={touched.role ? Boolean(errors.role) : null}
               >
-                <InputLabel> Role </InputLabel>
-                <Select
-                  label="Role"
-                  name="role"
-                  value={values.role}
-                  onChange={(e) => setFieldValue("role", e.target.value)}
-                  startAdornment={
-                    <InputAdornment position="start">
-                      <InfoIcon color="primary" />
-                    </InputAdornment>
-                  }
-                >
-                  <MenuItem value="sub_admin">Sub Admin</MenuItem>
-                  <MenuItem value="sales">Sales</MenuItem>
-                </Select>
+                <InputLabel>Role</InputLabel>
+                {decodedToken()?.role === "sub_admin" ? (
+                  <Select
+                    label="Role"
+                    name="role"
+                    value="sales"
+                    disabled
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <InfoIcon color="primary" />
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value="sales">Sales</MenuItem>
+                  </Select>
+                ) : (
+                  <Select
+                    label="Role"
+                    name="role"
+                    value={values.role}
+                    onChange={(e) => setFieldValue("role", e.target.value)}
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <InfoIcon color="primary" />
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value="sub_admin">Sub Admin</MenuItem>
+                    <MenuItem value="sales">Sales</MenuItem>
+                  </Select>
+                )}
                 {touched.role && errors.role ? (
                   <Typography color="error" variant="body2">
                     {errors.role}
@@ -491,9 +510,7 @@ const UserForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={
-                  touched.address ? Boolean(errors.address) : null
-                }
+                error={touched.address ? Boolean(errors.address) : null}
                 helperText={touched.address ? errors.address : null}
               />
               <Field
@@ -602,7 +619,7 @@ const UserForm: React.FC = () => {
                       <DeleteIcon sx={{ fontSize: "18px" }} />
                     </IconButton>
                     {values.profilePicture?.preview ||
-                      typeof values.profilePicture === "string" ? (
+                    typeof values.profilePicture === "string" ? (
                       <Box
                         component="img"
                         src={
@@ -621,7 +638,6 @@ const UserForm: React.FC = () => {
                     ) : null}
                   </Box>
                 ) : null}
-
               </Box>
             </Box>
 

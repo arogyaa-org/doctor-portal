@@ -123,13 +123,6 @@ const MainLayout = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   minHeight: "100vh",
-  backgroundColor: "#f8fafc",
-  padding: theme.spacing(2),
-  [theme.breakpoints.up("sm")]: { padding: theme.spacing(3) },
-  [theme.breakpoints.up("lg")]: {
-    flexDirection: "row",
-    padding: theme.spacing(4),
-  },
 }));
 
 const ContentArea = styled(Box)(({ theme }) => ({
@@ -144,11 +137,8 @@ const ContentArea = styled(Box)(({ theme }) => ({
 const StyledAvatar = styled(Avatar)(({ theme }) => ({
   width: 56,
   height: 56,
-  backgroundColor: theme.palette.primary.main,
   fontSize: "1.5rem",
   fontWeight: 600,
-  [theme.breakpoints.up("sm")]: { width: 72, height: 72, fontSize: "2rem" },
-  [theme.breakpoints.up("md")]: { width: 88, height: 88, fontSize: "2.5rem" },
 }));
 
 const PatientInfoCard = styled(Card)(({ theme }) => ({
@@ -180,7 +170,7 @@ const TabContainer = styled(Box)(({ theme }) => ({
   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
   "&::-webkit-scrollbar": { height: "4px" },
   "&::-webkit-scrollbar-thumb": {
-    backgroundColor: theme.palette.primary.main,
+    // backgroundColor: theme.palette.primary.main,
     borderRadius: "2px",
   },
 }));

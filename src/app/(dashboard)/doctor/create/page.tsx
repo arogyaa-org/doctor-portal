@@ -86,7 +86,7 @@ const initialValues: DoctorData = {
   contact: "",
   gender: "",
   dob: "",
-  experience: '',
+  experience: "",
   bio: "",
   tags: [],
   languagesSpoken: [],
@@ -118,6 +118,8 @@ const DoctorForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [updatePassword, setUpdatePassword] = useState<boolean>(false);
   const pwFieldRef = useRef<HTMLInputElement | null>(null);
+  const emailFieldRef = useRef<HTMLInputElement | null>(null);
+  const contactFieldRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const params = useParams();
@@ -175,7 +177,7 @@ const DoctorForm: React.FC = () => {
     setUpdatePassword(!updatePassword);
   }, [updatePassword, formValues]);
 
-  //Create/Edit/Populate Doctor
+  // Create/Edit/Populate Doctor
   useEffect(() => {
     if (doctorId) {
       setTitle("Edit Doctor");
@@ -205,16 +207,35 @@ const DoctorForm: React.FC = () => {
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
           availability: formattedAvailability,
-          createdBy: decodedToken().id
+          createdBy: decodedToken().id,
         });
         if (response?.statusCode === 409) {
-          toastAndNavigate(
-            dispatch,
-            true,
-            "error",
-            "Email already exists",
-            () => location.reload()
-          );
+          const errorMessage = response?.message?.toLowerCase() || "";
+          if (errorMessage.includes("email")) {
+            toastAndNavigate(
+              dispatch,
+              true,
+              "error",
+              "Email already exists, please edit the email",
+              () => emailFieldRef?.current?.focus()
+            );
+          } else if (errorMessage.includes("phone number")) {
+            toastAndNavigate(
+              dispatch,
+              true,
+              "error",
+              "Phone number already exists, please edit the phone number",
+              () => contactFieldRef?.current?.focus()
+            );
+          } else {
+            toastAndNavigate(
+              dispatch,
+              true,
+              "error",
+              "Email or phone number already exists, please edit the fields",
+              () => emailFieldRef?.current?.focus()
+            );
+          }
         }
         if (response?.statusCode === 201) {
           toastAndNavigate(
@@ -287,7 +308,7 @@ const DoctorForm: React.FC = () => {
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
           availability: formattedAvailability,
-          updatedBy: decodedToken().id
+          updatedBy: decodedToken().id,
         };
         if (!updatePassword) {
           delete payload.password;
@@ -391,6 +412,7 @@ const DoctorForm: React.FC = () => {
                 label="Email *"
                 name="email"
                 fullWidth
+                inputRef={emailFieldRef}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -441,6 +463,7 @@ const DoctorForm: React.FC = () => {
                 label="Contact *"
                 name="contact"
                 fullWidth
+                inputRef={contactFieldRef}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -682,7 +705,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.specializationIds &&
-                        typeof errors.specializationIds === "string"
+                      typeof errors.specializationIds === "string"
                         ? errors.specializationIds
                         : ""
                     }
@@ -733,7 +756,7 @@ const DoctorForm: React.FC = () => {
                     error={!!touched.symptomIds && !!errors.symptomIds}
                     helperText={
                       touched.symptomIds &&
-                        typeof errors.symptomIds === "string"
+                      typeof errors.symptomIds === "string"
                         ? errors.symptomIds
                         : ""
                     }
@@ -787,7 +810,7 @@ const DoctorForm: React.FC = () => {
                     }
                     helperText={
                       touched.qualificationIds &&
-                        typeof errors.qualificationIds === "string"
+                      typeof errors.qualificationIds === "string"
                         ? errors.qualificationIds
                         : ""
                     }
@@ -941,7 +964,7 @@ const DoctorForm: React.FC = () => {
                       <DeleteIcon sx={{ fontSize: "18px" }} />
                     </IconButton>
                     {values.profilePicture?.preview ||
-                      typeof values.profilePicture === "string" ? (
+                    typeof values.profilePicture === "string" ? (
                       <Box
                         component="img"
                         src={
@@ -961,27 +984,29 @@ const DoctorForm: React.FC = () => {
                   </Box>
                 ) : null}
 
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    whiteSpace: "nowrap",
-                    ml: 1,
-                  }}
-                >
-                  <Checkbox
-                    checked={values.isVerified}
-                    onChange={(event) =>
-                      setFieldValue("isVerified", event.target.checked)
-                    }
+                {decodedToken().role !== "sub_admin" && (
+                  <Box
                     sx={{
-                      color: values.isVerified ? "#3f51b5" : "default",
-                      "&.Mui-checked": { color: "#3f51b5" },
-                      padding: "4px 4px 4px 0",
+                      display: "flex",
+                      alignItems: "center",
+                      whiteSpace: "nowrap",
+                      ml: 1,
                     }}
-                  />
-                  <Typography variant="body2">Is Verified</Typography>
-                </Box>
+                  >
+                    <Checkbox
+                      checked={values.isVerified}
+                      onChange={(event) =>
+                        setFieldValue("isVerified", event.target.checked)
+                      }
+                      sx={{
+                        color: values.isVerified ? "#3f51b5" : "default",
+                        "&.Mui-checked": { color: "#3f51b5" },
+                        padding: "4px 4px 4px 0",
+                      }}
+                    />
+                    <Typography variant="body2">Is Verified</Typography>
+                  </Box>
+                )}
               </Box>
             </Box>
             <Box
@@ -1216,6 +1241,7 @@ const DoctorForm: React.FC = () => {
                               "Thursday",
                               "Friday",
                               "Saturday",
+                              "Sunday",
                             ];
                             const newAvailability = allDays.map((day) => ({
                               day,
