@@ -12,7 +12,7 @@ export enum Status {
 export enum Role {
   ADMIN = "admin",
   SUB_ADMIN = "sub_admin",
-  SALES = 'sales'
+  SALES = "sales",
 }
 
 export interface UserData {
@@ -29,6 +29,7 @@ export interface UserData {
   profilePicture: string;
   status: Status;
   role: Role;
+  createdBy?: string | null;
   createdAt?: string;
   updatedAt?: string;
   __v?: number;

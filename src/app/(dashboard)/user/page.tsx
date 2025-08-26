@@ -15,6 +15,7 @@ import { paths } from "@/paths";
 import { userDatagridColumns } from "./userConfig";
 import { setUser } from "@/redux/features/userSlice";
 import { useGetUser } from "@/hooks/user";
+import { Utility } from "@/utils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -22,13 +23,27 @@ const ITEMS_PER_PAGE = 10;
 const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
-  const { user, reduxLoading } = useSelector(
-    (state: RootState) => state.user
-  );
+  const { user, reduxLoading } = useSelector((state: RootState) => state.user);
   const [inputValue, setInputValue] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [apiPath, setApiPath] = useState<string>("get-users"); // default
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
+  const { decodedToken } = Utility(); 
+
+  useEffect(() => {
+    const payload = decodedToken();
+    const id = payload?.id;
+    const role = payload?.role;
+
+    if (role === "admin") {
+      setApiPath("get-users");
+    } else if (id) {
+      setApiPath(`get-users-created-by-subadmin/${id}`);
+    } else {
+      setApiPath("get-users"); 
+    }
+  }, [decodedToken]);
 
   const apiParams = useMemo(
     () => ({
@@ -39,13 +54,19 @@ const Page: React.FC = () => {
     [currentPage, pageSize, inputValue]
   );
 
+  // use dynamic path
   const { value: data, refetch } = useGetUser(
     null,
-    "get-users",
+    apiPath,
     apiParams.page,
     apiParams.limit,
     apiParams.search
   );
+
+  // make sure we refetch when the endpoint flips
+  useEffect(() => {
+    refetch();
+  }, [apiPath]);
 
   useEffect(() => {
     if (data?.results && !isEqual(data, user)) {
@@ -56,10 +77,8 @@ const Page: React.FC = () => {
   const handlePageChange = useCallback(
     async (newPage: number) => {
       if (loading) return;
-
       setLoading(true);
       setCurrentPage(newPage);
-
       try {
         await refetch();
       } catch (error) {
@@ -68,7 +87,7 @@ const Page: React.FC = () => {
         setLoading(false);
       }
     },
-    [loading, pageSize, refetch]
+    [loading, refetch]
   );
 
   const handlePageSizeChange = useCallback(
@@ -97,18 +116,13 @@ const Page: React.FC = () => {
       >
         <Typography
           variant="h4"
-          sx={{
-            flex: 1,
-            fontWeight: 600,
-            marginLeft: "25px",
-          }}
+          sx={{ flex: 1, fontWeight: 600, marginLeft: "25px" }}
         >
           User
         </Typography>
 
         <Stack direction="row" spacing={2} alignItems="center">
           <Search refetchAPI={handleSearch} holderText="User" />
-
           <Button
             variant="contained"
             startIcon={<CreateIcon />}

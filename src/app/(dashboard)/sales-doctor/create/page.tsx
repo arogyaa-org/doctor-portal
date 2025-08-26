@@ -12,7 +12,6 @@ import {
   TextField as MuiTextField,
   InputAdornment,
   IconButton,
-  Checkbox,
 } from "@mui/material";
 import {
   Person as PersonIcon,
@@ -20,7 +19,6 @@ import {
   Password as PasswordIcon,
   Call as CallIcon,
   Assignment as AssignmentIcon,
-  Info as InfoIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
@@ -46,8 +44,8 @@ const initialValues: Partial<DoctorData> = {
   password: "",
   contact: "",
   bio: "",
-  isVerified: false,
 };
+
 let editFormValues: Partial<DoctorData>;
 
 // eslint-disable-next-line react/function-component-definition
@@ -58,6 +56,7 @@ const DoctorForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [updatePassword, setUpdatePassword] = useState<boolean>(false);
   const pwFieldRef = useRef<HTMLInputElement | null>(null);
+  const emailFieldRef = useRef<HTMLInputElement | null>(null);
 
   const params = useParams();
   const router = useRouter();
@@ -91,7 +90,7 @@ const DoctorForm: React.FC = () => {
     setUpdatePassword(!updatePassword);
   }, [updatePassword, formValues]);
 
-  //Create/Edit/Populate Doctor
+  // Create/Edit/Populate Doctor
   useEffect(() => {
     if (doctorId) {
       setTitle("Edit Doctor");
@@ -108,15 +107,15 @@ const DoctorForm: React.FC = () => {
       try {
         const response = await createDoctor({
           ...values,
-          createdBy: decodedToken().id
+          createdBy: decodedToken().id,
         });
         if (response?.statusCode === 409) {
           toastAndNavigate(
             dispatch,
             true,
             "error",
-            "Email already exists",
-            () => location.reload()
+            "Email already exists, please edit the email",
+            () => emailFieldRef?.current?.focus()
           );
         }
         if (response?.statusCode === 201) {
@@ -139,7 +138,7 @@ const DoctorForm: React.FC = () => {
         setLoading(false);
       }
     },
-    []
+    [createDoctor, decodedToken, dispatch, router, toastAndNavigate]
   );
 
   const populateData = useCallback(async (doctorId: string | string[]) => {
@@ -183,7 +182,7 @@ const DoctorForm: React.FC = () => {
         setLoading(false);
       }
     },
-    []
+    [dispatch, modifyDoctor, router, toastAndNavigate, updatePassword]
   );
 
   return (
@@ -258,6 +257,7 @@ const DoctorForm: React.FC = () => {
                 label="Email *"
                 name="email"
                 fullWidth
+                inputRef={emailFieldRef}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -336,27 +336,6 @@ const DoctorForm: React.FC = () => {
                 error={touched.bio ? Boolean(errors.bio) : null}
                 helperText={touched.bio ? errors.bio : null}
               />
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  whiteSpace: "nowrap",
-                  ml: 1,
-                }}
-              >
-                <Checkbox
-                  checked={values.isVerified}
-                  onChange={(event) =>
-                    setFieldValue("isVerified", event.target.checked)
-                  }
-                  sx={{
-                    color: values.isVerified ? "#3f51b5" : "default",
-                    "&.Mui-checked": { color: "#3f51b5" },
-                    padding: "4px 4px 4px 0",
-                  }}
-                />
-                <Typography variant="body2">Is Verified</Typography>
-              </Box>
             </Box>
             <Box display="flex" justifyContent="end" m="20px">
               {title === "Edit Doctor" ? null : (
