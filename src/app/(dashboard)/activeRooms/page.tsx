@@ -137,14 +137,14 @@ const DoctorDashboard = () => {
   const [expandedExpired, setExpandedExpired] = useState(false);
 
   const visibleRooms = expanded
-    ? rooms.recentRooms
-    : rooms.recentRooms.slice(0, 3);
+    ? rooms?.recentRooms
+    : rooms?.recentRooms.slice(0, 3);
   const visibleScheduledRooms = expandedScheduled
-    ? rooms.scheduledRooms
-    : rooms.scheduledRooms.slice(0, 3);
+    ? rooms?.scheduledRooms
+    : rooms?.scheduledRooms.slice(0, 3);
   const visibleExpiredRooms = expandedExpired
-    ? rooms.expiredRooms
-    : rooms.expiredRooms.slice(0, 3);
+    ? rooms?.expiredRooms
+    : rooms?.expiredRooms.slice(0, 3);
 
   // Inline call state (Daily)
   const [activeRoom, setActiveRoom] = useState<{
@@ -215,13 +215,13 @@ const DoctorDashboard = () => {
   /* --- socket --- */
   useEffect(() => {
     if (!doctorId) return;
-    const s = io(
-      `${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`,
-      {
-        transports: ["websocket"],
-        autoConnect: true,
-      }
-    );
+   
+  const s = io(`${"https://arogyaa.f2fintech.in/doctor-notifications"}`, {
+    path: "/chat-service/socket.io",          // <-- critical
+    transports: ["websocket"],                // or remove to allow polling fallback
+    withCredentials: true,
+    autoConnect: true,
+  });
 
     s.on("connect", () => {
       setIsConnected(true);
@@ -735,7 +735,7 @@ const DoctorDashboard = () => {
                   Active Rooms
                 </Typography>
                 <Typography variant="h3" fontWeight="bold" color="text.primary">
-                  {rooms.summary.totalActive}
+                  {rooms?.summary.totalActive}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -770,7 +770,7 @@ const DoctorDashboard = () => {
                   Scheduled Calls
                 </Typography>
                 <Typography variant="h3" fontWeight="bold" color="text.primary">
-                  {rooms.summary.totalScheduled}
+                  {rooms?.summary.totalScheduled}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -783,11 +783,11 @@ const DoctorDashboard = () => {
             </GradientCard>
 
             {/* Scheduled Calls List */}
-            {rooms.scheduledRooms.length > 0 && (
+            {rooms?.scheduledRooms.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 {/* (kept commented) */}
 
-                {rooms.scheduledRooms.length > 3 && (
+                {rooms?.scheduledRooms.length > 3 && (
                   <Box sx={{ textAlign: "center", mt: 2 }}>
                     <Button
                       variant="text"
@@ -823,7 +823,7 @@ const DoctorDashboard = () => {
                   Recent Calls
                 </Typography>
                 <Typography variant="h3" fontWeight="bold" color="text.primary">
-                  {rooms.summary.totalRecent}
+                  {rooms?.summary.totalRecent}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -858,7 +858,7 @@ const DoctorDashboard = () => {
                   Expired Calls
                 </Typography>
                 <Typography variant="h3" fontWeight="bold" color="text.primary">
-                  {rooms.summary.totalExpired}
+                  {rooms?.summary.totalExpired}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -870,10 +870,10 @@ const DoctorDashboard = () => {
               </CardContent>
             </GradientCard>
 
-            {rooms.expiredRooms.length > 0 && (
+            {rooms?.expiredRooms.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 {/* (kept commented) */}
-                {rooms.expiredRooms.length > 3 && (
+                {rooms?.expiredRooms.length > 3 && (
                   <Box sx={{ textAlign: "center", mt: 2 }}>
                     <Button
                       variant="text"
@@ -889,7 +889,7 @@ const DoctorDashboard = () => {
         </Grid>
 
         {/* Active Rooms */}
-        {rooms.activeRooms.length > 0 && (
+        {rooms?.activeRooms.length > 0 && (
           <Paper
             elevation={3}
             sx={{ mb: 4, borderRadius: 4, overflow: "hidden" }}
@@ -1102,7 +1102,7 @@ const DoctorDashboard = () => {
         )}
 
         {/* Scheduled Rooms */}
-        {rooms.scheduledRooms.length > 0 && (
+        {rooms?.scheduledRooms.length > 0 && (
           <Paper
             elevation={3}
             sx={{ mb: 4, borderRadius: 4, overflow: "hidden" }}
@@ -1223,7 +1223,7 @@ const DoctorDashboard = () => {
         )}
 
         {/* Recent Rooms */}
-        {rooms.recentRooms.length > 0 && (
+        {rooms?.recentRooms.length > 0 && (
           <Paper
             elevation={3}
             sx={{ mb: 4, borderRadius: 4, overflow: "hidden" }}
