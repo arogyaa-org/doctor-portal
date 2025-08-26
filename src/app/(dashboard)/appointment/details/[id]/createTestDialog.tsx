@@ -111,6 +111,14 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
   ]);
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState(initialErrors);
+  const [testSuggestions, setTestSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("testSuggestions");
+    if (saved) {
+      setTestSuggestions(JSON.parse(saved));
+    }
+  }, []);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -220,6 +228,17 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
           "Test created successfully"
         );
         fetchTests();
+
+        // ✅ Save test names to suggestions
+        const newTests = testItems
+          .map((item) => item.name.trim())
+          .filter((name) => name !== "");
+
+        setTestSuggestions((prev) => {
+          const updated = Array.from(new Set([...prev, ...newTests]));
+          localStorage.setItem("testSuggestions", JSON.stringify(updated));
+          return updated;
+        });
         handleClose(); // Use handleClose instead of onClose to reset form
       }
     } catch (err) {
@@ -252,22 +271,33 @@ const CreateTestDialog: React.FC<CreateTestDialogProps> = ({
               <Box key={index} sx={{ mb: 3 }}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={4}>
-                    <StyledTextField
-                      label="Name"
-                      fullWidth
-                      value={item.name}
-                      onChange={(e) =>
-                        handleTestItemChange(index, "name", e.target.value)
+                    <Autocomplete
+                      freeSolo
+                      options={testSuggestions}
+                      inputValue={item.name || ""}
+                      onInputChange={(_, newValue) =>
+                        handleTestItemChange(index, "name", newValue)
                       }
-                      error={!!errors.name && !item.name}
-                      helperText={!item.name && errors.name}
-                      required
-                      placeholder="Enter test name"
-                      InputProps={{
-                        startAdornment: (
-                          <ListAlt sx={{ color: "#3f51b5", mr: 2 }} />
-                        ),
-                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Name"
+                          fullWidth
+                          error={!!errors.name && !item.name}
+                          helperText={!item.name && errors.name}
+                          required
+                          placeholder="Enter test name"
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <ListAlt sx={{ color: "#3f51b5", mr: 2 }} />
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
                     />
                   </Grid>
                   <Grid item xs={12} sm={4}>

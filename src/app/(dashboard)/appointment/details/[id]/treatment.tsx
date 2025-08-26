@@ -168,6 +168,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
   const [formData, setFormData] = useState({ ...initialFormData });
   const [errors, setErrors] = useState({ ...initialErrors });
   const token = decodedToken();
+  const [medicineSuggestions, setMedicineSuggestions] = useState<string[]>([]);
 
   // Reset form when modal opens or closes
   useEffect(() => {
@@ -328,6 +329,17 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
           "Treatment created successfully"
         );
         fetchTreatments(response.data);
+
+        // ✅ Save new medicines here
+        const newMedicines = treatmentItems
+          .map((item) => item.name.trim())
+          .filter((name) => name !== "");
+
+        setMedicineSuggestions((prev) => {
+          const updated = Array.from(new Set([...prev, ...newMedicines]));
+          localStorage.setItem("medicineSuggestions", JSON.stringify(updated));
+          return updated;
+        });
         resetForm();
         onClose();
       }
@@ -335,6 +347,25 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
       toastAndNavigate(dispatch, true, "error", "Failed to create treatment");
     }
   };
+
+  // // Collect unique medicines entered in this form
+  // const newMedicines = treatmentItems
+  //   .map((item) => item.name.trim())
+  //   .filter((name) => name !== "");
+
+  // // Merge with old suggestions (avoid duplicates)
+  // setMedicineSuggestions((prev) => {
+  //   const updated = Array.from(new Set([...prev, ...newMedicines]));
+  //   localStorage.setItem("medicineSuggestions", JSON.stringify(updated)); // optional persistence
+  //   return updated;
+  // });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("medicineSuggestions");
+    if (saved) {
+      setMedicineSuggestions(JSON.parse(saved));
+    }
+  }, []);
 
   return (
     <Dialog
@@ -372,23 +403,40 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
               <Box key={index} sx={{ mb: 3 }}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={4}>
-                    <StyledTextField
-                      label="Medication Name"
-                      fullWidth
-                      margin="dense"
-                      value={item.name}
-                      onChange={(e) =>
-                        handleTreatmentItemChange(index, "name", e.target.value)
-                      }
-                      error={!!errors.name && !item.name}
-                      helperText={!item.name && errors.name}
-                      required
-                      placeholder="Medications name(e.g.,paracetamol)"
-                      InputProps={{
-                        startAdornment: (
-                          <ListAlt sx={{ color: "#3f51b5", mr: 2 }} />
-                        ),
+                    <StyledAutocomplete
+                      freeSolo
+                      options={medicineSuggestions}
+                      inputValue={item.name} // <-- use inputValue for the typed text
+                      onInputChange={(event, newValue) => {
+                        handleTreatmentItemChange(index, "name", newValue);
                       }}
+                      value={item.name || null} // keep value as null unless selecting exact option
+                      onChange={(event, newValue) => {
+                        handleTreatmentItemChange(
+                          index,
+                          "name",
+                          newValue || ""
+                        );
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Medication Name"
+                          margin="dense"
+                          error={!!errors.name && !item.name}
+                          helperText={!item.name && errors.name}
+                          placeholder="Medications name (e.g., Paracetamol)"
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <ListAlt sx={{ color: "#3f51b5", mr: 2 }} />
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
                     />
                   </Grid>
 
