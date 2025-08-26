@@ -106,6 +106,13 @@ const getNavItemsByRole = (): NavItemConfig[] => {
       });
   }
 
+  // NEW: operations → show only Dashboard & Doctor
+  if (role === "operations") {
+    return navItems.filter((item) =>
+      ["dashboard", "doctor"].includes(item.key)
+    );
+  }
+
   if (role === "admin") {
     return navItems.filter((item) => item.key !== "salesDoctor");
   }
