@@ -215,13 +215,16 @@ const DoctorDashboard = () => {
   /* --- socket --- */
   useEffect(() => {
     if (!doctorId) return;
-   
-  const s = io(`${"https://arogyaa.f2fintech.in/doctor-notifications"}`, {
-    path: "/chat-service/socket.io",          // <-- critical
-    transports: ["websocket"],                // or remove to allow polling fallback
-    withCredentials: true,
-    autoConnect: true,
-  });
+
+    const s = io(
+      `${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`,
+      {
+        path: "/chat-service/socket.io",
+        transports: ["websocket"],
+        withCredentials: true,
+        autoConnect: true,
+      }
+    );
 
     s.on("connect", () => {
       setIsConnected(true);
