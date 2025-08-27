@@ -20,7 +20,7 @@ import { navIcons } from "./nav-icons";
 export function SideNav(): React.JSX.Element {
   const pathname = usePathname();
   const navItems = useNavItems();
-  const role = Utility()?.decodedToken()?.role; // "admin" | "sub_admin" | "doctor" | "sales" | etc.
+  const role = Utility()?.decodedToken()?.role?.toString?.().toLowerCase?.();
 
   return (
     <Box
@@ -71,10 +71,17 @@ export function SideNav(): React.JSX.Element {
 
       <Box component="nav" sx={{ flex: "1 1 auto", p: "12px" }}>
         {role === "admin" ? (
-          // Admin: inject divider after "user" and after "activeRooms"
+          // Admin: divider after "user" and after "activeRooms"
           renderNavItemsWithAdminDividers({ pathname, items: navItems })
+        ) : role === "operations" ? (
+          // Operations: exactly one divider, after "doctor"
+          renderNavItemsWithSingleDivider({
+            pathname,
+            items: navItems,
+            afterKey: "doctor",
+          })
         ) : (
-          // Others: keep your previous layout (first 4, divider if not sub_admin, rest)
+          // Others: previous layout (first 4, optional divider if not sub_admin, rest)
           <>
             {renderNavItems({ pathname, items: navItems.slice(0, 4) })}
 
@@ -115,7 +122,7 @@ function renderNavItems({
   );
 }
 
-// Special renderer for admin: adds dividers after "user" and "activeRooms"
+// Admin renderer: dividers after "user" and "activeRooms"
 function renderNavItemsWithAdminDividers({
   items = [],
   pathname,
@@ -130,11 +137,44 @@ function renderNavItemsWithAdminDividers({
 
     children.push(<NavItem key={key} pathname={pathname} {...item} />);
 
-    // Insert divider after "user" and "activeRooms" if not the last item
     if ((key === "user" || key === "activeRooms") && idx < items.length - 1) {
       children.push(
         <Divider
           key={`${key}-divider`}
+          sx={{ borderColor: "var(--mui-palette-neutral-700)", my: 2 }}
+        />
+      );
+    }
+  });
+
+  return (
+    <Stack component="ul" spacing={1} sx={{ listStyle: "none", m: 0, p: 0 }}>
+      {children}
+    </Stack>
+  );
+}
+
+// Operations renderer: one divider only, inserted after `afterKey`
+function renderNavItemsWithSingleDivider({
+  items = [],
+  pathname,
+  afterKey,
+}: {
+  items?: NavItemConfig[];
+  pathname: string;
+  afterKey: string;
+}): React.JSX.Element {
+  const children: React.ReactNode[] = [];
+
+  items.forEach((curr, idx) => {
+    const { key, ...item } = curr;
+
+    children.push(<NavItem key={key} pathname={pathname} {...item} />);
+
+    if (key === afterKey && idx < items.length - 1) {
+      children.push(
+        <Divider
+          key={`${key}-single-divider`}
           sx={{ borderColor: "var(--mui-palette-neutral-700)", my: 2 }}
         />
       );

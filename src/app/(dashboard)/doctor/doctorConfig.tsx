@@ -11,13 +11,29 @@ import { paths } from "@/paths";
 
 export const doctorDatagridColumns = (): GridColDef[] => {
   const router = useRouter();
-  const { capitalizeFirstLetter, formatDoctorName } = Utility();
+  const { capitalizeFirstLetter, formatDoctorName, decodedToken } = Utility();
+  const currentUserRole =
+    decodedToken?.role?.toString?.().toLowerCase?.() ?? "";
 
   const handleActionEdit = (doctorId: string | number) => {
     router.push(paths.dashboard.doctorUpdate(doctorId));
   };
 
-  return [
+  const createdByColumn: GridColDef = {
+    field: "createdByName", 
+    headerName: "Created By",
+    headerClassName: "super-app-theme--header",
+    headerAlign: "center",
+    align: "left",
+    flex: 1.3,
+    renderCell: (params) => (
+      <Typography fontSize="15px" sx={{ fontWeight: "bold" }}>
+        {params.value ? formatDoctorName(params.value) : "—"}
+      </Typography>
+    ),
+  };
+
+  const columns: GridColDef[] = [
     {
       field: "username",
       headerName: "Name",
@@ -112,8 +128,7 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       flex: 0.7,
       renderCell: ({ row: { isVerified, createdFrom } }) => {
         const hasAarogyaa =
-          typeof createdFrom === "string" &&
-          /(arogyaa)/i.test(createdFrom);
+          typeof createdFrom === "string" && /(arogyaa)/i.test(createdFrom);
 
         return (
           <Box
@@ -151,7 +166,7 @@ export const doctorDatagridColumns = (): GridColDef[] => {
                   sx={{
                     px: 1,
                     height: 20,
-                    borderRadius: "999px", 
+                    borderRadius: "999px",
                     backgroundColor: "black",
                     color: "#fff",
                     display: "flex",
@@ -172,6 +187,10 @@ export const doctorDatagridColumns = (): GridColDef[] => {
         );
       },
     },
+
+    // inject "Created By" for everyone EXCEPT sales
+    ...(currentUserRole !== "sales" ? [createdByColumn] : []),
+
     {
       field: "action",
       headerName: "Action",
@@ -202,4 +221,6 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       ),
     },
   ];
+
+  return columns;
 };
