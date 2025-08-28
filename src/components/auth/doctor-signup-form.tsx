@@ -26,6 +26,7 @@ import {
   Grid,
   Divider,
 } from "@mui/material";
+import { MedicalServices } from "@mui/icons-material";
 import { Controller, useForm } from "react-hook-form";
 import { z as zod } from "zod";
 import Toast from "@/components/common/Toast";
@@ -212,7 +213,7 @@ export function DoctorSignup({
       "recaptcha-container",
       {
         size: "invisible",
-        callback: () => {},
+        callback: () => { },
         "expired-callback": () => {
           toastAndNavigate(
             dispatch,
@@ -557,7 +558,7 @@ export function DoctorSignup({
                     mb: 4,
                   }}
                 >
-                  We'll send you a verification code
+                  We&apos;ll send you a verification code
                 </Typography>
 
                 <form onSubmit={handleOtpSubmit(handleOtpRequest)}>
@@ -1102,20 +1103,22 @@ export function DoctorSignup({
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
             Already have an account?{" "}
             <Button
-              variant="text"
+              variant="contained"
               sx={{
-                color: "#14b8a6",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": {
-                  color: "#0d9488",
-                  backgroundColor: "transparent",
-                },
+                px: 4,
+                py: 1.5,
+                mb: 2,
+                borderRadius: 2,
+                backgroundColor: "#15b79e",
+                "&:hover": { backgroundColor: "#129985" },
+                boxShadow: "0 4px 14px 0 rgba(21, 183, 158, 0.4)",
+                width: "100%",
+                transition: "all 0.3s ease",
               }}
-              onClick={() => {
-                router.push(`/login`);
-              }}
+              startIcon={<MedicalServices />}
+              onClick={() => router.push(`/login`)}
             >
+
               Sign In
             </Button>
           </Typography>

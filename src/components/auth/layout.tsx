@@ -6,7 +6,6 @@ import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 
 import { paths } from "@/paths";
-import { DynamicLogo } from "@/components/core/logo";
 
 export interface LayoutProps {
   children: React.ReactNode;
@@ -106,12 +105,15 @@ export function Layout({
               },
             }}
           >
-            <DynamicLogo
-              colorDark="light"
-              colorLight="dark"
-              height={32}
-              width={122}
+
+            <img
+              src="/assets/logomain.png"
+              style={{
+                height: '100px',
+                width: '140px',
+              }}
             />
+
           </Box>
         </Box>
 
@@ -152,7 +154,7 @@ export function Layout({
           }}
         >
           <Typography variant="caption">
-            © {new Date().getFullYear()} Arogyaa Health Systems. All rights
+            © 2025 Arogyaa Health Systems. All rights
             reserved.
           </Typography>
         </Box>

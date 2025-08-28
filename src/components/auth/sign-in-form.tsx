@@ -38,7 +38,7 @@ type Values = zod.infer<typeof schema>;
 
 const defaultValues = {
   email: "adarsh@gmail.com",
-  password: "Adarsh@123",
+  password: "Adarsh.6",
 } satisfies Values;
 
 interface SignInFormProps {
