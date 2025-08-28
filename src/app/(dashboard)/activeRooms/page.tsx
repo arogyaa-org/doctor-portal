@@ -666,19 +666,7 @@ const DoctorDashboard = () => {
             </Badge>
           </Stack>
 
-          {lastPayment && (
-            <Alert
-              severity="success"
-              onClose={() => setLastPayment(null)}
-              sx={{ mt: 2, mb: 2, borderRadius: 2, fontWeight: 600 }}
-            >
-              Extension amount paid by patient — Appointment{" "}
-              <strong>{lastPayment.appointmentId}</strong>
-              {typeof lastPayment.minutes === "number" ? (
-                <> • +{lastPayment.minutes} min</>
-              ) : null}
-            </Alert>
-          )}
+        
         </Box>
 
     
@@ -866,6 +854,45 @@ const DoctorDashboard = () => {
           </Grid>
         </Grid>
 
+  {lastPayment && (
+            <Alert
+              severity="success"
+              onClose={() => setLastPayment(null)}
+              sx={{ mt: 2, mb: 2, borderRadius: 2, fontWeight: 600 }}
+            >
+              Extension amount paid by patient — Appointment{" "}
+              <strong>{lastPayment.appointmentId}</strong>
+              {typeof lastPayment.minutes === "number" ? (
+                <> • +{lastPayment.minutes} min</>
+              ) : null}
+            </Alert>
+          )}
+
+        {/* Inline Call Area */}
+        {activeRoom && (
+          <Paper elevation={4} sx={{ mb: 6, p: 2, borderRadius: 3 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              mb={1.5}
+            >
+              <Typography variant="subtitle1" fontWeight={700}>
+                Video Call • Room: {activeRoom.roomId}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" color="error" onClick={endCall}>
+                  End Call
+                </Button>
+              </Stack>
+            </Stack>
+            <Box ref={callContainerRef} sx={{ width: "100%" }} />
+          </Paper>
+        )}
+
+
+      
+
         {/* Active Rooms */}
         {rooms?.activeRooms.length > 0 && (
           <Paper
@@ -1018,7 +1045,7 @@ const DoctorDashboard = () => {
                                 );
                               } else {
                                 console.log(
-                                  "Appointment ID not found, cann't redirect."
+                                  "Appointment ID not found, cannot redirect."
                                 );
                               }
                             }}
