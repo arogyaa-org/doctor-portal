@@ -1018,7 +1018,7 @@ const DoctorDashboard = () => {
                                 );
                               } else {
                                 console.log(
-                                  "Appointment ID not found, cannot redirect."
+                                  "Appointment ID not found, cann't redirect."
                                 );
                               }
                             }}
