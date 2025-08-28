@@ -215,16 +215,12 @@ const DoctorDashboard = () => {
   /* --- socket --- */
   useEffect(() => {
     if (!doctorId) return;
-
-    const s = io(
-      `${process.env.NEXT_PUBLIC_SOCKET_ENDPOINT}/doctor-notifications`,
-      {
-        path: "/chat-service/socket.io",
-        transports: ["websocket"],
-        withCredentials: true,
-        autoConnect: true,
-      }
-    );
+    const s = io(`${"https://arogyaa.f2fintech.in/doctor-notifications"}`, {
+      path: "/chat-service/socket.io",
+      transports: ["websocket"],
+      withCredentials: true,
+      autoConnect: true,
+    });
 
     s.on("connect", () => {
       setIsConnected(true);
@@ -685,28 +681,7 @@ const DoctorDashboard = () => {
           )}
         </Box>
 
-        {/* Inline Call Area */}
-        {activeRoom && (
-          <Paper elevation={4} sx={{ mb: 6, p: 2, borderRadius: 3 }}>
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              mb={1.5}
-            >
-              <Typography variant="subtitle1" fontWeight={700}>
-                Video Call • Room: {activeRoom.roomId}
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button variant="contained" color="error" onClick={endCall}>
-                  End Call
-                </Button>
-              </Stack>
-            </Stack>
-            <Box ref={callContainerRef} sx={{ width: "100%" }} />
-          </Paper>
-        )}
-
+    
         {/* Summary Cards */}
         <Grid container spacing={3} mb={6}>
           <Grid item xs={12} md={4}>
@@ -1080,7 +1055,7 @@ const DoctorDashboard = () => {
                               )
                             }
                           >
-                            Accept
+                            Accept Extension Request
                           </Button>
                           <Button
                             variant="outlined"
@@ -1092,14 +1067,15 @@ const DoctorDashboard = () => {
                               )
                             }
                           >
-                            Reject
+                            Reject Extension Request
                           </Button>
                         </Stack>
                       )}
                     </CardContent>
+
                   </GradientCard>
                 ))}
-              </Stack>
+              </Stack>          
             </Box>
           </Paper>
         )}
