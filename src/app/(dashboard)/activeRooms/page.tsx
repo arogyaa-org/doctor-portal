@@ -215,13 +215,12 @@ const DoctorDashboard = () => {
   /* --- socket --- */
   useEffect(() => {
     if (!doctorId) return;
-   
-  const s = io(`${"https://arogyaa.f2fintech.in/doctor-notifications"}`, {
-    path: "/chat-service/socket.io",          // <-- critical
-    transports: ["websocket"],                // or remove to allow polling fallback
-    withCredentials: true,
-    autoConnect: true,
-  });
+    const s = io(`${"https://arogyaa.f2fintech.in/doctor-notifications"}`, {
+      path: "/chat-service/socket.io",
+      transports: ["websocket"],
+      withCredentials: true,
+      autoConnect: true,
+    });
 
     s.on("connect", () => {
       setIsConnected(true);
@@ -667,43 +666,10 @@ const DoctorDashboard = () => {
             </Badge>
           </Stack>
 
-          {lastPayment && (
-            <Alert
-              severity="success"
-              onClose={() => setLastPayment(null)}
-              sx={{ mt: 2, mb: 2, borderRadius: 2, fontWeight: 600 }}
-            >
-              Extension amount paid by patient — Appointment{" "}
-              <strong>{lastPayment.appointmentId}</strong>
-              {typeof lastPayment.minutes === "number" ? (
-                <> • +{lastPayment.minutes} min</>
-              ) : null}
-            </Alert>
-          )}
+        
         </Box>
 
-        {/* Inline Call Area */}
-        {activeRoom && (
-          <Paper elevation={4} sx={{ mb: 6, p: 2, borderRadius: 3 }}>
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              mb={1.5}
-            >
-              <Typography variant="subtitle1" fontWeight={700}>
-                Video Call • Room: {activeRoom.roomId}
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button variant="contained" color="error" onClick={endCall}>
-                  End Call
-                </Button>
-              </Stack>
-            </Stack>
-            <Box ref={callContainerRef} sx={{ width: "100%" }} />
-          </Paper>
-        )}
-
+    
         {/* Summary Cards */}
         <Grid container spacing={3} mb={6}>
           <Grid item xs={12} md={4}>
@@ -887,6 +853,45 @@ const DoctorDashboard = () => {
             )}
           </Grid>
         </Grid>
+
+  {lastPayment && (
+            <Alert
+              severity="success"
+              onClose={() => setLastPayment(null)}
+              sx={{ mt: 2, mb: 2, borderRadius: 2, fontWeight: 600 }}
+            >
+              Extension amount paid by patient — Appointment{" "}
+              <strong>{lastPayment.appointmentId}</strong>
+              {typeof lastPayment.minutes === "number" ? (
+                <> • +{lastPayment.minutes} min</>
+              ) : null}
+            </Alert>
+          )}
+
+        {/* Inline Call Area */}
+        {activeRoom && (
+          <Paper elevation={4} sx={{ mb: 6, p: 2, borderRadius: 3 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              mb={1.5}
+            >
+              <Typography variant="subtitle1" fontWeight={700}>
+                Video Call • Room: {activeRoom.roomId}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" color="error" onClick={endCall}>
+                  End Call
+                </Button>
+              </Stack>
+            </Stack>
+            <Box ref={callContainerRef} sx={{ width: "100%" }} />
+          </Paper>
+        )}
+
+
+      
 
         {/* Active Rooms */}
         {rooms?.activeRooms.length > 0 && (
@@ -1077,7 +1082,7 @@ const DoctorDashboard = () => {
                               )
                             }
                           >
-                            Accept
+                            Accept Extension Request
                           </Button>
                           <Button
                             variant="outlined"
@@ -1089,14 +1094,15 @@ const DoctorDashboard = () => {
                               )
                             }
                           >
-                            Reject
+                            Reject Extension Request
                           </Button>
                         </Stack>
                       )}
                     </CardContent>
+
                   </GradientCard>
                 ))}
-              </Stack>
+              </Stack>          
             </Box>
           </Paper>
         )}
