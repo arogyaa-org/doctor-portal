@@ -21,6 +21,10 @@ import {
   IconButton,
   Autocomplete,
   Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Tooltip,
 } from "@mui/material";
 import {
   Person as PersonIcon,
@@ -41,6 +45,8 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PinDrop from "@mui/icons-material/PinDrop";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import CloseIcon from "@mui/icons-material/Close";
 import {
   DatePicker,
   LocalizationProvider,
@@ -79,7 +85,18 @@ const initializeTime = (time: string) => {
   return dayjs(`2023-01-01T${time}`);
 };
 
-const initialValues: DoctorData = {
+/** ========= New local types for doc fields ========= */
+type FileOrUrl = { file: File; name: string; preview?: string } | string;
+
+type DoctorFormValues = DoctorData & {
+  medicalCertificates?: FileOrUrl[];
+  registrationCertificates?: FileOrUrl[];
+  aadhaarDocs?: FileOrUrl[];
+  pancardDocs?: FileOrUrl[];
+};
+/** ================================================= */
+
+const initialValues: DoctorFormValues = {
   username: "",
   email: "",
   password: "",
@@ -107,20 +124,57 @@ const initialValues: DoctorData = {
     },
   ],
   isVerified: false,
+
+  // New optional arrays
+  medicalCertificates: [],
+  registrationCertificates: [],
+  aadhaarDocs: [],
+  pancardDocs: [],
 };
-let editFormValues: DoctorData;
+
+let editFormValues: DoctorFormValues;
+
+const ALLOWED_MIME = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+/** Helpers for viewer */
+const inferTypeFromUrl = (url: string): "image" | "pdf" | "doc" | "unknown" => {
+  const clean = url.split("?")[0].toLowerCase();
+  if (/\.(png|jpe?g|webp|gif)$/.test(clean)) return "image";
+  if (/\.pdf$/.test(clean)) return "pdf";
+  if (/\.(docx?|rtf)$/.test(clean)) return "doc";
+  return "unknown";
+};
+const googleDocViewer = (url: string) =>
+  `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`;
 
 // eslint-disable-next-line react/function-component-definition
 const DoctorForm: React.FC = () => {
   const [title, setTitle] = useState<"Create Doctor" | "Edit Doctor">();
   const [loading, setLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState<DoctorData>(initialValues);
+  const [formValues, setFormValues] = useState<DoctorFormValues>(initialValues);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [updatePassword, setUpdatePassword] = useState<boolean>(false);
   const pwFieldRef = useRef<HTMLInputElement | null>(null);
   const emailFieldRef = useRef<HTMLInputElement | null>(null);
   const contactFieldRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [langText, setLangText] = useState("");
+
+  /** Viewer state */
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerTitle, setViewerTitle] = useState("");
+  const [viewerType, setViewerType] = useState<
+    "image" | "pdf" | "doc" | "unknown"
+  >("image");
+  const [viewerSrc, setViewerSrc] = useState("");
+  const [revokeOnClose, setRevokeOnClose] = useState<string | null>(null);
 
   const params = useParams();
   const router = useRouter();
@@ -130,6 +184,10 @@ const DoctorForm: React.FC = () => {
   const { modifyDoctor } = useModifyDoctor("update-doctor");
   const { decodedToken, getIdsFromObject, toastAndNavigate } = Utility();
   const doctorId = params?.id;
+
+  // role gate for docs
+  const role = decodedToken().role;
+  const canManageDocs = role === "admin" || role === "operations";
 
   const { value: specialities } = useGetSpeciality(
     null,
@@ -146,13 +204,7 @@ const DoctorForm: React.FC = () => {
     200,
     ""
   );
-  const { value: symptoms, swrLoading: symptomLoading } = useGetSymptom(
-    null,
-    "get-symptoms",
-    1,
-    200,
-    ""
-  );
+  const { value: symptoms } = useGetSymptom(null, "get-symptoms", 1, 200, "");
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -186,10 +238,174 @@ const DoctorForm: React.FC = () => {
       setFormValues(initialValues);
       setTitle("Create Doctor");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctorId]);
 
+  // keep it in sync when data loads (edit mode / reinit)
+  useEffect(() => {
+    setLangText((formValues.languagesSpoken || []).join(", "));
+  }, [formValues.languagesSpoken]);
+
+  /** Helpers to manage doc arrays in Formik */
+  const handleAddFiles = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fieldName: keyof DoctorFormValues,
+    values: DoctorFormValues,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const toAdd: FileOrUrl[] = Array.from(files)
+      .map((f) => {
+        if (!ALLOWED_MIME.includes(f.type)) {
+          // Optional: toast for unsupported file type
+          return null as any;
+        }
+        return {
+          file: f,
+          name: f.name,
+          preview: f.type.startsWith("image/")
+            ? URL.createObjectURL(f)
+            : undefined,
+        };
+      })
+      .filter(Boolean);
+
+    const prev = (values[fieldName] as FileOrUrl[]) ?? [];
+    const next = [...prev, ...toAdd];
+
+    setFieldValue(fieldName as string, next);
+    e.target.value = "";
+  };
+
+  const removeAtIndex = (
+    fieldName: keyof DoctorFormValues,
+    idx: number,
+    values: DoctorFormValues,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    const arr = (values[fieldName] as FileOrUrl[]) || [];
+    const item = arr[idx] as any;
+    if (item?.preview) URL.revokeObjectURL(item.preview);
+    const next = arr.filter((_, i) => i !== idx);
+    setFieldValue(fieldName as string, next);
+  };
+
+  /** Open a doc viewer for a list item */
+  const openViewer = (item: FileOrUrl) => {
+    // Clean up any previous temp blob URL
+    if (revokeOnClose) {
+      URL.revokeObjectURL(revokeOnClose);
+      setRevokeOnClose(null);
+    }
+
+    if (typeof item === "string") {
+      const type = inferTypeFromUrl(item);
+      setViewerTitle(item.split("/").pop() || "Document");
+      setViewerType(type);
+      setViewerSrc(type === "doc" ? googleDocViewer(item) : item);
+      setViewerOpen(true);
+      return;
+    }
+
+    const f = item.file;
+    const name = item.name || f.name;
+    setViewerTitle(name);
+
+    if (f.type.startsWith("image/")) {
+      const src = item.preview ?? URL.createObjectURL(f);
+      if (!item.preview) setRevokeOnClose(src);
+      setViewerType("image");
+      setViewerSrc(src);
+      setViewerOpen(true);
+      return;
+    }
+
+    if (f.type === "application/pdf") {
+      const blobUrl = URL.createObjectURL(f);
+      setRevokeOnClose(blobUrl);
+      setViewerType("pdf");
+      setViewerSrc(blobUrl);
+      setViewerOpen(true);
+      return;
+    }
+
+    if (
+      f.type === "application/msword" ||
+      f.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      // Blob URLs can't be shown in Google Viewer. Offer a download/new tab.
+      const blobUrl = URL.createObjectURL(f);
+      setRevokeOnClose(blobUrl);
+      setViewerType("unknown");
+      setViewerSrc(blobUrl);
+      setViewerOpen(true);
+      return;
+    }
+
+    // Fallback
+    const blobUrl = URL.createObjectURL(f);
+    setRevokeOnClose(blobUrl);
+    setViewerType("unknown");
+    setViewerSrc(blobUrl);
+    setViewerOpen(true);
+  };
+
+  const closeViewer = () => {
+    setViewerOpen(false);
+    if (revokeOnClose) {
+      URL.revokeObjectURL(revokeOnClose);
+      setRevokeOnClose(null);
+    }
+  };
+
+  const populateData = useCallback(async (doctorId: string | string[]) => {
+    setLoading(true);
+    try {
+      const response: DoctorResponse = await fetcher(
+        "doctor",
+        `get-doctor-by-id/${doctorId}`
+      );
+      if (response?.statusCode === 200) {
+        const formattedData: DoctorFormValues = {
+          ...response.data,
+          availability: response.data.availability.map((slot) => ({
+            ...slot,
+            startTime: slot.startTime
+              ? initializeTime(slot.startTime).format("h:mm A")
+              : "",
+            endTime: slot.endTime
+              ? initializeTime(slot.endTime).format("h:mm A")
+              : "",
+          })),
+          medicalCertificates: (response.data as any).medicalCertificates ?? [],
+          registrationCertificates:
+            (response.data as any).registrationCertificates ?? [],
+          aadhaarDocs: (response.data as any).aadhaarDocs ?? [],
+          pancardDocs: (response.data as any).pancardDocs ?? [],
+        };
+        setFormValues(formattedData);
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /** Utils to split files vs. urls */
+  const extractFiles = (arr?: FileOrUrl[]) =>
+    (arr || [])
+      .filter((x: any) => x && (x as any).file)
+      .map((x: any) => (x as any).file as File);
+
+  const extractUrls = (arr?: FileOrUrl[]) =>
+    (arr || []).filter((x: any) => typeof x === "string") as string[];
+
   const create = useCallback(
-    async (values: DoctorData) => {
+    async (values: DoctorFormValues) => {
       setLoading(true);
       try {
         const formattedAvailability = values.availability.map((slot) => ({
@@ -198,17 +414,36 @@ const DoctorForm: React.FC = () => {
           endTime: slot.endTime,
         }));
 
-        const response = await createDoctor({
+        const payload: any = {
           ...values,
           gender: values.gender || null,
           status: values.status || null,
-          profilePicture: values?.profilePicture?.file || null,
+          profilePicture: (values as any)?.profilePicture?.file || null,
           qualificationIds: getIdsFromObject(values?.qualificationIds),
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
           availability: formattedAvailability,
           createdBy: decodedToken().id,
-        });
+
+          // Send Files if present, else URLs
+          medicalCertificates: extractFiles(values.medicalCertificates).length
+            ? extractFiles(values.medicalCertificates)
+            : extractUrls(values.medicalCertificates),
+          registrationCertificates: extractFiles(
+            values.registrationCertificates
+          ).length
+            ? extractFiles(values.registrationCertificates)
+            : extractUrls(values.registrationCertificates),
+          aadhaarDocs: extractFiles(values.aadhaarDocs).length
+            ? extractFiles(values.aadhaarDocs)
+            : extractUrls(values.aadhaarDocs),
+          pancardDocs: extractFiles(values.pancardDocs).length
+            ? extractFiles(values.pancardDocs)
+            : extractUrls(values.pancardDocs),
+        };
+
+        const response = await createDoctor(payload);
+
         if (response?.statusCode === 409) {
           const errorMessage = response?.message?.toLowerCase() || "";
           if (errorMessage.includes("email")) {
@@ -257,40 +492,11 @@ const DoctorForm: React.FC = () => {
         setLoading(false);
       }
     },
-    [createDoctor, dispatch, getIdsFromObject, router, toastAndNavigate]
+    [createDoctor, dispatch, router, toastAndNavigate]
   );
 
-  const populateData = useCallback(async (doctorId: string | string[]) => {
-    setLoading(true);
-    try {
-      const response: DoctorResponse = await fetcher(
-        "doctor",
-        `get-doctor-by-id/${doctorId}`
-      );
-      if (response?.statusCode === 200) {
-        const formattedData = {
-          ...response.data,
-          availability: response.data.availability.map((slot) => ({
-            ...slot,
-            startTime: slot.startTime
-              ? initializeTime(slot.startTime).format("h:mm A")
-              : "",
-            endTime: slot.endTime
-              ? initializeTime(slot.endTime).format("h:mm A")
-              : "",
-          })),
-        };
-        setFormValues(formattedData);
-      }
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const update = useCallback(
-    async (values: any) => {
+    async (values: DoctorFormValues) => {
       setLoading(true);
       try {
         const formattedAvailability = values.availability.map((slot: any) => ({
@@ -299,17 +505,33 @@ const DoctorForm: React.FC = () => {
           endTime: slot.endTime,
         }));
 
-        const payload = {
+        const payload: any = {
           ...values,
           gender: values.gender || null,
           status: values.status || null,
-          profilePicture: values?.profilePicture?.file || null,
+          profilePicture: (values as any)?.profilePicture?.file || null,
           qualificationIds: getIdsFromObject(values?.qualificationIds),
           specializationIds: getIdsFromObject(values?.specializationIds),
           symptomIds: getIdsFromObject(values?.symptomIds),
           availability: formattedAvailability,
           updatedBy: decodedToken().id,
+
+          medicalCertificates: extractFiles(values.medicalCertificates).length
+            ? extractFiles(values.medicalCertificates)
+            : extractUrls(values.medicalCertificates),
+          registrationCertificates: extractFiles(
+            values.registrationCertificates
+          ).length
+            ? extractFiles(values.registrationCertificates)
+            : extractUrls(values.registrationCertificates),
+          aadhaarDocs: extractFiles(values.aadhaarDocs).length
+            ? extractFiles(values.aadhaarDocs)
+            : extractUrls(values.aadhaarDocs),
+          pancardDocs: extractFiles(values.pancardDocs).length
+            ? extractFiles(values.pancardDocs)
+            : extractUrls(values.pancardDocs),
         };
+
         if (!updatePassword) {
           delete payload.password;
         }
@@ -330,14 +552,7 @@ const DoctorForm: React.FC = () => {
         setLoading(false);
       }
     },
-    [
-      getIdsFromObject,
-      updatePassword,
-      modifyDoctor,
-      toastAndNavigate,
-      dispatch,
-      router,
-    ]
+    [modifyDoctor, toastAndNavigate, dispatch, router, updatePassword]
   );
 
   return (
@@ -347,15 +562,13 @@ const DoctorForm: React.FC = () => {
           type="button"
           color={updatePassword ? "error" : "info"}
           variant="contained"
-          sx={{
-            position: "absolute",
-            right: 30,
-          }}
+          sx={{ position: "absolute", right: 30 }}
           onClick={handleUpdatePassword}
         >
           {updatePassword ? "Cancel Update Password" : "Update Password"}
         </Button>
       ) : null}
+
       <Typography
         variant="h4"
         gutterBottom
@@ -366,10 +579,14 @@ const DoctorForm: React.FC = () => {
 
       <Formik
         enableReinitialize
-        initialValues={formValues}
+        initialValues={
+          !doctorId && role === "sub_admin" && !formValues.status
+            ? { ...formValues, status: "pending" } // default for sub_admin on create
+            : formValues
+        }
         validationSchema={validationSchema}
         onSubmit={(values) => {
-          values._id ? update(values) : create(values);
+          (values as any)._id ? update(values) : create(values);
         }}
       >
         {({
@@ -401,10 +618,8 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-                error={touched.username ? Boolean(errors.username) : null}
+                InputLabelProps={{ shrink: true }}
+                error={touched.username ? Boolean(errors.username) : undefined}
                 helperText={touched.username ? errors.username : null}
               />
               <Field
@@ -420,7 +635,7 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.email ? Boolean(errors.email) : null}
+                error={touched.email ? Boolean(errors.email) : undefined}
                 helperText={touched.email ? errors.email : null}
               />
               {title === "Create Doctor" || updatePassword ? (
@@ -431,7 +646,7 @@ const DoctorForm: React.FC = () => {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   inputRef={pwFieldRef}
-                  value={values.password}
+                  value={(values as any).password}
                   onChange={handleChange}
                   InputProps={{
                     startAdornment: (
@@ -454,7 +669,9 @@ const DoctorForm: React.FC = () => {
                       </InputAdornment>
                     ),
                   }}
-                  error={touched.password ? Boolean(errors.password) : null}
+                  error={
+                    touched.password ? Boolean(errors.password) : undefined
+                  }
                   helperText={touched.password ? errors.password : null}
                 />
               ) : null}
@@ -471,13 +688,16 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.contact ? Boolean(errors.contact) : null}
+                error={touched.contact ? Boolean(errors.contact) : undefined}
                 helperText={touched.contact ? errors.contact : null}
               />
+
               <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <DatePicker
                   label="Date of Birth *"
-                  value={values.dob ? dayjs(values.dob) : null}
+                  value={
+                    (values as any).dob ? dayjs((values as any).dob) : null
+                  }
                   onChange={(newValue) => {
                     setFieldValue(
                       "dob",
@@ -491,13 +711,9 @@ const DoctorForm: React.FC = () => {
                       error: touched.dob && Boolean(errors.dob),
                       helperText: touched.dob && errors.dob,
                     },
-                    inputAdornment: {
-                      position: "start",
-                    },
+                    inputAdornment: { position: "start" },
                   }}
-                  slots={{
-                    openPickerIcon: CalendarMonthIcon,
-                  }}
+                  slots={{ openPickerIcon: CalendarMonthIcon }}
                   sx={{
                     "& .MuiIconButton-root": {
                       color: (theme) => theme.palette.primary.main,
@@ -516,13 +732,13 @@ const DoctorForm: React.FC = () => {
 
               <FormControl
                 fullWidth
-                error={touched.gender ? Boolean(errors.gender) : null}
+                error={touched.gender ? Boolean(errors.gender) : undefined}
               >
                 <InputLabel>Gender</InputLabel>
                 <Select
                   label="Gender"
                   name="gender"
-                  value={values.gender}
+                  value={(values as any).gender}
                   onChange={(e) => setFieldValue("gender", e.target.value)}
                   startAdornment={
                     <InputAdornment position="start">
@@ -536,10 +752,11 @@ const DoctorForm: React.FC = () => {
                 </Select>
                 {touched.gender && errors.gender ? (
                   <Typography color="error" variant="body2">
-                    {errors.gender}
+                    {errors.gender as any}
                   </Typography>
                 ) : null}
               </FormControl>
+
               <Field
                 as={MuiTextField}
                 label="Experience (in years)"
@@ -553,22 +770,43 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.experience ? Boolean(errors.experience) : null}
-                helperText={touched.experience ? errors.experience : null}
+                error={
+                  touched.experience ? Boolean(errors.experience) : undefined
+                }
+                helperText={
+                  touched.experience ? (errors as any).experience : null
+                }
               />
-              <Field
-                as={MuiTextField}
-                type="text"
+
+              <MuiTextField
                 label="Languages Spoken"
                 name="languagesSpoken"
                 fullWidth
-                value={values.languagesSpoken.join(", ")}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setFieldValue(
-                    "languagesSpoken",
-                    e.target.value.split(",").map((val: string) => val.trim())
-                  )
-                }
+                value={langText}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  // just update local text; no splitting here
+                  setLangText(e.target.value);
+                }}
+                onBlur={() => {
+                  // commit to Formik only when user leaves the field
+                  const arr = langText
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  setFieldValue("languagesSpoken", arr);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const arr = langText
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    setFieldValue("languagesSpoken", arr);
+                    // (optional) blur after commit
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -579,12 +817,15 @@ const DoctorForm: React.FC = () => {
                 error={
                   touched.languagesSpoken
                     ? Boolean(errors.languagesSpoken)
-                    : null
+                    : undefined
                 }
                 helperText={
-                  touched.languagesSpoken ? errors.languagesSpoken : null
+                  touched.languagesSpoken
+                    ? (errors as any).languagesSpoken
+                    : null
                 }
               />
+
               <Field
                 as={MuiTextField}
                 label="Consultation Fee "
@@ -603,22 +844,25 @@ const DoctorForm: React.FC = () => {
                 error={
                   touched.consultationFee
                     ? Boolean(errors.consultationFee)
-                    : null
+                    : undefined
                 }
                 helperText={
-                  touched.consultationFee ? errors.consultationFee : null
+                  touched.consultationFee
+                    ? (errors as any).consultationFee
+                    : null
                 }
               />
-              {decodedToken().role !== "sub_admin" && (
+
+              {role !== "sub_admin" && (
                 <FormControl
                   fullWidth
-                  error={touched.status ? Boolean(errors.status) : null}
+                  error={touched.status ? Boolean(errors.status) : undefined}
                 >
                   <InputLabel> Status </InputLabel>
                   <Select
                     label="Status"
                     name="status"
-                    value={values.status}
+                    value={(values as any).status}
                     onChange={(e) => setFieldValue("status", e.target.value)}
                     startAdornment={
                       <InputAdornment position="start">
@@ -632,11 +876,12 @@ const DoctorForm: React.FC = () => {
                   </Select>
                   {touched.status && errors.status ? (
                     <Typography color="error" variant="body2">
-                      {errors.status}
+                      {errors.status as any}
                     </Typography>
                   ) : null}
                 </FormControl>
               )}
+
               <Field
                 as={MuiTextField}
                 label="Clinic Address"
@@ -650,10 +895,15 @@ const DoctorForm: React.FC = () => {
                   ),
                 }}
                 error={
-                  touched.clinicAddress ? Boolean(errors.clinicAddress) : null
+                  touched.clinicAddress
+                    ? Boolean(errors.clinicAddress)
+                    : undefined
                 }
-                helperText={touched.clinicAddress ? errors.clinicAddress : null}
+                helperText={
+                  touched.clinicAddress ? (errors as any).clinicAddress : null
+                }
               />
+
               <Field
                 as={MuiTextField}
                 label="Pincode"
@@ -666,9 +916,10 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.pincode ? Boolean(errors.pincode) : null}
-                helperText={touched.pincode ? errors.pincode : null}
+                error={touched.pincode ? Boolean(errors.pincode) : undefined}
+                helperText={touched.pincode ? (errors as any).pincode : null}
               />
+
               <Autocomplete
                 multiple
                 disableCloseOnSelect
@@ -677,7 +928,7 @@ const DoctorForm: React.FC = () => {
                 isOptionEqualToValue={(option, value) =>
                   option._id === value._id
                 }
-                value={values.specializationIds || []}
+                value={(values as any).specializationIds || []}
                 onChange={(event, value) => {
                   setFieldValue("specializationIds", value);
                   const selectedSpecializationTags = value.map(
@@ -691,7 +942,6 @@ const DoctorForm: React.FC = () => {
                       ...selectedSpecializationTags,
                     ]),
                   ];
-
                   setFieldValue("tags", updatedTags);
                 }}
                 sx={{ gridColumn: "span 2" }}
@@ -707,7 +957,7 @@ const DoctorForm: React.FC = () => {
                     helperText={
                       touched.specializationIds &&
                       typeof errors.specializationIds === "string"
-                        ? errors.specializationIds
+                        ? (errors.specializationIds as string)
                         : ""
                     }
                     InputProps={{
@@ -733,7 +983,7 @@ const DoctorForm: React.FC = () => {
                 isOptionEqualToValue={(option, value) =>
                   option._id === value._id
                 }
-                value={values.symptomIds || []}
+                value={(values as any).symptomIds || []}
                 onChange={(event, value) => {
                   setFieldValue("symptomIds", value);
                   const selectedSymptomTags = value.map((item) => item.name);
@@ -758,7 +1008,7 @@ const DoctorForm: React.FC = () => {
                     helperText={
                       touched.symptomIds &&
                       typeof errors.symptomIds === "string"
-                        ? errors.symptomIds
+                        ? (errors.symptomIds as string)
                         : ""
                     }
                     InputProps={{
@@ -775,6 +1025,7 @@ const DoctorForm: React.FC = () => {
                   />
                 )}
               />
+
               <Autocomplete
                 multiple
                 disableCloseOnSelect
@@ -783,7 +1034,7 @@ const DoctorForm: React.FC = () => {
                 isOptionEqualToValue={(option, value) =>
                   option._id === value._id
                 }
-                value={values.qualificationIds || []}
+                value={(values as any).qualificationIds || []}
                 onChange={(event, value) => {
                   setFieldValue("qualificationIds", value);
                   const selectedQualificationTags = value.map(
@@ -812,7 +1063,7 @@ const DoctorForm: React.FC = () => {
                     helperText={
                       touched.qualificationIds &&
                       typeof errors.qualificationIds === "string"
-                        ? errors.qualificationIds
+                        ? (errors.qualificationIds as string)
                         : ""
                     }
                     InputProps={{
@@ -829,6 +1080,7 @@ const DoctorForm: React.FC = () => {
                   />
                 )}
               />
+
               <Field
                 as={MuiTextField}
                 label="Tags"
@@ -838,7 +1090,7 @@ const DoctorForm: React.FC = () => {
                 minRows={1}
                 maxRows={10}
                 sx={{ gridColumn: "span 2" }}
-                value={values.tags?.join(",")}
+                value={(values.tags || []).join(",")}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFieldValue(
                     "tags",
@@ -852,9 +1104,10 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.tags ? Boolean(errors.tags) : null}
-                helperText={touched.tags ? errors.tags : null}
+                error={touched.tags ? Boolean(errors.tags) : undefined}
+                helperText={touched.tags ? (errors as any).tags : null}
               />
+
               <Field
                 as={MuiTextField}
                 label="Bio "
@@ -870,10 +1123,11 @@ const DoctorForm: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                error={touched.bio ? Boolean(errors.bio) : null}
-                helperText={touched.bio ? errors.bio : null}
+                error={touched.bio ? Boolean(errors.bio) : undefined}
+                helperText={touched.bio ? (errors as any).bio : null}
               />
 
+              {/* Profile Picture */}
               <Box
                 sx={{
                   display: "grid",
@@ -915,6 +1169,7 @@ const DoctorForm: React.FC = () => {
                     ref={fileInputRef}
                     hidden
                     type="file"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={(event) => {
                       const imgfiles = event.target.files;
                       if (imgfiles && imgfiles[0]) {
@@ -937,7 +1192,8 @@ const DoctorForm: React.FC = () => {
                     }}
                   />
                 </Box>
-                {values.profilePicture?.file || values.profilePicture ? (
+                {(values as any).profilePicture?.file ||
+                typeof (values as any).profilePicture === "string" ? (
                   <Box
                     sx={{
                       position: "relative",
@@ -947,8 +1203,10 @@ const DoctorForm: React.FC = () => {
                   >
                     <IconButton
                       onClick={() => {
-                        if (values.profilePicture?.preview) {
-                          URL.revokeObjectURL(values.profilePicture.preview);
+                        if ((values as any).profilePicture?.preview) {
+                          URL.revokeObjectURL(
+                            (values as any).profilePicture.preview
+                          );
                         }
                         setFieldValue("profilePicture", null);
                       }}
@@ -964,14 +1222,14 @@ const DoctorForm: React.FC = () => {
                     >
                       <DeleteIcon sx={{ fontSize: "18px" }} />
                     </IconButton>
-                    {values.profilePicture?.preview ||
-                    typeof values.profilePicture === "string" ? (
+                    {(values as any).profilePicture?.preview ||
+                    typeof (values as any).profilePicture === "string" ? (
                       <Box
                         component="img"
                         src={
-                          typeof values.profilePicture === "string"
-                            ? values.profilePicture
-                            : values.profilePicture.preview
+                          typeof (values as any).profilePicture === "string"
+                            ? (values as any).profilePicture
+                            : (values as any).profilePicture.preview
                         }
                         alt="Profile Preview"
                         sx={{
@@ -985,7 +1243,7 @@ const DoctorForm: React.FC = () => {
                   </Box>
                 ) : null}
 
-                {decodedToken().role !== "sub_admin" && (
+                {role !== "sub_admin" && (
                   <Box
                     sx={{
                       display: "flex",
@@ -995,12 +1253,14 @@ const DoctorForm: React.FC = () => {
                     }}
                   >
                     <Checkbox
-                      checked={values.isVerified}
+                      checked={(values as any).isVerified}
                       onChange={(event) =>
                         setFieldValue("isVerified", event.target.checked)
                       }
                       sx={{
-                        color: values.isVerified ? "#3f51b5" : "default",
+                        color: (values as any).isVerified
+                          ? "#3f51b5"
+                          : "default",
                         "&.Mui-checked": { color: "#3f51b5" },
                         padding: "4px 4px 4px 0",
                       }}
@@ -1010,6 +1270,161 @@ const DoctorForm: React.FC = () => {
                 )}
               </Box>
             </Box>
+
+            {/* ===== Documents (role-gated) ===== */}
+            {canManageDocs && (
+              <Box
+                component="fieldset"
+                sx={{
+                  border: "2px solid #BADFE7",
+                  borderRadius: "12px",
+                  p: 2,
+                  m: "40px 10px",
+                }}
+              >
+                <Typography
+                  component="legend"
+                  sx={{ color: "rgb(102, 112, 133)", fontSize: "1rem", mb: 2 }}
+                >
+                  Documents (Images/PDF/DOC/DOCX)
+                </Typography>
+
+                {[
+                  {
+                    label: "Medical Certificates",
+                    field: "medicalCertificates" as const,
+                  },
+                  {
+                    label: "Registration Certificates",
+                    field: "registrationCertificates" as const,
+                  },
+                  { label: "Aadhaar Docs", field: "aadhaarDocs" as const },
+                  { label: "PAN Docs", field: "pancardDocs" as const },
+                ].map(({ label, field }) => (
+                  <Paper key={field} variant="outlined" sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} md={3}>
+                        <Typography sx={{ fontWeight: 600 }}>
+                          {label}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={9}>
+                        <Button
+                          variant="outlined"
+                          component="label"
+                          startIcon={<AddPhotoAlternateIcon />}
+                        >
+                          Upload files
+                          <input
+                            hidden
+                            type="file"
+                            multiple
+                            accept={ALLOWED_MIME.join(",")}
+                            onChange={(e) =>
+                              handleAddFiles(
+                                e,
+                                field,
+                                values as DoctorFormValues,
+                                setFieldValue
+                              )
+                            }
+                          />
+                        </Button>
+
+                        <Box
+                          sx={{
+                            mt: 2,
+                            display: "flex",
+                            gap: 1,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {(Array.isArray((values as any)[field])
+                            ? ((values as any)[field] as FileOrUrl[])
+                            : []
+                          ).map((item, idx) => {
+                            const isFile = typeof item !== "string";
+                            const name = isFile
+                              ? (item as any).name
+                              : (item as string);
+                            const preview = isFile && (item as any).preview;
+
+                            return (
+                              <Box
+                                key={idx}
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                  border: "1px solid #ddd",
+                                  borderRadius: 1,
+                                  p: 0.5,
+                                }}
+                              >
+                                {preview ? (
+                                  <Box
+                                    component="img"
+                                    src={preview as string}
+                                    alt={name}
+                                    sx={{
+                                      width: 36,
+                                      height: 36,
+                                      borderRadius: 0.5,
+                                      objectFit: "cover",
+                                    }}
+                                  />
+                                ) : null}
+
+                                <Tooltip title="View">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => openViewer(item)}
+                                    sx={{ mr: 0.5 }}
+                                  >
+                                    <VisibilityIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+
+                                <Typography
+                                  variant="caption"
+                                  sx={{ maxWidth: 220 }}
+                                  noWrap
+                                  title={name}
+                                >
+                                  {name}
+                                </Typography>
+
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    removeAtIndex(
+                                      field,
+                                      idx,
+                                      values as DoctorFormValues,
+                                      setFieldValue
+                                    )
+                                  }
+                                  aria-label="remove"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                ))}
+
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  Note: Uploading new files for a section will replace the saved
+                  list for that section on update.
+                </Typography>
+              </Box>
+            )}
+
+            {/* ===== Availability block ===== */}
             <Box
               component="fieldset"
               sx={{
@@ -1025,7 +1440,7 @@ const DoctorForm: React.FC = () => {
               >
                 Availability
               </Typography>
-              {values.availability.map((slot, index) => (
+              {(values as any).availability.map((slot: any, index: number) => (
                 <Paper variant="outlined" sx={{ p: 2, mb: 3 }} key={index}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={4}>
@@ -1036,7 +1451,9 @@ const DoctorForm: React.FC = () => {
                         fullWidth
                         value={slot.hospital?.name || ""}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const updatedAvailability = [...values.availability];
+                          const updatedAvailability = [
+                            ...(values as any).availability,
+                          ];
                           updatedAvailability[index].hospital = {
                             ...updatedAvailability[index].hospital,
                             name: e.target.value,
@@ -1061,7 +1478,9 @@ const DoctorForm: React.FC = () => {
                         fullWidth
                         value={slot.hospital?.location || ""}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const updatedAvailability = [...values.availability];
+                          const updatedAvailability = [
+                            ...(values as any).availability,
+                          ];
                           updatedAvailability[index].hospital = {
                             ...updatedAvailability[index].hospital,
                             location: e.target.value,
@@ -1092,7 +1511,9 @@ const DoctorForm: React.FC = () => {
                         getOptionLabel={(option) => option}
                         value={slot.day || ""}
                         onChange={(event, newValue) => {
-                          const updatedAvailability = [...values.availability];
+                          const updatedAvailability = [
+                            ...(values as any).availability,
+                          ];
                           updatedAvailability[index].day = newValue || "";
                           setFieldValue("availability", updatedAvailability);
                           setFieldValue("dirty", true);
@@ -1114,6 +1535,7 @@ const DoctorForm: React.FC = () => {
                         )}
                       />
                     </Grid>
+
                     <Grid item xs={4}>
                       <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <TimePicker
@@ -1121,7 +1543,7 @@ const DoctorForm: React.FC = () => {
                           value={initializeTime(slot.startTime)}
                           onChange={(newValue) => {
                             const updatedAvailability = [
-                              ...values.availability,
+                              ...(values as any).availability,
                             ];
                             updatedAvailability[index].startTime =
                               parseTimeTo12Hour(newValue);
@@ -1133,16 +1555,19 @@ const DoctorForm: React.FC = () => {
                             textField: {
                               fullWidth: true,
                               error:
-                                !!touched.availability?.[index]?.startTime &&
-                                !!errors.availability?.[index]?.startTime,
+                                !!touched?.availability?.[index]?.startTime &&
+                                !!(errors as any)?.availability?.[index]
+                                  ?.startTime,
                               helperText:
-                                touched.availability?.[index]?.startTime &&
-                                errors.availability?.[index]?.startTime,
+                                touched?.availability?.[index]?.startTime &&
+                                (errors as any)?.availability?.[index]
+                                  ?.startTime,
                             },
                           }}
                         />
                       </LocalizationProvider>
                     </Grid>
+
                     <Grid item xs={4}>
                       <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <TimePicker
@@ -1150,7 +1575,7 @@ const DoctorForm: React.FC = () => {
                           value={initializeTime(slot.endTime)}
                           onChange={(newValue) => {
                             const updatedAvailability = [
-                              ...values.availability,
+                              ...(values as any).availability,
                             ];
                             updatedAvailability[index].endTime =
                               parseTimeTo12Hour(newValue);
@@ -1162,11 +1587,12 @@ const DoctorForm: React.FC = () => {
                             textField: {
                               fullWidth: true,
                               error:
-                                !!touched.availability?.[index]?.endTime &&
-                                !!errors.availability?.[index]?.endTime,
+                                !!touched?.availability?.[index]?.endTime &&
+                                !!(errors as any)?.availability?.[index]
+                                  ?.endTime,
                               helperText:
-                                touched.availability?.[index]?.endTime &&
-                                errors.availability?.[index]?.endTime,
+                                touched?.availability?.[index]?.endTime &&
+                                (errors as any)?.availability?.[index]?.endTime,
                             },
                           }}
                         />
@@ -1178,10 +1604,11 @@ const DoctorForm: React.FC = () => {
                         variant="outlined"
                         color="error"
                         onClick={() => {
-                          const updatedAvailability =
-                            values.availability.filter(
-                              (_, idx) => idx !== index
-                            );
+                          const updatedAvailability = (
+                            values as any
+                          ).availability.filter(
+                            (_: any, idx: number) => idx !== index
+                          );
                           setFieldValue("availability", updatedAvailability);
                           setFieldValue("dirty", true);
                         }}
@@ -1193,6 +1620,7 @@ const DoctorForm: React.FC = () => {
                   </Grid>
                 </Paper>
               ))}
+
               <Box mt={2}>
                 <Grid container spacing={2}>
                   <Grid item sx={{ display: "flex", alignItems: "center" }}>
@@ -1200,7 +1628,7 @@ const DoctorForm: React.FC = () => {
                       variant="outlined"
                       onClick={() =>
                         setFieldValue("availability", [
-                          ...values.availability,
+                          ...(values as any).availability,
                           {
                             day: "",
                             startTime: "",
@@ -1218,23 +1646,25 @@ const DoctorForm: React.FC = () => {
                     <Button
                       variant="outlined"
                       color={
-                        values.availability.length > 1 ? "warning" : "primary"
+                        (values as any).availability.length > 1
+                          ? "warning"
+                          : "primary"
                       }
                       fullWidth
                       disabled={
-                        values.availability.length === 0 ||
-                        !values.availability[0]?.day ||
-                        !values.availability[0]?.startTime ||
-                        !values.availability[0]?.endTime
+                        (values as any).availability.length === 0 ||
+                        !(values as any).availability[0]?.day ||
+                        !(values as any).availability[0]?.startTime ||
+                        !(values as any).availability[0]?.endTime
                       }
                       onClick={() => {
-                        if (values.availability.length > 0) {
-                          if (values.availability.length > 1) {
+                        if ((values as any).availability.length > 0) {
+                          if ((values as any).availability.length > 1) {
                             setFieldValue("availability", [
-                              values.availability[0],
+                              (values as any).availability[0],
                             ]);
                           } else {
-                            const firstSlot = values.availability[0];
+                            const firstSlot = (values as any).availability[0];
                             const allDays = [
                               "Monday",
                               "Tuesday",
@@ -1311,6 +1741,78 @@ const DoctorForm: React.FC = () => {
           </Form>
         )}
       </Formik>
+
+      {/* ===== Viewer Dialog ===== */}
+      <Dialog open={viewerOpen} onClose={closeViewer} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <VisibilityIcon fontSize="small" />
+          <span style={{ flex: 1 }}>{viewerTitle}</span>
+          <Tooltip title="Open in new tab">
+            <span>
+              <IconButton
+                onClick={() => {
+                  if (viewerSrc) window.open(viewerSrc, "_blank");
+                }}
+                disabled={!viewerSrc}
+              >
+                <OpenInNewIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <IconButton onClick={closeViewer}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ height: "80vh", p: 0 }}>
+          {viewerType === "image" && (
+            <Box
+              component="img"
+              src={viewerSrc}
+              alt={viewerTitle}
+              sx={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          )}
+          {viewerType === "pdf" && (
+            <iframe
+              src={viewerSrc}
+              style={{ width: "100%", height: "100%", border: 0 }}
+              title={viewerTitle}
+            />
+          )}
+          {viewerType === "doc" && (
+            <iframe
+              src={viewerSrc /* google viewer url */}
+              style={{ width: "100%", height: "100%", border: 0 }}
+              title={viewerTitle}
+            />
+          )}
+          {viewerType === "unknown" && (
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                p: 3,
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                This file type can’t be previewed inline. You can open it in a
+                new tab or download it.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={() => window.open(viewerSrc, "_blank")}
+                startIcon={<OpenInNewIcon />}
+              >
+                Open in new tab
+              </Button>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
