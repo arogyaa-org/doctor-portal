@@ -106,10 +106,16 @@ const getNavItemsByRole = (): NavItemConfig[] => {
       });
   }
 
-  // NEW: operations → show only Dashboard & Doctor
+  //operations 
   if (role === "operations") {
     return navItems.filter((item) =>
-      ["dashboard", "doctor"].includes(item.key)
+      [
+        "dashboard",
+        "speciality",
+        "qualification",
+        "symptoms",
+        "doctor",
+      ].includes(item.key)
     );
   }
 
