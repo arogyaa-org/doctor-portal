@@ -11,7 +11,6 @@ import Typography from "@mui/material/Typography";
 import type { NavItemConfig } from "@/types/nav";
 import { paths } from "@/paths";
 import { isNavItemActive } from "@/utils/is-nav-item-active";
-import { Logo } from "@/components/core/logo";
 import { Utility } from "@/utils";
 
 import { useNavItems } from "./config";
@@ -65,7 +64,13 @@ export function SideNav(): React.JSX.Element {
           href={paths.home}
           sx={{ display: "inline-flex", justifyContent: "center" }}
         >
-          <Logo color="light" height={122} width={142} />
+          <img
+            src="/assets/logomain.png"
+            style={{
+              height: '100px',
+              width: '140px',
+            }}
+          />
         </Box>
       </Stack>
 
@@ -215,12 +220,12 @@ function NavItem({
       <Box
         {...(href
           ? {
-              component: external ? "a" : RouterLink,
-              href:
-                paths.dashboard[href as keyof typeof paths.dashboard] || href,
-              target: external ? "_blank" : undefined,
-              rel: external ? "noreferrer" : undefined,
-            }
+            component: external ? "a" : RouterLink,
+            href:
+              paths.dashboard[href as keyof typeof paths.dashboard] || href,
+            target: external ? "_blank" : undefined,
+            rel: external ? "noreferrer" : undefined,
+          }
           : { role: "button" })}
         sx={{
           alignItems: "center",

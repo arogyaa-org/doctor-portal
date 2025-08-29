@@ -12,7 +12,6 @@ import Typography from "@mui/material/Typography";
 import type { NavItemConfig } from "@/types/nav";
 import { paths } from "@/paths";
 import { isNavItemActive } from "@/utils/is-nav-item-active";
-import { Logo } from "@/components/core/logo";
 import { navIcons } from "./nav-icons";
 
 import { useNavItems } from "./config"; // ✅ Use hook here
@@ -64,7 +63,13 @@ export function MobileNav({
           href={paths.home}
           sx={{ display: "inline-flex", justifyContent: "center" }}
         >
-          <Logo color="light" height={122} width={142} />
+          <img
+            src="/assets/logomain.png"
+            style={{
+              height: '100px',
+              width: '140px',
+            }}
+          />
         </Box>
       </Stack>
       <Divider sx={{ borderColor: "var(--mui-palette-neutral-700)" }} />
@@ -126,11 +131,11 @@ function NavItem({
       <Box
         {...(href
           ? {
-              component: external ? "a" : RouterLink,
-              href,
-              target: external ? "_blank" : undefined,
-              rel: external ? "noreferrer" : undefined,
-            }
+            component: external ? "a" : RouterLink,
+            href,
+            target: external ? "_blank" : undefined,
+            rel: external ? "noreferrer" : undefined,
+          }
           : { role: "button" })}
         sx={{
           alignItems: "center",
