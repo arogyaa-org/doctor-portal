@@ -73,7 +73,6 @@ export function SignInForm({
     formState: { errors },
     getValues,
   } = useForm<Values>({
-    defaultValues,
     resolver: zodResolver(schema),
     mode: "onChange",
   });

@@ -34,12 +34,35 @@ export default function LegalConsentInline({
   const target = openInNewTab ? "_blank" : undefined;
   const rel = openInNewTab ? "noopener noreferrer" : undefined;
 
+  const linkStyles = {
+    color: "#4ade80", // Light green that pops on dark teal
+    textDecoration: "underline",
+    textDecorationColor: "rgba(74, 222, 128, 0.5)", // Semi-transparent underline
+    fontWeight: 500,
+    transition: "all 0.2s ease-in-out",
+    "&:hover": {
+      color: "#22d3ee", // Bright cyan on hover
+      textDecorationColor: "#22d3ee",
+      textShadow: "0 0 8px rgba(34, 211, 238, 0.3)", // Subtle glow effect
+    },
+    "&:focus": {
+      outline: "2px solid #22d3ee",
+      outlineOffset: "2px",
+      borderRadius: "2px",
+    },
+  };
+
   return (
     <Box sx={{ textAlign: align, mt: 1.5, ...sx }}>
       <Typography
         id={ariaId}
         variant="caption"
-        sx={{ color: "text.secondary", lineHeight: 1.6 }}
+        sx={{
+          backgroundColor: "transparent",
+          color: "rgba(255, 255, 255, 0.9)", // Slightly transparent white for softer look
+          lineHeight: 1.4,
+          "& a": linkStyles,
+        }}
       >
         By clicking <strong>{primaryCtaLabel}</strong>
         {continueLabel ? (
