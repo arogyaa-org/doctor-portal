@@ -11,6 +11,7 @@ import FormHelperText from "@mui/material/FormHelperText";
 import InputLabel from "@mui/material/InputLabel";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import Typography from "@mui/material/Typography";
+import Alert from "@mui/material/Alert";
 import { Controller, useForm } from "react-hook-form";
 import { z as zod } from "zod";
 import Toast from "@/components/common/Toast";
@@ -19,9 +20,158 @@ import { creator, fetcher } from "@/apis/apiClient";
 import { Utility } from "@/utils";
 import { ArrowBack, Visibility } from "@mui/icons-material";
 import { VisibilityOff } from "@mui/icons-material";
-import { MedicalServices } from "@mui/icons-material";
-import { AdminPanelSettings } from "@mui/icons-material";
 import LegalConsentInline from "@/components/common/LegalConsentInline";
+
+function HeaderStripe({ bg }: { bg: string }) {
+  return (
+    <Box
+      sx={{
+        bgcolor: bg,
+        mx: -4, 
+        mt: -4, 
+        px: 4,
+        py: 3,
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <img
+        src="/assets/logomain.png"
+        alt="Arogyaa"
+        style={{ height: 80, width: "auto", objectFit: "contain" }}
+      />
+    </Box>
+  );
+}
+
+const resetSchema = zod.object({
+  email: zod.string().min(1, { message: "Email is required" }).email(),
+});
+type ResetValues = zod.infer<typeof resetSchema>;
+
+type ServiceKey = "doctor" | "user";
+
+function ResetPasswordFormInline({
+  onBack,
+  accentColor = "#15b79e",
+  service, 
+}: {
+  onBack: () => void;
+  accentColor?: string;
+  service: ServiceKey;
+}): React.JSX.Element {
+  const [isPending, setIsPending] = React.useState<boolean>(false);
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<ResetValues>({
+    defaultValues: { email: "" },
+    resolver: zodResolver(resetSchema),
+  });
+
+  const dispatch: AppDispatch = useDispatch();
+  const { toast } = useSelector((state: RootState) => state.toast);
+  const { toastAndNavigate } = Utility();
+
+  const onSubmit = React.useCallback(
+    async (values: ResetValues): Promise<void> => {
+      setIsPending(true);
+      try {
+        const path =
+          service === "doctor"
+            ? "/doctor/reset-password/request"
+            : "/reset-password/request";
+
+        await creator(service, path, { email: values.email });
+
+        toastAndNavigate(
+          dispatch,
+          true,
+          "success",
+          "Recovery link has been sent to your email."
+        );
+      } catch {
+        setError("root", {
+          type: "server",
+          message: "Failed to send recovery link. Try again.",
+        });
+        toastAndNavigate(
+          dispatch,
+          true,
+          "error",
+          "Failed to send recovery link. Try again."
+        );
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [dispatch, setError, toastAndNavigate, service]
+  );
+
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Enter your registered email to receive a reset link.
+      </Typography>
+
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        <Stack spacing={2}>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field }) => (
+              <FormControl error={Boolean(errors.email)}>
+                <InputLabel>Email address</InputLabel>
+                <OutlinedInput {...field} label="Email address" type="email" />
+                {errors.email ? (
+                  <FormHelperText>{errors.email.message}</FormHelperText>
+                ) : null}
+              </FormControl>
+            )}
+          />
+          {errors.root?.message ? (
+            <Alert severity="error">{errors.root?.message}</Alert>
+          ) : null}
+
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Button
+              onClick={onBack}
+              variant="text"
+              sx={{
+                color: "#666",
+                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+              }}
+              startIcon={<ArrowBack />}
+              type="button"
+            >
+              Back to Sign in
+            </Button>
+            <Box sx={{ flex: 1 }} />
+            <Button
+              disabled={isPending}
+              type="submit"
+              variant="contained"
+              sx={{ backgroundColor: accentColor }}
+            >
+              {isPending ? "Sending…" : "Send recovery link"}
+            </Button>
+          </Stack>
+        </Stack>
+      </form>
+
+      <Toast
+        alerting={toast.toastAlert}
+        severity={toast.toastSeverity}
+        message={toast.toastMessage}
+      />
+    </Box>
+  );
+}
 
 interface DoctorResponse {
   statusCode: number;
@@ -33,13 +183,7 @@ const schema = zod.object({
   email: zod.string().min(1, { message: "Email is required" }).email(),
   password: zod.string().min(8, { message: "Minimum Length should be 8" }),
 });
-
 type Values = zod.infer<typeof schema>;
-
-const defaultValues = {
-  email: "adarsh@gmail.com",
-  password: "Adarsh.6",
-} satisfies Values;
 
 interface SignInFormProps {
   clientRole: string | null;
@@ -60,6 +204,7 @@ export function SignInForm({
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [needsConsent, setNeedsConsent] = React.useState<boolean>(false);
+  const [showResetForm, setShowResetForm] = React.useState<boolean>(false);
 
   const { toast } = useSelector((state: RootState) => state.toast);
 
@@ -71,37 +216,32 @@ export function SignInForm({
     control,
     handleSubmit,
     formState: { errors },
-    getValues,
   } = useForm<Values>({
     resolver: zodResolver(schema),
     mode: "onChange",
   });
 
+  const serviceKey: ServiceKey =
+    clientRole === "admin" ||
+    clientRole === "sub_admin" ||
+    clientRole === "sales"
+      ? "user"
+      : "doctor";
+
   const doLogin = React.useCallback(
     async (values: Values) => {
-      const response: DoctorResponse = await creator(
-        clientRole === "admin" ||
-          clientRole === "sub_admin" ||
-          clientRole === "sales"
-          ? "user"
-          : clientRole ?? "doctor",
-        "/login",
-        {
-          email: values.email,
-          password: values.password,
-        }
-      );
+      const response: DoctorResponse = await creator(serviceKey, "/login", {
+        email: values.email,
+        password: values.password,
+      });
 
       const { role } = decodedToken(response.token);
       if (response?.statusCode === 200) {
         document.cookie = `token=${response.token}; path=/; max-age=${
-          1 * 24 * 60 * 60
+          24 * 60 * 60
         }; secure; samesite=strict`;
-        if (role === "sales") {
-          router.push("/sales-dashboard");
-        } else {
-          router.push("/dashboard");
-        }
+        if (role === "sales") router.push("/sales-dashboard");
+        else router.push("/dashboard");
       } else if (response?.statusCode === 409 || response?.statusCode === 404) {
         toastAndNavigate(dispatch, true, "error", "User not found");
       } else if (response?.statusCode === 400) {
@@ -115,22 +255,19 @@ export function SignInForm({
         );
       }
     },
-    [clientRole, decodedToken, dispatch, router, toastAndNavigate]
+    [serviceKey, decodedToken, dispatch, router, toastAndNavigate]
   );
 
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
       setLoading(true);
       try {
-        // Consent gate applies only to doctor login
-        if ((clientRole ?? "doctor") === "doctor") {
+        // Consent gate applies only to doctor
+        if (serviceKey === "doctor") {
           if (!needsConsent) {
-            // 1) Check if consent is required
             const data = await fetcher<ConsentCheckRes>(
               "doctor",
-              `/doctor/consent-required?email=${encodeURIComponent(
-                values.email
-              )}`
+              `/doctor/consent-required?email=${encodeURIComponent(values.email)}`
             );
             if (data?.exists && data?.requireConsent) {
               setNeedsConsent(true);
@@ -140,17 +277,14 @@ export function SignInForm({
                 "info",
                 "Please agree to the latest Terms & Privacy to continue."
               );
-              return; // stop here; user will click again to accept + login
+              return;
             }
           } else {
-            // 2) User already saw the text: accept and continue
             await creator("doctor", "/doctor/accept-consent", {
               email: values.email,
             } as any);
           }
         }
-
-        // 3) Proceed with normal login
         await doLogin(values);
       } catch (error) {
         console.error("Login failed", error);
@@ -165,7 +299,7 @@ export function SignInForm({
       }
     },
     [
-      clientRole,
+      serviceKey,
       creator,
       fetcher,
       needsConsent,
@@ -174,6 +308,8 @@ export function SignInForm({
       toastAndNavigate,
     ]
   );
+
+  const accent = clientRole === "admin" ? "#122647" : "#15b79e";
 
   return (
     <Box
@@ -186,16 +322,19 @@ export function SignInForm({
         margin: "auto",
         transform: "translateY(-20px)",
         position: "relative",
+        overflow: "hidden",
       }}
     >
       <Stack spacing={2}>
         {!clientRole ? (
-          <Box sx={{ textAlign: "center", mb: 4 }}>
+          <Box sx={{ textAlign: "center", mb: 2 }}>
+            <HeaderStripe bg="#122647" />
             <Typography
               variant="h5"
               sx={{
                 fontWeight: 600,
                 color: "#122647",
+                mt: 1.5,
                 mb: 2,
                 textAlign: "center",
               }}
@@ -216,7 +355,6 @@ export function SignInForm({
                 width: "100%",
                 transition: "all 0.3s ease",
               }}
-              startIcon={<MedicalServices />}
               onClick={() => setClientRole("doctor")}
             >
               Login as Doctor
@@ -234,7 +372,6 @@ export function SignInForm({
                 width: "100%",
                 transition: "all 0.3s ease",
               }}
-              startIcon={<AdminPanelSettings />}
               onClick={() => setClientRole("admin")}
             >
               Login as User
@@ -242,181 +379,167 @@ export function SignInForm({
           </Box>
         ) : (
           <Stack spacing={2}>
-            {/* Login Section */}
-            <Box
+            <HeaderStripe bg={accent} />
+
+            <Typography
+              variant="h4"
               sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                mb: 2,
-                flexDirection: "column",
+                fontWeight: "bold",
+                color: accent,
+                textAlign: "center",
+                mb: 1,
               }}
             >
-              <Box
-                sx={{
-                  backgroundColor:
-                    clientRole === "admin" ? "#122647" : "#15b79e",
-                  borderRadius: "50%",
-                  width: 60,
-                  height: 60,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  mb: 2,
-                }}
-              >
-                {clientRole === "admin" ? (
-                  <AdminPanelSettings fontSize="large" />
-                ) : (
-                  <MedicalServices fontSize="large" />
-                )}
-              </Box>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: "bold",
-                  color: clientRole === "admin" ? "#122647" : "#15b79e",
-                }}
-              >
-                {clientRole !== "doctor"
-                  ? "User"
-                  : capitalizeFirstLetter(clientRole)}{" "}
-                Login
-              </Typography>
-            </Box>
+              {showResetForm
+                ? "Reset password"
+                : (clientRole !== "doctor"
+                    ? "User"
+                    : capitalizeFirstLetter(clientRole)) + " Login"}
+            </Typography>
 
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <Stack spacing={2.5}>
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormControl
-                      error={Boolean(errors.email)}
-                      variant="outlined"
+            {showResetForm ? (
+              <ResetPasswordFormInline
+                onBack={() => setShowResetForm(false)}
+                accentColor={accent}
+                service={serviceKey}
+              />
+            ) : (
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <Stack spacing={2.5}>
+                  <Controller
+                    control={control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormControl
+                        error={Boolean(errors.email)}
+                        variant="outlined"
+                      >
+                        <InputLabel>*Email Address</InputLabel>
+                        <OutlinedInput
+                          {...field}
+                          label="*Email address"
+                          type="email"
+                          sx={{ borderRadius: 1.5 }}
+                        />
+                        {errors.email ? (
+                          <FormHelperText>
+                            {errors.email.message}
+                          </FormHelperText>
+                        ) : null}
+                      </FormControl>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormControl
+                        error={Boolean(errors.password)}
+                        variant="outlined"
+                      >
+                        <InputLabel>*Password</InputLabel>
+                        <OutlinedInput
+                          {...field}
+                          endAdornment={
+                            showPassword ? (
+                              <Visibility
+                                style={{ cursor: "pointer" }}
+                                onClick={() => setShowPassword(false)}
+                              />
+                            ) : (
+                              <VisibilityOff
+                                style={{ cursor: "pointer" }}
+                                onClick={() => setShowPassword(true)}
+                              />
+                            )
+                          }
+                          label="*Password"
+                          type={showPassword ? "text" : "password"}
+                          sx={{ borderRadius: 1.5 }}
+                        />
+                        {errors.password ? (
+                          <FormHelperText>
+                            {errors.password.message}
+                          </FormHelperText>
+                        ) : null}
+                      </FormControl>
+                    )}
+                  />
+
+                  <Typography align="right">
+                    <Box
+                      component="button"
+                      onClick={() => setShowResetForm(true)}
+                      type="button"
+                      sx={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: accent,
+                        fontWeight: "bold",
+                        fontSize: "0.875rem",
+                        p: 0,
+                      }}
                     >
-                      <InputLabel>*Email Address</InputLabel>
-                      <OutlinedInput
-                        {...field}
-                        label="*Email address"
-                        type="email"
-                        sx={{ borderRadius: 1.5 }}
-                      />
-                      {errors.email ? (
-                        <FormHelperText>{errors.email.message}</FormHelperText>
-                      ) : null}
-                    </FormControl>
-                  )}
-                />
+                      Forgot password?
+                    </Box>
+                  </Typography>
 
-                <Controller
-                  control={control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormControl
-                      error={Boolean(errors.password)}
-                      variant="outlined"
-                    >
-                      <InputLabel>*Password</InputLabel>
-                      <OutlinedInput
-                        {...field}
-                        endAdornment={
-                          showPassword ? (
-                            <Visibility
-                              style={{ cursor: "pointer" }}
-                              onClick={() => setShowPassword(false)}
-                            />
-                          ) : (
-                            <VisibilityOff
-                              style={{ cursor: "pointer" }}
-                              onClick={() => setShowPassword(true)}
-                            />
-                          )
-                        }
-                        label="*Password"
-                        type={showPassword ? "text" : "password"}
-                        sx={{ borderRadius: 1.5 }}
+                  {serviceKey === "doctor" && needsConsent ? (
+                    <Box sx={{ mt: 1 }}>
+                      <LegalConsentInline
+                        primaryCtaLabel="Agree & Sign in"
+                        continueLabel=""
+                        termsHref="/legal/terms"
+                        privacyHref="/legal/privacy"
+                        align="left"
                       />
-                      {errors.password ? (
-                        <FormHelperText>
-                          {errors.password.message}
-                        </FormHelperText>
-                      ) : null}
-                    </FormControl>
-                  )}
-                />
+                    </Box>
+                  ) : null}
 
-                {/* <Typography align="right">
-                  <Box
-                    component="a"
-                    href="/reset-password"
+                  <Button
+                    disabled={loading}
+                    type="submit"
+                    variant="contained"
                     sx={{
-                      textDecoration: "none",
-                      color: clientRole === "admin" ? "#122647" : "#15b79e",
-                      fontWeight: "bold",
-                      fontSize: "0.875rem",
+                      py: 1.5,
+                      borderRadius: 2,
+                      backgroundColor: accent,
+                      "&:hover": {
+                        backgroundColor:
+                          clientRole === "admin" ? "#0a1a38" : "#129985",
+                      },
+                      boxShadow:
+                        clientRole === "admin"
+                          ? "0 4px 14px 0 rgba(18, 38, 71, 0.4)"
+                          : "0 4px 14px 0 rgba(21, 183, 158, 0.4)",
+                      transition: "all 0.3s ease",
                     }}
                   >
-                    Forgot password?
-                  </Box>
-                </Typography> */}
+                    {loading ? (
+                      <CircularProgress size={22} color="inherit" />
+                    ) : needsConsent && serviceKey === "doctor" ? (
+                      "Agree & Sign in"
+                    ) : (
+                      "Sign in"
+                    )}
+                  </Button>
 
-                {/* Consent gate appears only when needed for doctors */}
-                {clientRole === "doctor" && needsConsent ? (
-                  <Box sx={{ mt: 1 }}>
-                    <LegalConsentInline
-                      primaryCtaLabel="Agree & Sign in"
-                      continueLabel="" // hide google text here
-                      termsHref="/legal/terms"
-                      privacyHref="/legal/privacy"
-                      align="left"
-                    />
-                  </Box>
-                ) : null}
-
-                <Button
-                  disabled={loading}
-                  type="submit"
-                  variant="contained"
-                  sx={{
-                    py: 1.5,
-                    borderRadius: 2,
-                    backgroundColor:
-                      clientRole === "admin" ? "#122647" : "#15b79e",
-                    "&:hover": {
-                      backgroundColor:
-                        clientRole === "admin" ? "#0a1a38" : "#129985",
-                    },
-                    boxShadow:
-                      clientRole === "admin"
-                        ? "0 4px 14px 0 rgba(18, 38, 71, 0.4)"
-                        : "0 4px 14px 0 rgba(21, 183, 158, 0.4)",
-                    transition: "all 0.3s ease",
-                  }}
-                >
-                  {loading ? (
-                    <CircularProgress size={22} color="inherit" />
-                  ) : needsConsent && clientRole === "doctor" ? (
-                    "Agree & Sign in"
-                  ) : (
-                    "Sign in"
-                  )}
-                </Button>
-
-                <Button
-                  variant="text"
-                  onClick={() => setClientRole(null)}
-                  sx={{
-                    color: "#666",
-                    "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
-                  }}
-                >
-                  <ArrowBack sx={{ marginRight: 1 }} />
-                  Back to Select the Role
-                </Button>
-              </Stack>
-            </form>
+                  <Button
+                    variant="text"
+                    onClick={() => setClientRole(null)}
+                    sx={{
+                      color: "#666",
+                      "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+                    }}
+                  >
+                    <ArrowBack sx={{ marginRight: 1 }} />
+                    Back to Select the Role
+                  </Button>
+                </Stack>
+              </form>
+            )}
           </Stack>
         )}
       </Stack>

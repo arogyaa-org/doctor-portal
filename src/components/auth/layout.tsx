@@ -97,7 +97,7 @@ export function Layout({
             alignItems: "center",
           }}
         >
-          <Box
+          {/* <Box
             component={RouterLink}
             href={paths.home}
             sx={{
@@ -116,7 +116,7 @@ export function Layout({
                 width: "140px",
               }}
             />
-          </Box>
+        </Box> */}
         </Box>
 
         {/* Main content */}
