@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
+import { Suspense } from 'react';             // <-- add this
 import { Layout } from '@/components/auth/layout';
 import { ResetPasswordForm } from '@/components/auth/reset-password-form';
 
@@ -10,8 +10,9 @@ export default function Page(): React.JSX.Element {
 
   return (
     <Layout clientRole={clientRole}>
-      {/* The form itself detects whether it's a Request or Confirm flow */}
-      <ResetPasswordForm />
+      <Suspense fallback={<div style={{padding:16}}>Loading…</div>}>
+        <ResetPasswordForm />
+      </Suspense>
     </Layout>
   );
 }

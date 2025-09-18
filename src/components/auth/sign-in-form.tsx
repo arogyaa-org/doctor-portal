@@ -487,17 +487,38 @@ export function SignInForm({
                   </Typography>
 
                   {serviceKey === "doctor" && needsConsent ? (
-                    <Box sx={{ mt: 1 }}>
-                      <LegalConsentInline
-                        primaryCtaLabel="Agree & Sign in"
-                        continueLabel=""
-                        termsHref="/legal/terms"
-                        privacyHref="/legal/privacy"
-                        align="left"
-                      />
-                    </Box>
-                  ) : null}
-
+                  <Stack
+                    direction="row"
+                    justifyContent="center"    
+                    alignItems="center"
+                    sx={{
+                     mt: -4,
+                     typography: "caption",
+                     color: "text.secondary",
+                     "& *": { lineHeight: 1.4 },
+                     "& a": {
+                     display: "inline-block",
+                     textDecoration: "none",
+                     color: "inherit",
+                     mx: 0.75,
+                     "&:hover": { textDecoration: "underline" },
+                     },
+                     "& a + a::before": {
+                     content: '"•"',
+                     marginRight: "0.5rem",
+                color: "divider",
+              },
+              }}
+              >
+                <LegalConsentInline
+                   primaryCtaLabel="Agree & Sign in"
+                   continueLabel=""
+                   termsHref="/legal/terms"
+                   privacyHref="/legal/privacy"
+                   align="left"
+                />
+              </Stack>
+                ) : null}
                   <Button
                     disabled={loading}
                     type="submit"
