@@ -1,3 +1,4 @@
+// ValidationSchema.ts
 import * as yup from "yup";
 import dayjs from "dayjs";
 
@@ -23,7 +24,7 @@ const validationSchema = yup.object().shape({
     .matches(/[0-9]/, "Password Must Contain At Least 1 Number")
     .matches(/[^\w]/, "Password Must Contain At Least 1 Special Character")
     .when("_id", {
-      is: (value: string) => !value, 
+      is: (value: string) => !value,
       then: (schema) => schema.required("This Field is Required"),
       otherwise: (schema) => schema.optional(),
     }),
@@ -105,12 +106,17 @@ const validationSchema = yup.object().shape({
             }
           ),
         hospital: yup.object().shape({
-          name: yup.string().nullable(),
-          location: yup.string().nullable(),
+          name: yup.string().required("Hospital name is required"), // Changed from nullable()
+          location: yup.string().required("Hospital location is required"), // Already required
         }),
       })
     )
     .min(1, "At least one availability slot is required"),
+  medicalCertificates: yup.array().of(yup.mixed()).optional(),
+  registrationCertificates: yup.array().of(yup.mixed()).optional(),
+  aadhaarDocs: yup.array().of(yup.mixed()).optional(),
+  pancardDocs: yup.array().of(yup.mixed()).optional(),
+  isVerified: yup.boolean().optional(),
 });
 
 export default validationSchema;

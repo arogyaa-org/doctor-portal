@@ -213,7 +213,7 @@ export function DoctorSignup({
       "recaptcha-container",
       {
         size: "invisible",
-        callback: () => { },
+        callback: () => {},
         "expired-callback": () => {
           toastAndNavigate(
             dispatch,
@@ -416,7 +416,7 @@ export function DoctorSignup({
         <Paper
           elevation={24}
           sx={{
-            borderRadius: 6,
+            borderRadius: 2,
             overflow: "hidden",
             background: "white",
             border: `1px solid ${alpha(theme.palette.grey[200], 0.5)}`,
@@ -452,7 +452,7 @@ export function DoctorSignup({
                   height: 40,
                   bgcolor: "rgba(255, 255, 255, 0.2)",
                   backdropFilter: "blur(10px)",
-                  borderRadius: 4,
+                  borderRadius: 1,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1099,8 +1099,11 @@ export function DoctorSignup({
 
       {/* Footer */}
       {!isGoogleFlow && (
-        <Box sx={{ textAlign: "center", mt: 3 }}>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+        <Box sx={{ textAlign: "center", mt: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{ backgroundColor: "transparent", color: "white" }}
+          >
             Already have an account?{" "}
             <Button
               variant="contained"
@@ -1118,7 +1121,6 @@ export function DoctorSignup({
               startIcon={<MedicalServices />}
               onClick={() => router.push(`/login`)}
             >
-
               Sign In
             </Button>
           </Typography>

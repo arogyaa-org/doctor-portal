@@ -3,8 +3,11 @@ import { Typography, Button, Box } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
 import { EditRounded } from "@mui/icons-material";
 import React, { useState } from "react";
+import VerifiedIcon from "@mui/icons-material/Verified";
+import CancelIcon from "@mui/icons-material/Cancel";
 
 import { paths } from "@/paths";
+import { green, red } from "@mui/material/colors";
 
 export const doctorDatagridColumns = (): GridColDef[] => {
   const router = useRouter();
@@ -52,10 +55,10 @@ export const doctorDatagridColumns = (): GridColDef[] => {
             sx={{
               display: "flex",
               flexDirection: "column",
-              justifyContent: 'center',
+              justifyContent: "center",
               width: "100%",
               whiteSpace: "normal",
-              minHeight: 47
+              minHeight: 47,
             }}
           >
             <Typography
@@ -83,6 +86,74 @@ export const doctorDatagridColumns = (): GridColDef[] => {
                 {expanded ? "Show Less" : "Read More"}
               </Typography>
             )}
+          </Box>
+        );
+      },
+    },
+    {
+      field: "isVerified",
+      headerName: "Verified",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 0.7,
+      renderCell: ({ row: { isVerified, createdFrom } }) => {
+        const hasAarogyaa =
+          typeof createdFrom === "string" && /(arogyaa)/i.test(createdFrom);
+
+        return (
+          <Box
+            sx={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 0.4,
+              }}
+            >
+              {isVerified ? (
+                <VerifiedIcon
+                  sx={{ color: green[600] }}
+                  titleAccess="Verified"
+                />
+              ) : (
+                <CancelIcon
+                  sx={{ color: red[600] }}
+                  titleAccess="Not Verified"
+                />
+              )}
+
+              {hasAarogyaa && (
+                <Box
+                  sx={{
+                    px: 1,
+                    height: 20,
+                    borderRadius: "999px",
+                    backgroundColor: "black",
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    whiteSpace: "nowrap",
+                  }}
+                  title="Aarogyaa Origin"
+                >
+                  Arogyaa
+                </Box>
+              )}
+            </Box>
           </Box>
         );
       },
