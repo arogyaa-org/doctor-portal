@@ -26,6 +26,7 @@ import {
   MedicalServices,
   Assignment,
   LocalHospital,
+  Description,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 
@@ -135,8 +136,8 @@ const Preview: React.FC<PreviewProps> = ({
     ) {
       const blobUrl = URL.createObjectURL(f);
       setRevokeOnClose(blobUrl);
-      setViewerType("unknown");
-      setViewerSrc(blobUrl);
+      setViewerType("doc");
+      setViewerSrc(googleDocViewer(blobUrl));
       setViewerOpen(true);
       return;
     }
@@ -296,7 +297,7 @@ const Preview: React.FC<PreviewProps> = ({
                 />
                 <Chip
                   icon={<MedicalServices />}
-                  label={`₹${values.consultationFee} consultation`}
+                  label={`₹${values.consultationFee} consultation Fee`}
                   color="secondary"
                   variant="outlined"
                 />
@@ -603,6 +604,12 @@ const Preview: React.FC<PreviewProps> = ({
                   field: values.pancardDocs,
                   icon: <Assignment color="warning" />,
                   color: "warning",
+                },
+                {
+                  label: "Combined Documents",
+                  field: values.combinedDocuments,
+                  icon: <Description color="success" />,
+                  color: "success",
                 },
               ].map(({ label, field, icon, color }) => (
                 <Grid item xs={12} md={6} key={label}>

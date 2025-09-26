@@ -1004,7 +1004,7 @@ const ProfessionalDetails: React.FC<ProfessionalDetailsProps> = ({
                       },
                     }}
                   >
-                    Add Time Slot
+                    Add Slot
                   </Button>
 
                   <Button

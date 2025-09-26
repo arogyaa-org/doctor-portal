@@ -57,13 +57,14 @@ type ServiceKey = "doctor" | "user";
 function ResetPasswordFormInline({
   onBack,
   accentColor = "#15b79e",
-  service, 
+  service,
 }: {
   onBack: () => void;
   accentColor?: string;
   service: ServiceKey;
 }): React.JSX.Element {
   const [isPending, setIsPending] = React.useState<boolean>(false);
+  const [isLinkSent, setIsLinkSent] = React.useState<boolean>(false);
   const {
     control,
     handleSubmit,
@@ -82,6 +83,28 @@ function ResetPasswordFormInline({
     async (values: ResetValues): Promise<void> => {
       setIsPending(true);
       try {
+        // Check if the user or doctor exists
+        const existsEndpoint =
+          service === "doctor" ? "/doctor/exists" : "user/exists";
+        const existsResponse = await fetcher<{ exists: boolean }>(
+          service,
+          `${existsEndpoint}?email=${encodeURIComponent(values.email)}`
+        );
+
+        if (!existsResponse?.exists) {
+          setError("root", {
+            type: "server",
+            message: `No ${service} found with this email.`,
+          });
+          toastAndNavigate(
+            dispatch,
+            true,
+            "error",
+            `No ${service} found with this email.`
+          );
+          return;
+        }
+
         const path =
           service === "doctor"
             ? "/doctor/reset-password/request"
@@ -89,6 +112,7 @@ function ResetPasswordFormInline({
 
         await creator(service, path, { email: values.email });
 
+        setIsLinkSent(true);
         toastAndNavigate(
           dispatch,
           true,
@@ -158,7 +182,7 @@ function ResetPasswordFormInline({
               variant="contained"
               sx={{ backgroundColor: accentColor }}
             >
-              {isPending ? "Sending…" : "Send recovery link"}
+              {isPending ? "Sending…" : isLinkSent ? "Resend recovery link" : "Send recovery link"}
             </Button>
           </Stack>
         </Stack>
@@ -511,7 +535,7 @@ export function SignInForm({
               }}
               >
                 <LegalConsentInline
-                   primaryCtaLabel="Agree & Sign in"
+                   primaryCtaLabel=" Agree & Sign in"
                    continueLabel=""
                    termsHref="/legal/terms"
                    privacyHref="/legal/privacy"
@@ -541,7 +565,7 @@ export function SignInForm({
                     {loading ? (
                       <CircularProgress size={22} color="inherit" />
                     ) : needsConsent && serviceKey === "doctor" ? (
-                      "Agree & Sign in"
+                      " Agree & Sign in"
                     ) : (
                       "Sign in"
                     )}

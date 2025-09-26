@@ -67,45 +67,49 @@ const ServerPaginationGrid: React.FC<ServerPaginationGridProps> = ({
   }, [count]);
 
   const dataGridStyles = useMemo(
-    () => ({
+  () => ({
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    "& .super-app-theme--header": {
+      fontSize: 17,
+      fontWeight: 600,
+      alignItems: "center",
+    },
+    "& .MuiDataGrid-columnHeaders": {
+      backgroundColor: "rgb(34, 116, 199) !important",
+      color: "white !important",
+      "& .MuiDataGrid-columnHeader": {
+        backgroundColor: "rgb(34, 116, 199) !important",
+        color: "white !important",
+      },
+    },
+    "& .MuiDataGrid-cell": {
+      fontSize: "14px",
+      textAlign: "center",
       display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      "& .super-app-theme--header": {
-        fontSize: 17,
-        fontWeight: 600,
-        alignItems: "center",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      whiteSpace: "normal",
+      textAlign: "left",
+      lineHeight: 1.4,
+      paddingTop: "8px",
+      paddingBottom: "8px",
+    },
+    "& .MuiDataGrid-row": {
+      backgroundColor: "#ffffff",
+      fontWeight: 600,
+      fontSize: "14px",
+      boxSizing: "border-box",
+      transition: "background-color 0.3s ease, transform 0.2s ease",
+      "&:hover": {
+        backgroundColor: "#e3f2fd",
+        transform: "scale(1.001)",
+        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
       },
-      "& .mui-yrdy0g-MuiDataGrid-columnHeaderRow": {
-        background: "rgb(34, 116, 199)   !important",
-        color: "white",
-      },
-      "& .MuiDataGrid-cell": {
-        fontSize: "14px",
-        textAlign: "center",
-        display: "flex",
-        alignItems: "center", // vertical center
-        justifyContent: "flex-start", // left align content
-        whiteSpace: "normal",
-        textAlign: "left",
-        lineHeight: 1.4,
-        paddingTop: "8px",
-        paddingBottom: "8px",
-      },
-      "& .MuiDataGrid-row": {
-        backgroundColor: "#ffffff",
-        fontWeight: 600,
-        fontSize: "14px",
-        boxSizing: "border-box",
-        transition: "background-color 0.3s ease, transform 0.2s ease",
-        "&:hover": {
-          backgroundColor: "#e3f2fd",
-          transform: "scale(1.001)",
-          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
-        },
-      },
-    }),
-    []
+    },
+  }),
+  []
   );
 
   function CustomNoRowsOverlay() {

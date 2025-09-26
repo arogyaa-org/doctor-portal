@@ -48,6 +48,7 @@ type DoctorFormValues = DoctorData & {
   registrationCertificates?: FileOrUrl[];
   aadhaarDocs?: FileOrUrl[];
   pancardDocs?: FileOrUrl[];
+  combinedDocuments?: FileOrUrl[];
 };
 
 const initialValues: DoctorFormValues = {
@@ -82,6 +83,7 @@ const initialValues: DoctorFormValues = {
   registrationCertificates: [],
   aadhaarDocs: [],
   pancardDocs: [],
+  combinedDocuments: [],
 };
 
 let editFormValues: DoctorFormValues;
@@ -219,6 +221,7 @@ const DoctorForm: React.FC = () => {
               response.data.registrationCertificates ?? [],
             aadhaarDocs: response.data.aadhaarDocs ?? [],
             pancardDocs: response.data.pancardDocs ?? [],
+            combinedDocuments: response.data.combinedDocuments ?? [],
             languagesSpoken: response.data.languagesSpoken ?? [],
             tags: response.data.tags ?? [],
             profilePicture: response.data.profilePicture ?? null,
@@ -300,6 +303,9 @@ const DoctorForm: React.FC = () => {
           pancardDocs: extractFiles(values.pancardDocs).length
             ? extractFiles(values.pancardDocs)
             : extractUrls(values.pancardDocs),
+          combinedDocuments: extractFiles(values.combinedDocuments).length
+            ? extractFiles(values.combinedDocuments)
+            : extractUrls(values.combinedDocuments),
         };
 
         const response = await createDoctor(payload);
@@ -385,20 +391,26 @@ const DoctorForm: React.FC = () => {
           symptomIds: getIdsFromObject(values?.symptomIds || []),
           availability: formattedAvailability,
           updatedBy: decodedToken().id,
-          medicalCertificates: extractFiles(values.medicalCertificates).length
-            ? extractFiles(values.medicalCertificates)
-            : extractUrls(values.medicalCertificates),
-          registrationCertificates: extractFiles(
-            values.registrationCertificates
-          ).length
-            ? extractFiles(values.registrationCertificates)
-            : extractUrls(values.registrationCertificates),
-          aadhaarDocs: extractFiles(values.aadhaarDocs).length
-            ? extractFiles(values.aadhaarDocs)
-            : extractUrls(values.aadhaarDocs),
-          pancardDocs: extractFiles(values.pancardDocs).length
-            ? extractFiles(values.pancardDocs)
-            : extractUrls(values.pancardDocs),
+          medicalCertificates: [
+            ...extractUrls(values.medicalCertificates),
+            ...extractFiles(values.medicalCertificates),
+          ],
+          registrationCertificates: [
+            ...extractUrls(values.registrationCertificates),
+            ...extractFiles(values.registrationCertificates),
+          ],
+          aadhaarDocs: [
+            ...extractUrls(values.aadhaarDocs),
+            ...extractFiles(values.aadhaarDocs),
+          ],
+          pancardDocs: [
+            ...extractUrls(values.pancardDocs),
+            ...extractFiles(values.pancardDocs),
+          ],
+          combinedDocuments: [
+            ...extractUrls(values.combinedDocuments),
+            ...extractFiles(values.combinedDocuments),
+          ],
         };
 
         if (!updatePassword) {
@@ -457,6 +469,7 @@ const DoctorForm: React.FC = () => {
           "registrationCertificates",
           "aadhaarDocs",
           "pancardDocs",
+          "combinedDocuments",
         ]
       : [];
 

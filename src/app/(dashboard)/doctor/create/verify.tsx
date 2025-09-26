@@ -30,6 +30,7 @@ import {
   CreditCard,
   CheckCircle,
   Upload,
+  FolderZip,
 } from "@mui/icons-material";
 import { AppDispatch } from "@/redux/store";
 import { Utility } from "@/utils";
@@ -62,6 +63,8 @@ const ALLOWED_MIME = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+
 const inferTypeFromUrl = (url: string): "image" | "pdf" | "doc" | "unknown" => {
   const clean = url.split("?")[0].toLowerCase();
   if (/\.(png|jpe?g|webp|gif)$/.test(clean)) return "image";
@@ -92,6 +95,8 @@ const getCategoryIcon = (field: string) => {
       return <Badge sx={{ color: "#FF9800" }} />;
     case "pancardDocs":
       return <CreditCard sx={{ color: "#4CAF50" }} />;
+    case "combinedDocuments":
+      return <FolderZip sx={{ color: "#9C27B0" }} />;
     default:
       return <Description sx={{ color: "#9E9E9E" }} />;
   }
@@ -143,6 +148,16 @@ const Verify: React.FC<VerifyProps> = ({
           );
           return null as any;
         }
+        if (f.size > MAX_FILE_SIZE) {
+          toastAndNavigate(
+            dispatch,
+            true,
+            "error",
+            `File ${f.name} exceeds the 5MB size limit`,
+            () => {}
+          );
+          return null as any;
+        }
         return {
           file: f,
           name: f.name,
@@ -186,7 +201,6 @@ const Verify: React.FC<VerifyProps> = ({
       const type = inferTypeFromUrl(item);
       setViewerTitle(item.split("/").pop() || "Document");
       setViewerType(type);
-      // only remote DOC/DOCX should use Google doc viewer
       setViewerSrc(type === "doc" ? googleDocViewer(item) : item);
       setViewerOpen(true);
       return;
@@ -220,7 +234,6 @@ const Verify: React.FC<VerifyProps> = ({
       f.type ===
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ) {
-      // Can't use Google viewer on blob: URL. Just open the blob and let the browser handle (download/OS handler).
       const blobUrl = URL.createObjectURL(f);
       setRevokeOnClose(blobUrl);
       setViewerType("doc");
@@ -238,6 +251,13 @@ const Verify: React.FC<VerifyProps> = ({
 
   const documentCategories = [
     {
+      label: "Combined Documents",
+      field: "combinedDocuments",
+      description: "Upload combined or miscellaneous documents",
+      color: "#9C27B0",
+      icon: FolderZip,
+    },
+    {
       label: "Medical Certificates",
       field: "medicalCertificates",
       description: "Upload medical certificates and health documents",
@@ -252,19 +272,27 @@ const Verify: React.FC<VerifyProps> = ({
       icon: Assignment,
     },
     {
-      label: "Aadhaar Documents",
+      label: "Aadhaar Card",
       field: "aadhaarDocs",
-      description: "Upload Aadhaar card and related documents",
+      description: "Upload Aadhaar card",
       color: "#FF9800",
       icon: Badge,
     },
     {
-      label: "PAN Documents",
+      label: "PAN Card",
       field: "pancardDocs",
-      description: "Upload PAN card and related documents",
+      description: "Upload PAN card",
       color: "#4CAF50",
       icon: CreditCard,
     },
+  ];
+
+  const allFiles = [
+    ...(values.combinedDocuments || []),
+    ...(values.medicalCertificates || []),
+    ...(values.registrationCertificates || []),
+    ...(values.aadhaarDocs || []),
+    ...(values.pancardDocs || []),
   ];
 
   return (
@@ -272,306 +300,277 @@ const Verify: React.FC<VerifyProps> = ({
       {canManageDocs && (
         <>
           <Grid container spacing={3}>
-            {documentCategories.map(
-              ({ label, field, description, color, icon: IconComponent }) => {
-                const files = values[field] || [];
-                const hasFiles = files.length > 0;
-
-                return (
-                  <Grid item xs={12} lg={6} key={field}>
-                    <Fade in timeout={300}>
-                      <Card
-                        elevation={2}
-                        sx={{
-                          height: "100%",
-                          borderRadius: 3,
-                          border: hasFiles
-                            ? `2px solid ${color}`
-                            : "2px solid transparent",
-                          transition: "all 0.3s ease",
-                          "&:hover": {
-                            elevation: 4,
-                            transform: "translateY(-2px)",
-                          },
-                        }}
+            <Grid item xs={12}>
+              <Fade in timeout={300}>
+                <Card
+                  elevation={2}
+                  sx={{
+                    height: "100%",
+                    borderRadius: 3,
+                    border: allFiles.length > 0
+                      ? `2px solid #2196F3`
+                      : "2px solid transparent",
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      elevation: 4,
+                      transform: "translateY(-2px)",
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={2}
+                      mb={2}
+                    >
+                      <Avatar
+                        sx={{ bgcolor: "#2196F3", width: 48, height: 48 }}
                       >
-                        <CardContent sx={{ p: 3 }}>
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={2}
-                            mb={2}
-                          >
-                            <Avatar
-                              sx={{ bgcolor: color, width: 48, height: 48 }}
-                            >
-                              <IconComponent />
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Typography
-                                variant="h6"
-                                fontWeight="bold"
-                                gutterBottom
-                              >
-                                {label}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                {description}
-                              </Typography>
-                            </Box>
-                            {hasFiles && (
-                              <Chip
-                                icon={<CheckCircle />}
-                                label={`${files.length} file${files.length > 1 ? "s" : ""}`}
-                                color="success"
-                                variant="outlined"
-                                size="small"
-                              />
-                            )}
-                          </Stack>
+                        <Description />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant="h6"
+                          fontWeight="bold"
+                          gutterBottom
+                        >
+                          Document Upload
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Upload all required documents
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Supported formats: JPEG, PNG, WebP, PDF, DOC, DOCX (Max size: 5MB)
+                        </Typography>
+                      </Box>
+                      {allFiles.length > 0 && (
+                        <Chip
+                          icon={<CheckCircle />}
+                          label={`${allFiles.length} file${allFiles.length > 1 ? "s" : ""}`}
+                          color="success"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                    </Stack>
 
-                          <Divider sx={{ my: 2 }} />
+                    <Divider sx={{ my: 2 }} />
 
-                          <Button
-                            variant="outlined"
-                            component="label"
-                            fullWidth
-                            startIcon={<CloudUpload />}
-                            sx={{
-                              mb: 2,
-                              py: 1.5,
-                              borderStyle: "dashed",
-                              borderWidth: 2,
-                              borderColor: color,
-                              color: color,
-                              "&:hover": {
-                                borderColor: color,
-                                backgroundColor: `${color}10`,
-                              },
-                            }}
-                          >
-                            Upload Documents
-                            <input
-                              hidden
-                              type="file"
-                              multiple
-                              accept={ALLOWED_MIME.join(",")}
-                              onChange={(e) =>
-                                handleAddFiles(e, field, values, setFieldValue)
-                              }
-                            />
-                          </Button>
-
-                          {hasFiles && (
-                            <Stack spacing={1.5}>
-                              {files.map((item: any, idx: number) => {
-                                const isFile = typeof item !== "string";
-                                const name = isFile ? item.name : item;
-                                const preview = isFile && item.preview;
-                                const fileSize = isFile ? item.size : null;
-                                const fileType = isFile
-                                  ? item.type
-                                  : inferTypeFromUrl(item);
-
-                                return (
-                                  <Fade in timeout={300} key={idx}>
-                                    <Paper
-                                      elevation={1}
-                                      sx={{
-                                        p: 2,
-                                        borderRadius: 2,
-                                        border: `1px solid ${color}20`,
-                                        transition: "all 0.2s ease",
-                                        "&:hover": {
-                                          bgcolor: `${color}05`,
-                                          borderColor: `${color}40`,
-                                        },
-                                      }}
-                                    >
-                                      <Stack
-                                        direction="row"
-                                        alignItems="center"
-                                        spacing={2}
-                                      >
-                                        {preview ? (
-                                          <Avatar
-                                            src={preview}
-                                            alt={name}
-                                            variant="rounded"
-                                            sx={{ width: 48, height: 48 }}
-                                          />
-                                        ) : (
-                                          <Avatar
-                                            variant="rounded"
-                                            sx={{
-                                              width: 48,
-                                              height: 48,
-                                              bgcolor: `${color}20`,
-                                            }}
-                                          >
-                                            {getFileIcon(
-                                              isFile
-                                                ? fileType
-                                                : (fileType as string)
-                                            )}
-                                          </Avatar>
-                                        )}
-
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                          <Typography
-                                            variant="body2"
-                                            fontWeight="medium"
-                                            noWrap
-                                            title={name}
-                                            sx={{ mb: 0.5 }}
-                                          >
-                                            {name}
-                                          </Typography>
-                                          <Stack
-                                            direction="row"
-                                            spacing={1}
-                                            alignItems="center"
-                                          >
-                                            {fileSize && (
-                                              <Chip
-                                                label={formatFileSize(fileSize)}
-                                                size="small"
-                                                variant="outlined"
-                                                sx={{
-                                                  height: 20,
-                                                  fontSize: "0.75rem",
-                                                }}
-                                              />
-                                            )}
-                                            {isFile && (
-                                              <Chip
-                                                label={item.type
-                                                  .split("/")[1]
-                                                  .toUpperCase()}
-                                                size="small"
-                                                sx={{
-                                                  height: 20,
-                                                  fontSize: "0.75rem",
-                                                  bgcolor: `${color}20`,
-                                                  color: color,
-                                                }}
-                                              />
-                                            )}
-                                          </Stack>
-                                        </Box>
-
-                                        <Stack direction="row" spacing={0.5}>
-                                          <Tooltip title="Preview">
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => openViewer(item)}
-                                              sx={{
-                                                color: color,
-                                                "&:hover": {
-                                                  bgcolor: `${color}10`,
-                                                },
-                                              }}
-                                            >
-                                              <Visibility fontSize="small" />
-                                            </IconButton>
-                                          </Tooltip>
-                                          <Tooltip title="Remove">
-                                            <IconButton
-                                              size="small"
-                                              onClick={() =>
-                                                removeAtIndex(
-                                                  field,
-                                                  idx,
-                                                  values,
-                                                  setFieldValue
-                                                )
-                                              }
-                                              sx={{
-                                                color: "#F44336",
-                                                "&:hover": {
-                                                  bgcolor: "#F4433610",
-                                                },
-                                              }}
-                                            >
-                                              <Delete fontSize="small" />
-                                            </IconButton>
-                                          </Tooltip>
-                                        </Stack>
-                                      </Stack>
-                                    </Paper>
-                                  </Fade>
-                                );
-                              })}
-                            </Stack>
-                          )}
-
-                          {!hasFiles && (
-                            <Box
+                    <Grid container spacing={2}>
+                      {documentCategories.map(
+                        ({ label, field, color, icon: IconComponent }) => (
+                          <Grid item xs={12} sm={6} md={4} key={field}>
+                            <Button
+                              variant="outlined"
+                              component="label"
+                              fullWidth
+                              startIcon={<CloudUpload />}
                               sx={{
-                                textAlign: "center",
-                                py: 3,
-                                color: "text.secondary",
-                                border: `2px dashed ${color}30`,
-                                borderRadius: 2,
-                                bgcolor: `${color}05`,
+                                py: 1.5,
+                                borderStyle: "dashed",
+                                borderWidth: 2,
+                                borderColor: color,
+                                color: color,
+                                "&:hover": {
+                                  borderColor: color,
+                                  backgroundColor: `${color}10`,
+                                },
                               }}
                             >
-                              <Upload
-                                sx={{
-                                  fontSize: 48,
-                                  mb: 1,
-                                  color: `${color}60`,
-                                }}
+                              {label}
+                              <input
+                                hidden
+                                type="file"
+                                multiple
+                                accept={ALLOWED_MIME.join(",")}
+                                onChange={(e) =>
+                                  handleAddFiles(e, field, values, setFieldValue)
+                                }
                               />
-                              <Typography variant="body2">
-                                No documents uploaded yet
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.disabled"
-                              >
-                                Drag and drop or click to upload
-                              </Typography>
-                            </Box>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Fade>
-                  </Grid>
-                );
-              }
-            )}
-          </Grid>
+                            </Button>
+                          </Grid>
+                        )
+                      )}
+                    </Grid>
 
-          <Card
-            elevation={0}
-            sx={{
-              mt: 4,
-              bgcolor: "grey.50",
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "grey.200",
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Security sx={{ color: "warning.main" }} />
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    Important Note
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Uploading new files for a section will replace the saved
-                    list for that section on update. Supported formats: JPEG,
-                    PNG, WebP, PDF, DOC, DOCX
-                  </Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
+                    {allFiles.length > 0 && (
+                      <Stack spacing={1.5} sx={{ mt: 2 }}>
+                        {documentCategories.map(({ field, color }) =>
+                          (values[field] || []).map((item: any, idx: number) => {
+                            const isFile = typeof item !== "string";
+                            const name = isFile ? item.name : item;
+                            const preview = isFile && item.preview;
+                            const fileSize = isFile ? item.size : null;
+                            const fileType = isFile
+                              ? item.type
+                              : inferTypeFromUrl(item);
+
+                            return (
+                              <Fade in timeout={300} key={`${field}-${idx}`}>
+                                <Paper
+                                  elevation={1}
+                                  sx={{
+                                    p: 2,
+                                    borderRadius: 2,
+                                    border: `1px solid ${color}20`,
+                                    transition: "all 0.2s ease",
+                                    "&:hover": {
+                                      bgcolor: `${color}05`,
+                                      borderColor: `${color}40`,
+                                    },
+                                  }}
+                                >
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    spacing={2}
+                                  >
+                                    {preview ? (
+                                      <Avatar
+                                        src={preview}
+                                        alt={name}
+                                        variant="rounded"
+                                        sx={{ width: 48, height: 48 }}
+                                      />
+                                    ) : (
+                                      <Avatar
+                                        variant="rounded"
+                                        sx={{
+                                          width: 48,
+                                          height: 48,
+                                          bgcolor: `${color}20`,
+                                        }}
+                                      >
+                                        {getFileIcon(
+                                          isFile
+                                            ? fileType
+                                            : (fileType as string)
+                                        )}
+                                      </Avatar>
+                                    )}
+
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight="medium"
+                                        noWrap
+                                        title={name}
+                                        sx={{ mb: 0.5 }}
+                                      >
+                                        {name}
+                                      </Typography>
+                                      <Stack
+                                        direction="row"
+                                        spacing={1}
+                                        alignItems="center"
+                                      >
+                                        {fileSize && (
+                                          <Chip
+                                            label={formatFileSize(fileSize)}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{
+                                              height: 20,
+                                              fontSize: "0.75rem",
+                                            }}
+                                          />
+                                        )}
+                                        {isFile && (
+                                          <Chip
+                                            label={item.type
+                                              .split("/")[1]
+                                              .toUpperCase()}
+                                            size="small"
+                                            sx={{
+                                              height: 20,
+                                              fontSize: "0.75rem",
+                                              bgcolor: `${color}20`,
+                                              color: color,
+                                            }}
+                                          />
+                                        )}
+                                      </Stack>
+                                    </Box>
+
+                                    <Stack direction="row" spacing={0.5}>
+                                      <Tooltip title="Preview">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => openViewer(item)}
+                                          sx={{
+                                            color: color,
+                                            "&:hover": {
+                                              bgcolor: `${color}10`,
+                                            },
+                                          }}
+                                        >
+                                          <Visibility fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="Remove">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() =>
+                                            removeAtIndex(
+                                              field,
+                                              idx,
+                                              values,
+                                              setFieldValue
+                                            )
+                                          }
+                                          sx={{
+                                            color: "#F44336",
+                                            "&:hover": {
+                                              bgcolor: "#F4433610",
+                                            },
+                                          }}
+                                        >
+                                          <Delete fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Stack>
+                                  </Stack>
+                                </Paper>
+                              </Fade>
+                            );
+                          })
+                        )}
+                      </Stack>
+                    )}
+
+                    {allFiles.length === 0 && (
+                      <Box
+                        sx={{
+                          textAlign: "center",
+                          py: 3,
+                          color: "text.secondary",
+                          border: `2px dashed #2196F330`,
+                          borderRadius: 2,
+                          bgcolor: `#2196F305`,
+                          mt: 2,
+                        }}
+                      >
+                        <Upload
+                          sx={{
+                            fontSize: 48,
+                            mb: 1,
+                            color: `#2196F360`,
+                          }}
+                        />
+                        <Typography variant="body2">
+                          No documents uploaded yet
+                        </Typography>
+                        <Typography variant="caption" color="text.disabled">
+                          Drag and drop or click any button to upload
+                        </Typography>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
+              </Fade>
+            </Grid>
+          </Grid>
 
           <Card
             elevation={0}
@@ -600,7 +599,7 @@ const Verify: React.FC<VerifyProps> = ({
                     Verification Status
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Mark as verified once all documents have been reviewed
+                    Mark as verified once at least one document has been uploaded and reviewed
                   </Typography>
                 </Box>
                 <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -609,6 +608,7 @@ const Verify: React.FC<VerifyProps> = ({
                     onChange={(event) => {
                       const wantToVerify = event.target.checked;
                       const total = [
+                        "combinedDocuments",
                         "medicalCertificates",
                         "registrationCertificates",
                         "aadhaarDocs",
@@ -618,12 +618,12 @@ const Verify: React.FC<VerifyProps> = ({
                         0
                       );
 
-                      if (wantToVerify && total < 2) {
+                      if (wantToVerify && total < 1) {
                         toastAndNavigate(
                           dispatch,
                           true,
                           "error",
-                          "Please upload at least 2 documents before marking as Verified.",
+                          "Please upload at least 1 document before marking as Verified.",
                           () => {}
                         );
                         return;
@@ -665,7 +665,7 @@ const Verify: React.FC<VerifyProps> = ({
               Access Restricted
             </Typography>
             <Typography variant="body2" color="text.disabled">
-              You don't have permission to manage documents in this section
+               For verification, please contact the Operations Team.
             </Typography>
           </CardContent>
         </Card>
