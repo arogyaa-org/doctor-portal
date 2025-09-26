@@ -116,7 +116,7 @@ export const datagridColumns = ({
       headerName: "Status",
       headerAlign: "center",
       align: "center",
-      flex: 1.5,
+      flex: 1.8,
       sortable: false,
       renderCell: ({ row: { _id, status } }) => {
         const statusOptions = [

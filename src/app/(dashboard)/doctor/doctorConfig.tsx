@@ -1,7 +1,7 @@
 import { useRouter } from "next/navigation";
-import { Typography, Button, Box } from "@mui/material";
+import { Typography, Button, Box, Modal, IconButton } from "@mui/material";
 import { GridColDef } from "@mui/x-data-grid";
-import { EditRounded } from "@mui/icons-material";
+import { EditRounded, Visibility } from "@mui/icons-material";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { green, red } from "@mui/material/colors";
@@ -20,17 +20,24 @@ export const doctorDatagridColumns = (): GridColDef[] => {
   };
 
   const createdByColumn: GridColDef = {
-    field: "createdByName", 
+    field: "createdByName",
     headerName: "Created By",
     headerClassName: "super-app-theme--header",
     headerAlign: "center",
     align: "left",
     flex: 1.3,
-    renderCell: (params) => (
-      <Typography fontSize="15px" sx={{ fontWeight: "bold" }}>
-        {params.value ? formatDoctorName(params.value) : "—"}
-      </Typography>
-    ),
+    renderCell: (params) => {
+      const hasAarogyaa =
+        typeof params.row.createdFrom === "string" &&
+        /(arogyaa)/i.test(params.row.createdFrom);
+      const name = params.value ? formatDoctorName(params.value) : "N/A";
+
+      return (
+        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+          {hasAarogyaa ? "Arogyaa Public Signup" : name}
+        </Typography>
+      );
+    },
   };
 
   const columns: GridColDef[] = [
@@ -40,7 +47,7 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "left",
-      flex: 1.3,
+      flex: 1.8,
       renderCell: (params) => (
         <Typography fontSize="15px" sx={{ fontWeight: "bold" }}>
           {formatDoctorName(params.value)}
@@ -53,7 +60,7 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
       align: "left",
-      flex: 1.5,
+      flex: 1.8,
     },
     {
       field: "experience",
@@ -64,7 +71,7 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       flex: 0.7,
       renderCell: (params) => (
         <Typography fontSize="14px" sx={{ textAlign: "center", width: "100%" }}>
-          {params.value}
+          {params.value != null && params.value !== "" ? params.value : "N/A"}
         </Typography>
       ),
     },
@@ -73,62 +80,14 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerName: "Bio",
       headerClassName: "super-app-theme--header",
       headerAlign: "center",
-      align: "left",
-      flex: 1.5,
-      renderCell: (params) => {
-        const [expanded, setExpanded] = useState(false);
-        const toggleExpanded = () => setExpanded(!expanded);
-        const content = capitalizeFirstLetter(params.row.bio) || "N/A";
-        const isOverflowing = content.length > 70;
-
-        return (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              width: "100%",
-              minHeight: 47,
-            }}
-          >
-            <Typography
-              sx={{
-                whiteSpace: expanded ? "normal" : "nowrap",
-                overflow: expanded ? "visible" : "hidden",
-                textOverflow: expanded ? "clip" : "ellipsis",
-                fontSize: "14px",
-              }}
-            >
-              {content}
-            </Typography>
-            {isOverflowing && (
-              <Box sx={{ display: "flex", justifyContent: "center" }}>
-                <Typography
-                  onClick={toggleExpanded}
-                  sx={{
-                    cursor: "pointer",
-                    color: "#1976D2",
-                    fontSize: "14px",
-                    textDecoration: "underline",
-                  }}
-                >
-                  {expanded ? "Show Less" : "Read More"}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        );
-      },
-    },
-    {
-      field: "isVerified",
-      headerName: "Verified",
-      headerClassName: "super-app-theme--header",
-      headerAlign: "center",
       align: "center",
       flex: 0.7,
-      renderCell: ({ row: { isVerified, createdFrom } }) => {
-        const hasAarogyaa =
-          typeof createdFrom === "string" && /(arogyaa)/i.test(createdFrom);
+      renderCell: (params) => {
+        const [open, setOpen] = useState(false);
+        const content = capitalizeFirstLetter(params.row.bio) || "N/A";
+
+        const handleOpen = () => setOpen(true);
+        const handleClose = () => setOpen(false);
 
         return (
           <Box
@@ -140,57 +99,71 @@ export const doctorDatagridColumns = (): GridColDef[] => {
               justifyContent: "center",
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 0.4,
-              }}
+            <IconButton onClick={handleOpen} title="View Bio">
+              <Visibility />
+            </IconButton>
+            <Modal
+              open={open}
+              onClose={handleClose}
+              aria-labelledby="bio-modal-title"
+              aria-describedby="bio-modal-description"
             >
-              {isVerified ? (
-                <VerifiedIcon
-                  sx={{ color: green[600] }}
-                  titleAccess="Verified"
-                />
-              ) : (
-                <CancelIcon
-                  sx={{ color: red[600] }}
-                  titleAccess="Not Verified"
-                />
-              )}
-
-              {hasAarogyaa && (
-                <Box
-                  sx={{
-                    px: 1,
-                    height: 20,
-                    borderRadius: "999px",
-                    backgroundColor: "black",
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "0.62rem",
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    whiteSpace: "nowrap",
-                  }}
-                  title="Aarogyaa Origin"
-                >
-                  Arogyaa
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: 400,
+                  bgcolor: "background.paper",
+                  boxShadow: 24,
+                  p: 4,
+                  borderRadius: 2,
+                }}
+              >
+                <Typography id="bio-modal-title" variant="h6" component="h2">
+                  Doctor Bio
+                </Typography>
+                <Typography id="bio-modal-description" sx={{ mt: 2 }}>
+                  {content}
+                </Typography>
+                <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+                  <Button onClick={handleClose} variant="contained">
+                    Close
+                  </Button>
                 </Box>
-              )}
-            </Box>
+              </Box>
+            </Modal>
           </Box>
         );
       },
     },
-
-    // inject "Created By" for everyone EXCEPT sales
+    {
+      field: "isVerified",
+      headerName: "Is Verified",
+      headerClassName: "super-app-theme--header",
+      headerAlign: "center",
+      align: "center",
+      flex: 0.7,
+      renderCell: ({ row: { isVerified } }) => (
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {isVerified ? (
+            <VerifiedIcon sx={{ color: green[600] }} titleAccess="Verified" />
+          ) : (
+            <CancelIcon sx={{ color: red[600] }} titleAccess="Not Verified" />
+          )}
+        </Box>
+      ),
+    },
     ...(currentUserRole !== "sales" ? [createdByColumn] : []),
-
     {
       field: "action",
       headerName: "Action",

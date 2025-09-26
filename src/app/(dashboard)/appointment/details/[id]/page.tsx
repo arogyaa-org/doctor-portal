@@ -19,7 +19,6 @@ import {
   Stack,
   Chip,
   Skeleton,
-  Tooltip,
   Modal,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -59,16 +58,13 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 
-// ✅ IMPORTANT: use "react-player" (NOT "react-player/lazy") and disable SSR
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
-// Your components
 import Toast from "@/components/common/Toast";
 import TreatmentHistory from "./treatmentHistory";
 import TestHistory from "./testHistory";
 import VisitsHistory from "./visitHistory";
 
-// Hooks & utils
 import { useGetAppointment } from "@/hooks/appointment";
 import { useGetPatient } from "@/hooks/patient";
 import { useRouter, useParams } from "next/navigation";
@@ -170,7 +166,6 @@ const TabContainer = styled(Box)(({ theme }) => ({
   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
   "&::-webkit-scrollbar": { height: "4px" },
   "&::-webkit-scrollbar-thumb": {
-    // backgroundColor: theme.palette.primary.main,
     borderRadius: "2px",
   },
 }));
@@ -203,20 +198,60 @@ const DetailCard = styled(Card)(({ theme }) => ({
   },
 }));
 
-const VideoToggleButton = styled(IconButton)(({ theme }) => ({
+const EnhancedVideoButton = styled(Box)(({ theme }) => ({
   position: "fixed",
   bottom: theme.spacing(2),
   right: theme.spacing(2),
+  zIndex: 1300,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
   backgroundColor: theme.palette.primary.main,
   color: "white",
-  zIndex: 1300,
+  borderRadius: theme.spacing(4),
+  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+  cursor: "pointer",
+  overflow: "hidden",
   width: 64,
   height: 64,
-  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-  transition: "all 0.3s ease",
-  "&:hover": {
+  padding: 0,
+  
+  "&.force-expanded, &:hover": {
     backgroundColor: theme.palette.primary.dark,
-    transform: "scale(1.1)",
+    transform: "scale(1.05)",
+    height: "auto",
+    width: "auto",
+    padding: theme.spacing(1),
+  },
+  
+  "& .video-icon": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 64,
+    height: 64,
+    flexShrink: 0,
+  },
+  
+  "& .video-text": {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    fontWeight: 600,
+    fontSize: "0.875rem",
+    opacity: 0,
+    transform: "translateY(-10px)",
+    transition: "all 0.3s ease 0.1s",
+    overflow: "hidden",
+    marginTop: 0,
+  },
+  
+  "&.force-expanded .video-text, &:hover .video-text": {
+    opacity: 1,
+    transform: "translateY(0)",
+    marginTop: theme.spacing(0.5),
   },
 }));
 
@@ -300,6 +335,7 @@ const AppointmentDetails = () => {
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {}
   );
+  const [isVideoButtonExpanded, setIsVideoButtonExpanded] = useState(true);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -328,6 +364,13 @@ const AppointmentDetails = () => {
   useEffect(() => {
     if (appointmentData?.data?.status) setStatus(appointmentData.data.status);
   }, [appointmentData?.data?.status]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVideoButtonExpanded(false);
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const toggleVideoModal = () => setShowVideoModal((v) => !v);
 
@@ -659,12 +702,27 @@ const AppointmentDetails = () => {
           </Box>
         </ContentArea>
 
-        {/* Video Toggle Button with Tooltip */}
-        <Tooltip title="Patient Symptoms Video" placement="left" arrow>
-          <VideoToggleButton onClick={toggleVideoModal}>
+        {/* Enhanced Video Toggle Button with Hover Text */}
+        <EnhancedVideoButton
+          className={isVideoButtonExpanded ? "force-expanded" : ""}
+          onClick={toggleVideoModal}
+        >
+          <Box className="video-icon">
             <VideocamIcon />
-          </VideoToggleButton>
-        </Tooltip>
+          </Box>
+          <Box className="video-text">
+            {["Patient", "Symptom", "Video"].map((word, wdx) => (
+              <Typography
+                key={wdx}
+                component="span"
+                variant="body2"
+                sx={{ fontWeight: 600 }}
+              >
+                {word}
+              </Typography>
+            ))}
+          </Box>
+        </EnhancedVideoButton>
 
         {/* Video Modal */}
         <VideoModal
