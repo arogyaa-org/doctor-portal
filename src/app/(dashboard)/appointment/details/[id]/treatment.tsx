@@ -110,6 +110,7 @@ interface CreateTreatmentDialogProps {
   onClose: () => void;
   fetchTreatments: (newTreatment: any) => void;
   patientId: string;
+  appointmentId: string;
 }
 
 // Initial state values
@@ -157,6 +158,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
   onClose,
   fetchTreatments,
   patientId,
+  appointmentId,
 }) => {
   const dispatch: AppDispatch = useDispatch();
   const { toastAndNavigate, decodedToken } = Utility();
@@ -285,6 +287,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
       const payload = {
         doctorId: token.id,
         patientId,
+        appointmentId,
         treatments: treatmentItems.map((item) => ({
           name: item.name,
           description: item.description,
@@ -302,7 +305,7 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
         followUpDate: formData.followUpDate,
         status: formData.status,
       };
-
+      console.log("Payload to send:", payload);
       const formDataInstance = new FormData();
       formDataInstance.append("payload", JSON.stringify(payload));
 
@@ -329,8 +332,6 @@ const CreateTreatmentDialog: React.FC<CreateTreatmentDialogProps> = ({
           "Treatment created successfully"
         );
         fetchTreatments(response.data);
-
-        // ✅ Save new medicines here
         const newMedicines = treatmentItems
           .map((item) => item.name.trim())
           .filter((name) => name !== "");

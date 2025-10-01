@@ -64,6 +64,7 @@ import { AppDispatch, RootState } from "@/redux/store";
 import Toast from "@/components/common/Toast";
 import ImagePicker from "@/components/common/ImagePicker";
 import CreateTreatmentDialog from "./treatment";
+import { useParams } from "next/navigation";
 
 interface Treatment {
   _id: string;
@@ -181,7 +182,8 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
-
+ const params = useParams();
+  const appointmentId = params?.id as string;
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -229,7 +231,7 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
           "treatment",
           `get-treatments-by-patientId/${patientId}?page=${page + 1}&limit=${rowsPerPage}`
         );
-
+        
         if (!response) {
           throw new Error("No response from the API");
         }
@@ -796,6 +798,7 @@ const TreatmentHistory: React.FC<TreatmentHistoryProps> = ({ patientId }) => {
         onClose={() => setOpenCreateDialog(false)}
         fetchTreatments={fetchTreatments}
         patientId={patientId}
+      appointmentId={appointmentId} 
       />
 
       {error && (
