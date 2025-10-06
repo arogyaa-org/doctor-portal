@@ -1,6 +1,6 @@
 import { useRouter } from "next/navigation";
 import { Typography, Button, Box, Modal, IconButton } from "@mui/material";
-import { GridColDef } from "@mui/x-data-grid";
+import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { EditRounded, Visibility } from "@mui/icons-material";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -9,11 +9,77 @@ import React, { useState } from "react";
 import { Utility } from "@/utils";
 import { paths } from "@/paths";
 
+const BioCell: React.FC<{ rawBio?: string; capitalize: (s: string) => string }> = ({
+  rawBio,
+  capitalize,
+}) => {
+  const [open, setOpen] = useState(false);
+
+  const bio = rawBio?.trim?.() || "";
+  const content = bio ? capitalize(bio) : "";
+
+  if (!content) {
+    return (
+      <Typography fontSize="14px" sx={{ textAlign: "center", width: "100%" }}>
+        N/A
+      </Typography>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <IconButton onClick={() => setOpen(true)} title="View Bio" size="small">
+        <Visibility />
+      </IconButton>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        aria-labelledby="bio-modal-title"
+        aria-describedby="bio-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 420,
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+          }}
+        >
+          <Typography id="bio-modal-title" variant="h6" component="h2">
+            Doctor Bio
+          </Typography>
+          <Typography id="bio-modal-description" sx={{ mt: 2 }}>
+            {content}
+          </Typography>
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button onClick={() => setOpen(false)} variant="contained">
+              Close
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+    </Box>
+  );
+};
+
 export const doctorDatagridColumns = (): GridColDef[] => {
   const router = useRouter();
   const { capitalizeFirstLetter, formatDoctorName, decodedToken } = Utility();
-  const currentUserRole =
-    decodedToken?.role?.toString?.().toLowerCase?.() ?? "";
+  const currentUserRole = decodedToken?.role?.toString?.().toLowerCase?.() ?? "";
 
   const handleActionEdit = (doctorId: string | number) => {
     router.push(paths.dashboard.doctorUpdate(doctorId));
@@ -26,7 +92,7 @@ export const doctorDatagridColumns = (): GridColDef[] => {
     headerAlign: "center",
     align: "left",
     flex: 1.3,
-    renderCell: (params) => {
+    renderCell: (params: GridRenderCellParams<any, string>) => {
       const hasAarogyaa =
         typeof params.row.createdFrom === "string" &&
         /(arogyaa)/i.test(params.row.createdFrom);
@@ -48,9 +114,9 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerAlign: "center",
       align: "left",
       flex: 1.8,
-      renderCell: (params) => (
+      renderCell: (params: GridRenderCellParams<any, string>) => (
         <Typography fontSize="15px" sx={{ fontWeight: "bold" }}>
-          {formatDoctorName(params.value)}
+          {params.value ? formatDoctorName(params.value) : "N/A"}
         </Typography>
       ),
     },
@@ -61,6 +127,9 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerAlign: "center",
       align: "left",
       flex: 1.8,
+      renderCell: (params: GridRenderCellParams<any, string>) => (
+        <Typography fontSize="14px">{params.value || "N/A"}</Typography>
+      ),
     },
     {
       field: "experience",
@@ -69,7 +138,7 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerAlign: "center",
       align: "center",
       flex: 0.7,
-      renderCell: (params) => (
+      renderCell: (params: GridRenderCellParams<any, number | string>) => (
         <Typography fontSize="14px" sx={{ textAlign: "center", width: "100%" }}>
           {params.value != null && params.value !== "" ? params.value : "N/A"}
         </Typography>
@@ -82,61 +151,9 @@ export const doctorDatagridColumns = (): GridColDef[] => {
       headerAlign: "center",
       align: "center",
       flex: 0.7,
-      renderCell: (params) => {
-        const [open, setOpen] = useState(false);
-        const content = capitalizeFirstLetter(params.row.bio) || "N/A";
-
-        const handleOpen = () => setOpen(true);
-        const handleClose = () => setOpen(false);
-
-        return (
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <IconButton onClick={handleOpen} title="View Bio">
-              <Visibility />
-            </IconButton>
-            <Modal
-              open={open}
-              onClose={handleClose}
-              aria-labelledby="bio-modal-title"
-              aria-describedby="bio-modal-description"
-            >
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 400,
-                  bgcolor: "background.paper",
-                  boxShadow: 24,
-                  p: 4,
-                  borderRadius: 2,
-                }}
-              >
-                <Typography id="bio-modal-title" variant="h6" component="h2">
-                  Doctor Bio
-                </Typography>
-                <Typography id="bio-modal-description" sx={{ mt: 2 }}>
-                  {content}
-                </Typography>
-                <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
-                  <Button onClick={handleClose} variant="contained">
-                    Close
-                  </Button>
-                </Box>
-              </Box>
-            </Modal>
-          </Box>
-        );
-      },
+      renderCell: (params: GridRenderCellParams) => (
+        <BioCell rawBio={params.row?.bio} capitalize={capitalizeFirstLetter} />
+      ),
     },
     {
       field: "isVerified",

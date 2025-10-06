@@ -1,3 +1,5 @@
+"use client";
+
 import { Field } from "formik";
 import {
   Box,
@@ -81,7 +83,7 @@ const StyledTextField = ({ icon, children, ...props }) => {
       },
       ...props.InputProps,
     }),
-    [icon, props.InputProps]
+    [icon, props.InputProps],
   );
 
   return (
@@ -126,7 +128,7 @@ const StyledFormControl = ({ icon, children, ...props }) => {
       props.selectProps?.name,
       props.selectProps?.value,
       props.selectProps?.onChange,
-    ]
+    ],
   );
 
   return (
@@ -368,14 +370,15 @@ const PersonalDetails: React.FC<PersonalDetailsProps> = ({
               <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <DatePicker
                   label="Date of Birth *"
-                  value={values.dob ? dayjs(values.dob) : null}
+                  value={values.dob ? dayjs(values.dob, "DD/MM/YYYY") : null}
                   onChange={(newValue) => {
                     setFieldValue(
                       "dob",
-                      newValue ? newValue.format("YYYY-MM-DD") : ""
+                      newValue ? newValue.format("DD/MM/YYYY") : "",
                     );
                   }}
                   maxDate={dayjs().subtract(20, "year")}
+                  format="DD/MM/YYYY"
                   slotProps={{
                     textField: {
                       fullWidth: true,
@@ -428,7 +431,7 @@ const PersonalDetails: React.FC<PersonalDetailsProps> = ({
                 color="primary"
                 sx={{
                   position: "absolute",
-                  left: 14,
+                  left: 10,
                   top: 16,
                   zIndex: 1,
                   pointerEvents: "none",
@@ -465,7 +468,7 @@ const PersonalDetails: React.FC<PersonalDetailsProps> = ({
                 }}
                 onBlur={() => {
                   console.log(
-                    "Languages input blurred, updating languagesSpoken"
+                    "Languages input blurred, updating languagesSpoken",
                   );
                   const arr = langText
                     .split(",")
@@ -662,7 +665,7 @@ const PersonalDetails: React.FC<PersonalDetailsProps> = ({
                             true,
                             "error",
                             "Profile picture must be less than 1MB",
-                            () => {}
+                            () => {},
                           );
                           return;
                         }
