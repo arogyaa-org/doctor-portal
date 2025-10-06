@@ -17,6 +17,7 @@ export const paths = {
     overview: '/dashboard',
     account: '/account',
     appointment: '/appointment',
+     emergency: "/emergency",
     appointmentDetails: '/appointment/details',
     appointmentDetails_id: (id: string | number) => `/appointment/details/${id}`,
     doctor: '/doctor',

@@ -17,6 +17,12 @@ export const navItems = [
     icon: "users",
   },
   {
+    key: "emergency",
+    title: "Emergency",
+    href: paths.dashboard.emergency,
+    icon: "medical-services",
+  },
+  {
     key: "doctor",
     title: "Doctor",
     href: paths.dashboard.doctor,
@@ -54,6 +60,7 @@ export const navItems = [
     href: paths.dashboard.activeRooms,
     icon: "Video",
   },
+
   {
     key: "salesDashboard",
     title: "Sales Dashboard",
@@ -88,7 +95,9 @@ const getNavItemsByRole = (): NavItemConfig[] => {
 
   if (role === "doctor") {
     return navItems.filter((item) =>
-      ["dashboard", "appointment", "activeRooms"].includes(item.key)
+      ["dashboard", "appointment", "activeRooms", "emergency"].includes(
+        item.key
+      )
     );
   }
 
@@ -106,7 +115,7 @@ const getNavItemsByRole = (): NavItemConfig[] => {
       });
   }
 
-  //operations 
+  //operations
   if (role === "operations") {
     return navItems.filter((item) =>
       [

@@ -352,7 +352,7 @@ const AppointmentDetails = () => {
   const { value: appointmentData, swrLoading: appointmentLoading } =
     useGetAppointment(null, `get-appointment-by-id/${appointmentId}`);
 
-  const patientId = appointmentData?.data?.patientId?._id || null;
+  const patientId = appointmentData?.data?.patientId?._id || appointmentData?.data?.patientId || null;
 
   const { value: patientData, swrLoading: patientLoading } = useGetPatient(
     null,
@@ -360,7 +360,7 @@ const AppointmentDetails = () => {
     1,
     1
   );
-
+console.log(appointmentData,"appointmentData");
   useEffect(() => {
     if (appointmentData?.data?.status) setStatus(appointmentData.data.status);
   }, [appointmentData?.data?.status]);
