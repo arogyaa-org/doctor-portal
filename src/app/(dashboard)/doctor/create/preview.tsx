@@ -283,7 +283,7 @@ const Preview: React.FC<PreviewProps> = ({
                 color="primary.main"
                 gutterBottom
               >
-                Dr. {values.username}
+                {values.username}
               </Typography>
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 {getNameById(values.specializationIds, specialities)}

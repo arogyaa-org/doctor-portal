@@ -188,7 +188,7 @@ const DoctorForm: React.FC = () => {
       try {
         const response: DoctorResponse = await fetcher(
           "doctor",
-          `get-doctor-by-id/${doctorId}`
+          `get-doctor-by-id/${doctorId}`,
         );
         if (response?.statusCode === 200) {
           const formattedData: DoctorFormValues = {
@@ -234,7 +234,9 @@ const DoctorForm: React.FC = () => {
             symptomIds: Array.isArray(response.data.symptomIds)
               ? response.data.symptomIds
               : [],
-            dob: response.data.dob ? response.data.dob : "",
+            dob: response.data.dob
+              ? dayjs(response.data.dob).format("DD/MM/YYYY")
+              : "",
             experience: response.data.experience
               ? String(response.data.experience)
               : "",
@@ -247,18 +249,19 @@ const DoctorForm: React.FC = () => {
           setCurrentStep(0);
         }
       } catch (err) {
-        toastAndNavigate(
-          dispatch,
-          true,
-          "error",
-          "Failed to load doctor data",
-          () => {}
-        );
+        dispatch({
+          type: "toast/setToast",
+          payload: {
+            toastAlert: true,
+            toastSeverity: "error",
+            toastMessage: "Failed to load doctor data",
+          },
+        });
       } finally {
         setDataLoading(false);
       }
     },
-    [dispatch, toastAndNavigate]
+    [dispatch],
   );
 
   const extractFiles = (arr?: FileOrUrl[]) =>
@@ -289,11 +292,12 @@ const DoctorForm: React.FC = () => {
           symptomIds: getIdsFromObject(values?.symptomIds || []),
           availability: formattedAvailability,
           createdBy: decodedToken().id,
+          dob: values.dob ? dayjs(values.dob, "DD/MM/YYYY").format("YYYY-MM-DD") : "",
           medicalCertificates: extractFiles(values.medicalCertificates).length
             ? extractFiles(values.medicalCertificates)
             : extractUrls(values.medicalCertificates),
           registrationCertificates: extractFiles(
-            values.registrationCertificates
+            values.registrationCertificates,
           ).length
             ? extractFiles(values.registrationCertificates)
             : extractUrls(values.registrationCertificates),
@@ -312,62 +316,60 @@ const DoctorForm: React.FC = () => {
 
         if (response?.statusCode === 409) {
           const errorMessage = response?.message?.toLowerCase() || "";
+          let toastMsg = "Email or phone number already exists, please edit the fields";
+          let callback = () => {
+            setCurrentStep(0);
+            emailFieldRef?.current?.focus();
+          };
           if (errorMessage.includes("email")) {
-            toastAndNavigate(
-              dispatch,
-              true,
-              "error",
-              "Email already exists, please edit the email",
-              () => {
-                setCurrentStep(0);
-                emailFieldRef?.current?.focus();
-              }
-            );
+            toastMsg = "Doctor with this Email already exists";
+            callback = () => {
+              setCurrentStep(0);
+              emailFieldRef?.current?.focus();
+            };
           } else if (errorMessage.includes("phone number")) {
-            toastAndNavigate(
-              dispatch,
-              true,
-              "error",
-              "Phone number already exists, please edit the phone number",
-              () => {
-                setCurrentStep(0);
-                contactFieldRef?.current?.focus();
-              }
-            );
-          } else {
-            toastAndNavigate(
-              dispatch,
-              true,
-              "error",
-              "Email or phone number already exists, please edit the fields",
-              () => {
-                setCurrentStep(0);
-                emailFieldRef?.current?.focus();
-              }
-            );
+            toastMsg = "Phone number already exists, please edit the phone number";
+            callback = () => {
+              setCurrentStep(0);
+              contactFieldRef?.current?.focus();
+            };
           }
+          dispatch({
+            type: "toast/setToast",
+            payload: {
+              toastAlert: true,
+              toastSeverity: "error",
+              toastMessage: toastMsg,
+            },
+          });
+          callback();
         } else if (response?.statusCode === 201) {
           toastAndNavigate(
             dispatch,
             true,
             "success",
             "Created Successfully",
-            () => router.back()
+            () => router.back(),
           );
         }
       } catch (error: any) {
         const errorMessage =
-          error?.response?.data?.message ||
-          "Error creating Doctor, please try again.";
-        toastAndNavigate(dispatch, true, "error", errorMessage, () =>
-          location.reload()
-        );
+          error?.response?.data?.message || "Error creating Doctor, please try again.";
+        dispatch({
+          type: "toast/setToast",
+          payload: {
+            toastAlert: true,
+            toastSeverity: "error",
+            toastMessage: errorMessage,
+          },
+        });
+        setCurrentStep(3);
       } finally {
         setLoading(false);
         setSubmitClicked(false);
       }
     },
-    [createDoctor, dispatch, router, toastAndNavigate]
+    [createDoctor, dispatch, router, toastAndNavigate],
   );
 
   const update = useCallback(
@@ -391,6 +393,7 @@ const DoctorForm: React.FC = () => {
           symptomIds: getIdsFromObject(values?.symptomIds || []),
           availability: formattedAvailability,
           updatedBy: decodedToken().id,
+          dob: values.dob ? dayjs(values.dob, "DD/MM/YYYY").format("YYYY-MM-DD") : "",
           medicalCertificates: [
             ...extractUrls(values.medicalCertificates),
             ...extractFiles(values.medicalCertificates),
@@ -418,29 +421,68 @@ const DoctorForm: React.FC = () => {
         }
 
         const response = await modifyDoctor(payload);
-        if (response?.statusCode === 200) {
-          toastAndNavigate(dispatch, true, "info", "Updated Successfully", () =>
-            router.back()
+        if (response?.statusCode === 409) {
+          const errorMessage = response?.message?.toLowerCase() || "";
+          let toastMsg = "Email or phone number already exists, please edit the fields";
+          let callback = () => {
+            setCurrentStep(0);
+            emailFieldRef?.current?.focus();
+          };
+          if (errorMessage.includes("email")) {
+            toastMsg = "Email already exists, please edit the email";
+            callback = () => {
+              setCurrentStep(0);
+              emailFieldRef?.current?.focus();
+            };
+          } else if (errorMessage.includes("phone number")) {
+            toastMsg = "Phone number already exists, please edit the phone number";
+            callback = () => {
+              setCurrentStep(0);
+              contactFieldRef?.current?.focus();
+            };
+          }
+          dispatch({
+            type: "toast/setToast",
+            payload: {
+              toastAlert: true,
+              toastSeverity: "error",
+              toastMessage: toastMsg,
+            },
+          });
+          callback();
+        } else if (response?.statusCode === 200) {
+          toastAndNavigate(
+            dispatch,
+            true,
+            "info",
+            "Updated Successfully",
+            () => router.back(),
           );
         }
       } catch (err: any) {
         const errorMessage =
-          err?.response?.data?.message || "Error Occurred. Please Try Again";
-        toastAndNavigate(dispatch, true, "error", errorMessage, () =>
-          location.reload()
-        );
+          err?.response?.data?.message || "Error updating Doctor, please try again.";
+        dispatch({
+          type: "toast/setToast",
+          payload: {
+            toastAlert: true,
+            toastSeverity: "error",
+            toastMessage: errorMessage,
+          },
+        });
+        setCurrentStep(3);
       } finally {
         setLoading(false);
         setSubmitClicked(false);
       }
     },
-    [modifyDoctor, toastAndNavigate, dispatch, router, updatePassword, doctorId]
+    [modifyDoctor, dispatch, router, updatePassword, doctorId, toastAndNavigate],
   );
 
   const handleNext = async (
     validateForm: () => Promise<any>,
     setFieldTouched: any,
-    values: any
+    values: any,
   ) => {
     const personalFields = [
       "username",
@@ -490,24 +532,25 @@ const DoctorForm: React.FC = () => {
         arr.forEach((_, i) => {
           tasks.push(setFieldTouched(`availability[${i}].day`, true, true));
           tasks.push(
-            setFieldTouched(`availability[${i}].startTime`, true, true)
+            setFieldTouched(`availability[${i}].startTime`, true, true),
           );
           tasks.push(setFieldTouched(`availability[${i}].endTime`, true, true));
           tasks.push(
-            setFieldTouched(`availability[${i}].hospital.name`, true, true)
+            setFieldTouched(`availability[${i}].hospital.name`, true, true),
           );
           tasks.push(
-            setFieldTouched(`availability[${i}].hospital.location`, true, true)
+            setFieldTouched(`availability[${i}].hospital.location`, true, true),
           );
         });
         return tasks;
-      })
+      }),
     );
 
     const errors = await validateForm();
     const hasErrors = fieldsToValidate.some((field) => errors[field]);
 
     if (!hasErrors) {
+      setFormValues(values);
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -555,8 +598,8 @@ const DoctorForm: React.FC = () => {
     return (
       <Box sx={{ p: 2 }}>
         <Typography color="error">
-          Failed to load required data (specialities, qualifications, or
-          symptoms). Please try again later.
+          Failed to load required data (specialities, qualifications, or symptoms). Please try again
+          later.
         </Typography>
       </Box>
     );
@@ -585,6 +628,7 @@ const DoctorForm: React.FC = () => {
         initialValues={memoizedFormValues}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting }) => {
+          setFormValues(values);
           if (currentStep === 3 && submitClicked) {
             (values as any)._id ? update(values) : create(values);
           }
@@ -803,8 +847,7 @@ const DoctorForm: React.FC = () => {
               }}
             >
               <Typography variant="body1" sx={{ mb: 2 }}>
-                This file type can’t be previewed inline. You can open it in a
-                new tab or download it.
+                This file type can't be previewed inline. You can open it in a new tab or download it.
               </Typography>
               <Button
                 variant="contained"

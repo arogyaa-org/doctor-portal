@@ -69,6 +69,8 @@ const initializeTime = (time: string) => {
   return dayjs(`2023-01-01T${time}`);
 };
 
+
+// eslint-disable-next-line react/function-component-definition
 const StyledTextField = ({ icon, children, ...props }: any) => {
   const inputProps = useMemo(
     () => ({
@@ -205,6 +207,7 @@ const StyledAutocomplete = (props: any) => {
   );
 };
 
+// eslint-disable-next-line react/function-component-definition
 const ProfessionalDetails: React.FC<ProfessionalDetailsProps> = ({
   values,
   errors,
