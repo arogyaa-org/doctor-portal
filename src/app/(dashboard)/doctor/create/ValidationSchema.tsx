@@ -1,6 +1,10 @@
 // ValidationSchema.ts
 import * as yup from "yup";
 import dayjs from "dayjs";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+
+dayjs.extend(isSameOrBefore);
+
 
 const phoneRegExp =
   /^((\+[1-9]{1,4}[ -]?)|(\([0-9]{2,3}\)[ -]?)|([0-9]{2,4})[ -]?)*?[0-9]{3,4}[ -]?[0-9]{3,4}$/;
@@ -62,19 +66,20 @@ const validationSchema = yup.object().shape({
     .matches(/^[0-9]{6}$/, "Pincode must be a valid 6-digit number")
     .required("Pincode is required"),
   dob: yup
-    .string()
-    .required("Date of Birth is required")
-    .test(
-      "is-at-least-20-years-old",
-      "You must be at least 20 years old",
-      (value) => {
-        if (!value) return false;
-        const dob = new Date(value);
-        const minDate = new Date();
-        minDate.setFullYear(minDate.getFullYear() - 20);
-        return dob <= minDate;
-      }
-    ),
+  .string()
+  .required("Date of Birth is required")
+  .test("valid-format", "Invalid date format (use DD/MM/YYYY)", (value) => {
+    if (!value) return false;
+    const d = dayjs(value, "DD/MM/YYYY", true); // strict parse
+    return d.isValid();
+  })
+  .test("is-at-least-20-years-old", "You must be at least 20 years old", (value) => {
+    if (!value) return false;
+    const dob = dayjs(value, "DD/MM/YYYY", true); // strict parse
+    if (!dob.isValid()) return false;
+    const cutoff = dayjs().subtract(20, "year");
+    return dob.isSameOrBefore(cutoff, "day");
+  }),
   availability: yup
     .array()
     .of(
