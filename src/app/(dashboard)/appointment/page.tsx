@@ -148,18 +148,22 @@ const Page: React.FC = () => {
       ? `get-doctors-appointment/${doctorId}`
       : "get-appointments";
 
-  const { value: data, refetch } = useGetAppointment(
-    null,
-    apiEndpoint,
-    undefined,
-    currentPage + 1,
-    pageSize,
-    {
-      dateFilter: selectedDateFilter !== "all" ? selectedDateFilter : undefined,
-      statusFilter: selectedStatus !== "all" ? selectedStatus : undefined,
-      search: searchQuery,
-    }
-  );
+  const commonFilters = {
+  dateFilter: selectedDateFilter !== "all" ? selectedDateFilter : undefined,
+  statusFilter: selectedStatus !== "all" ? selectedStatus : undefined,
+  search: searchQuery,
+  ...(role !== "doctor" ? { emergency: "true" } : {}), // 👈 this triggers backend exclusion
+};
+
+// ✅ 3. Use them in the hook
+const { value: data, refetch } = useGetAppointment(
+  null,
+  apiEndpoint,
+  undefined,
+  currentPage + 1,
+  pageSize,
+  commonFilters
+);
 
   useEffect(() => {
     if (!data?.results) return;
