@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import useSWR, { mutate } from 'swr';
+import { useState } from "react";
+import useSWR, { mutate } from "swr";
 
 import { creator, fetcher, modifier } from "@/apis/apiClient";
 import { AppointmentData, Appointment } from "@/types/appointment";
@@ -10,6 +10,7 @@ interface AppointmentFilters {
   dateFilter?: string;
   statusFilter?: string;
   search?: string;
+  emergency?: string | boolean; // 👈 add this
 }
 
 /**
@@ -31,7 +32,7 @@ export const useGetAppointment = (
   limit: number = 5,
   filters?: AppointmentFilters
 ) => {
-  const { dateFilter, statusFilter, search } = filters || {};
+  const { dateFilter, statusFilter, search, emergency } = filters || {};
 
   const queryParams = new URLSearchParams();
   queryParams.append("page", page.toString());
@@ -39,6 +40,9 @@ export const useGetAppointment = (
   if (dateFilter) queryParams.append("dateFilter", dateFilter);
   if (statusFilter) queryParams.append("statusFilter", statusFilter);
   if (search) queryParams.append("search", search);
+  if (typeof emergency !== "undefined") {
+    queryParams.append("emergency", String(emergency)); // 👈 add this
+  }
 
   const url = appointmentId
     ? `${pathKey}/${appointmentId}?${queryParams.toString()}`
@@ -63,6 +67,8 @@ export const useGetAppointment = (
     if (newFilters?.statusFilter)
       newQueryParams.append("statusFilter", newFilters.statusFilter);
     if (newFilters?.search) newQueryParams.append("search", newFilters.search);
+    if (typeof newFilters?.emergency !== "undefined")
+      newQueryParams.append("emergency", String(newFilters.emergency));
 
     const newUrl = appointmentId
       ? `${pathKey}/${appointmentId}?${newQueryParams.toString()}`
@@ -76,11 +82,11 @@ export const useGetAppointment = (
       results: [],
       total: 0,
       pages: 0,
-      errorMessage: null
+      errorMessage: null,
     },
     swrLoading: !error && !swrData && isValidating,
     error,
-    refetch
+    refetch,
   };
 };
 
@@ -99,7 +105,7 @@ export const useCreateAppointment = (pathKey: string) => {
     setError(null);
     try {
       const appointment = await creator<AppointmentData, AppointmentData>(
-        'appointment',
+        "appointment",
         pathKey,
         newAppointmentData
       );
@@ -123,15 +129,16 @@ export const useModifyAppointment = (pathKey: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-    const modifyAppointment = async (updatedAppointmentData: Partial<AppointmentData>) => {
+  const modifyAppointment = async (
+    updatedAppointmentData: Partial<AppointmentData>
+  ) => {
     setLoading(true);
     setError(null);
     try {
-            const appointment = await modifier<AppointmentData, Partial<AppointmentData>>(
-                'appointment',
-                pathKey,
-                updatedAppointmentData
-            );
+      const appointment = await modifier<
+        AppointmentData,
+        Partial<AppointmentData>
+      >("appointment", pathKey, updatedAppointmentData);
       return appointment;
     } catch (err) {
       setError(err as Error);
